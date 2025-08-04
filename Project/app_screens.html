@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>TypeTalk 결과 화면</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(180deg, #F9B8D0 0%, #F9F6FF 100%);
+      font-family: 'Pretendard', Arial, sans-serif;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 360px;
+      margin: 0 auto;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+    }
+    .top-bar {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 18px 12px 0 12px;
+      box-sizing: border-box;
+    }
+    .back-arrow {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3em;
+      margin-right: 8px;
+      cursor: pointer;
+    }
+    .status-icons {
+      margin-left: auto;
+      display: flex;
+      gap: 6px;
+    }
+    .illustration {
+      width: 220px;
+      height: 180px;
+      background: #fff;
+      border-radius: 32px;
+      margin: 18px auto 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+      font-size: 3.5em;
+      color: #F9B8D0;
+      position: relative;
+    }
+    .mbti-card {
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      padding: 22px 18px 18px 18px;
+      margin: -36px 0 0 0;
+      width: 85%;
+      text-align: center;
+      position: relative;
+      z-index: 2;
+    }
+    .mbti-label {
+      color: #888;
+      font-size: 1em;
+      margin-bottom: 6px;
+    }
+    .mbti-type {
+      font-size: 1.35em;
+      font-weight: bold;
+      color: #222;
+      margin-bottom: 0;
+    }
+    .desc {
+      margin: 32px 0 0 0;
+      color: #333;
+      font-size: 1.08em;
+      line-height: 1.6;
+      text-align: center;
+      padding: 0 18px;
+    }
+    .btn {
+      width: 90%;
+      padding: 16px 0;
+      border: none;
+      border-radius: 14px;
+      font-size: 1.1em;
+      font-weight: 600;
+      margin: 18px auto 0 auto;
+      display: block;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      transition: background 0.2s, color 0.2s;
+    }
+    .btn-share {
+      background: #fff;
+      color: #222;
+      border: 1.5px solid #E0E0E0;
+    }
+    .btn-premium {
+      background: #7B3FF9;
+      color: #fff;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 400px) {
+      .container { max-width: 100vw; }
+      .mbti-card { width: 95%; }
+      .illustration { width: 90vw; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="top-bar">
+      <div class="back-arrow">&#8592;</div>
+      <div class="status-icons">
+        <span style="width:18px; height:18px; background:#222; border-radius:50%; display:inline-block;"></span>
+        <span style="width:18px; height:18px; background:#888; border-radius:50%; display:inline-block;"></span>
+      </div>
+    </div>
+    <div class="illustration">
+      <span style="font-size:2.5em;">🐻‍❄️</span>
+      <!-- 실제 앱에서는 3D 일러스트 이미지가 들어갑니다. -->
+    </div>
+    <div class="mbti-card">
+      <div class="mbti-label">당신의 MBTI 유형은</div>
+      <div class="mbti-type">재기 발랄한 ENFP</div>
+    </div>
+    <div class="desc">
+      열정적이고 창의적인 성격의 당신은<br>
+      새로운 가능성을 발견하고<br>
+      다양한 아이디어를 탐험하는 것을 즐깁니다.<br>
+      자유로운 영혼과 긍정적인 에너지로<br>
+      주변 사람들에게 영감을 줍니다.
+    </div>
+    <button class="btn btn-share">결과 공유하기</button>
+    <button class="btn btn-premium">상세 분석보기(프리미엄)</button>
+  </div>
+</body>
+</html> 

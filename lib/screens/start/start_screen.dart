@@ -59,6 +59,13 @@ class StartScreen extends StatelessWidget {
           final double profileW = thirdWidthDesign * scaleX;
           final double profileH = navHeight * scaleY;
 
+          // 우측 1/3: 채팅 버튼 영역
+          final double chatLeftDesign = thirdWidthDesign * 2;
+          final double chatX = offsetX + chatLeftDesign * scaleX;
+          final double chatY = profileY;
+          final double chatW = thirdWidthDesign * scaleX;
+          final double chatH = profileH;
+
           return Stack(
             children: [
               Positioned(
@@ -91,6 +98,18 @@ class StartScreen extends StatelessWidget {
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: () => Get.toNamed(AppRoutes.profile),
+                  child: const SizedBox.expand(),
+                ),
+              ),
+              // 하단 채팅 버튼 터치 영역
+              Positioned(
+                left: chatX,
+                top: chatY,
+                width: chatW,
+                height: chatH,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => Get.toNamed(AppRoutes.chat),
                   child: const SizedBox.expand(),
                 ),
               ),

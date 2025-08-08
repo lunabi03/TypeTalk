@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:typetalk/core/theme/app_colors.dart';
 import 'package:typetalk/core/theme/app_text_styles.dart';
-import 'package:typetalk/core/widgets/app_text_field.dart';
 
 class ChatScreen extends StatelessWidget {
   const ChatScreen({super.key});
@@ -9,72 +9,72 @@ class ChatScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 1,
-        title: Row(
-          children: [
-            const CircleAvatar(
-              radius: 20,
-              backgroundColor: AppColors.primary,
-              child: Icon(Icons.person, color: Colors.white),
-            ),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Sarah', style: AppTextStyles.body),
-                Text(
-                  'ENFP',
-                  style: AppTextStyles.small.copyWith(color: AppColors.primary),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final double screenWidth = constraints.maxWidth;
+          final double screenHeight = constraints.maxHeight;
+
+          const double designWidth = 390;
+          const double designHeight = 844; // 긴 화면 기준
+          final double designAspect = designWidth / designHeight;
+          final double screenAspect = screenWidth / screenHeight;
+
+          double imageWidth;
+          double imageHeight;
+          double offsetX;
+          double offsetY;
+
+          if (screenAspect > designAspect) {
+            imageHeight = screenHeight;
+            imageWidth = imageHeight * designAspect;
+            offsetX = (screenWidth - imageWidth) / 2;
+            offsetY = 0;
+          } else {
+            imageWidth = screenWidth;
+            imageHeight = imageWidth / designAspect;
+            offsetX = 0;
+            offsetY = (screenHeight - imageHeight) / 2;
+          }
+
+          // 입력창 마이크 버튼 영역 (대략 하단 우측 원형 버튼 위치)
+          const double micRight = 24;
+          const double micBottom = 20;
+          const double micSize = 44;
+
+          final double scaleX = imageWidth / designWidth;
+          final double scaleY = imageHeight / designHeight;
+
+          final double micW = micSize * scaleX;
+          final double micH = micSize * scaleY;
+          final double micX = offsetX + (designWidth - micRight - micSize) * scaleX;
+          final double micY = offsetY + (designHeight - micBottom - micSize) * scaleY;
+
+          return Stack(
+            children: [
+              Positioned(
+                left: offsetX,
+                top: offsetY,
+                width: imageWidth,
+                height: imageHeight,
+                child: Image.asset(
+                  'assets/images/Chat Screen-1.png',
+                  fit: BoxFit.fill,
                 ),
-              ],
-            ),
-          ],
-        ),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _buildReceivedMessage('안녕하세요! ENFP인 Sarah입니다 😊'),
-                _buildSentMessage('반갑습니다! INTJ입니다.'),
-                _buildReceivedMessage('MBTI에 관심이 많으신가요?'),
-                _buildSentMessage('네, 특히 성격 유형별 특징이 흥미로워요'),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
+              ),
+              Positioned(
+                left: micX,
+                top: micY,
+                width: micW,
+                height: micH,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => Get.snackbar('음성 입력', '마이크 버튼을 눌렀습니다.'),
+                  child: const SizedBox.expand(),
                 ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: AppTextField(
-                    hint: '메시지를 입력하세요',
-                  ),
-                ),
-                const SizedBox(width: 12),
-                IconButton(
-                  onPressed: () {},
-                  icon: const Icon(Icons.send),
-                  color: AppColors.primary,
-                ),
-              ],
-            ),
-          ),
-        ],
+              ),
+            ],
+          );
+        },
       ),
     );
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:typetalk/routes/app_routes.dart';
 import 'package:typetalk/screens/chat/chat_screen.dart';
 import 'package:typetalk/screens/profile/profile_screen.dart';
@@ -16,22 +17,27 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GetMaterialApp(
-      title: 'TypeMate',
-      theme: ThemeData(
-        primarySwatch: Colors.deepPurple,
-        scaffoldBackgroundColor: Colors.white,
-        fontFamily: 'Pretendard',
+    return ScreenUtilInit(
+      designSize: const Size(390, 844),
+      minTextAdapt: true,
+      splitScreenMode: true,
+      builder: (context, child) => GetMaterialApp(
+        title: 'TypeMate',
+        theme: ThemeData(
+          primarySwatch: Colors.deepPurple,
+          scaffoldBackgroundColor: Colors.white,
+          fontFamily: 'Pretendard',
+        ),
+        debugShowCheckedModeBanner: false,
+        initialRoute: AppRoutes.start,
+        getPages: [
+          GetPage(name: AppRoutes.start, page: () => const StartScreen()),
+          GetPage(name: AppRoutes.question, page: () => const QuestionScreen()),
+          GetPage(name: AppRoutes.result, page: () => const ResultScreen()),
+          GetPage(name: AppRoutes.profile, page: () => const ProfileScreen()),
+          GetPage(name: AppRoutes.chat, page: () => const ChatScreen()),
+        ],
       ),
-      debugShowCheckedModeBanner: false,
-      initialRoute: AppRoutes.start,
-      getPages: [
-        GetPage(name: AppRoutes.start, page: () => const StartScreen()),
-        GetPage(name: AppRoutes.question, page: () => const QuestionScreen()),
-        GetPage(name: AppRoutes.result, page: () => const ResultScreen()),
-        GetPage(name: AppRoutes.profile, page: () => const ProfileScreen()),
-        GetPage(name: AppRoutes.chat, page: () => const ChatScreen()),
-      ],
     );
   }
 }

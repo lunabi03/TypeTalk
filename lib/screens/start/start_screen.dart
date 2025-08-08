@@ -48,6 +48,17 @@ class StartScreen extends StatelessWidget {
           final double buttonX = offsetX + buttonLeft * scaleX;
           final double buttonY = offsetY + (designHeight - buttonBottom - buttonHeight) * scaleY;
 
+          // 하단 네비게이션 바의 중앙(프로필) 버튼 영역 (디자인 축 기준 3등분)
+          const double navHeight = 88; // 바 높이 근사값
+          final double navTopDesign = designHeight - navHeight;
+          final double thirdWidthDesign = designWidth / 3;
+          final double profileLeftDesign = thirdWidthDesign; // 중앙 1/3 시작점
+
+          final double profileX = offsetX + profileLeftDesign * scaleX;
+          final double profileY = offsetY + navTopDesign * scaleY;
+          final double profileW = thirdWidthDesign * scaleX;
+          final double profileH = navHeight * scaleY;
+
           return Stack(
             children: [
               Positioned(
@@ -68,6 +79,18 @@ class StartScreen extends StatelessWidget {
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: () => Get.toNamed(AppRoutes.question),
+                  child: const SizedBox.expand(),
+                ),
+              ),
+              // 하단 프로필 버튼 터치 영역
+              Positioned(
+                left: profileX,
+                top: profileY,
+                width: profileW,
+                height: profileH,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => Get.toNamed(AppRoutes.profile),
                   child: const SizedBox.expand(),
                 ),
               ),

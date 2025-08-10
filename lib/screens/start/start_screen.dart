@@ -127,38 +127,43 @@ class StartScreen extends StatelessWidget {
           ),
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: 0,
-        onTap: (index) {
-          if (index == 1) {
-            Get.toNamed(AppRoutes.profile);
-          } else if (index == 2) {
-            Get.toNamed(AppRoutes.chat);
-          }
-        },
-        showUnselectedLabels: true,
-        selectedItemColor: const Color(0xFF5C3DF7),
-        unselectedItemColor: Color(0xFF9FA4B0),
-        selectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-        unselectedLabelStyle: const TextStyle(fontSize: 12),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.auto_awesome),
-            activeIcon: Icon(Icons.auto_awesome),
-            label: 'MBTI 테스트',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: '프로필',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline),
-            activeIcon: Icon(Icons.chat_bubble),
-            label: '채팅',
-          ),
-        ],
+      bottomNavigationBar: Container(
+        height: 80,
+        child: BottomNavigationBar(
+          type: BottomNavigationBarType.fixed,
+          currentIndex: 0,
+          onTap: (index) {
+            if (index == 1) {
+              Get.toNamed(AppRoutes.profile);
+            } else if (index == 2) {
+              Get.toNamed(AppRoutes.chat);
+            }
+          },
+          showUnselectedLabels: true,
+          selectedItemColor: const Color(0xFF5C3DF7),
+          unselectedItemColor: Color(0xFF9FA4B0),
+          selectedLabelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          unselectedLabelStyle: const TextStyle(fontSize: 14),
+          backgroundColor: Colors.white,
+          elevation: 8,
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.auto_awesome, size: 28),
+              activeIcon: Icon(Icons.auto_awesome, size: 28),
+              label: 'MBTI 테스트',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline, size: 28),
+              activeIcon: Icon(Icons.person, size: 28),
+              label: '프로필',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.chat_bubble_outline, size: 28),
+              activeIcon: Icon(Icons.chat_bubble, size: 28),
+              label: '채팅',
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -40,13 +40,13 @@ class ResultScreen extends StatelessWidget {
                     ),
                   ),
                   
-                  // 뒤로가기 버튼
+                  // 홈 버튼
                   Positioned(
                     top: 4,
                     left: 8,
                     child: IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.black87),
-                      onPressed: Get.back,
+                      icon: const Icon(Icons.home, color: Colors.black87),
+                      onPressed: () => Get.offAllNamed('/'),
                     ),
                   ),
                   
@@ -93,14 +93,19 @@ class ResultScreen extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: () => Get.snackbar('공유', '결과 공유하기를 눌렀습니다.'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFF2F3F5),
+                        backgroundColor: const Color(0xFFE1E3E6),
                         foregroundColor: Colors.black87,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(28),
                         ),
                       ),
-                      child: const Text('결과 공유하기'),
+                      child: const Text(
+                        '결과 공유하기',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -118,7 +123,10 @@ class ResultScreen extends StatelessWidget {
                       ),
                       child: const Text(
                         '상세 분석보기(프리미엄)',
-                        style: TextStyle(fontWeight: FontWeight.w700),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),

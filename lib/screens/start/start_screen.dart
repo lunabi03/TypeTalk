@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:typetalk/core/theme/app_colors.dart';
 import 'package:typetalk/routes/app_routes.dart';
 
 class StartScreen extends StatelessWidget {
@@ -8,116 +10,156 @@ class StartScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final double screenWidth = constraints.maxWidth;
-          final double screenHeight = constraints.maxHeight;
-
-          const double designWidth = 390;
-          const double designHeight = 844;
-          final double designAspect = designWidth / designHeight;
-          final double screenAspect = screenWidth / screenHeight;
-
-          double imageWidth;
-          double imageHeight;
-          double offsetX;
-          double offsetY;
-
-          if (screenAspect > designAspect) {
-            imageHeight = screenHeight;
-            imageWidth = imageHeight * designAspect;
-            offsetX = (screenWidth - imageWidth) / 2;
-            offsetY = 0;
-          } else {
-            imageWidth = screenWidth;
-            imageHeight = imageWidth / designAspect;
-            offsetX = 0;
-            offsetY = (screenHeight - imageHeight) / 2;
-          }
-
-          // 버튼의 디자인 좌표(스크린샷 기준)
-          const double buttonLeft = 24;
-          const double buttonRight = 24;
-          const double buttonHeight = 60;
-          const double buttonBottom = 120; // 하단 내비+여백 고려한 근사값
-
-          final double scaleX = imageWidth / designWidth;
-          final double scaleY = imageHeight / designHeight;
-          final double buttonWidthScaled = (designWidth - buttonLeft - buttonRight) * scaleX;
-          final double buttonHeightScaled = buttonHeight * scaleY;
-          final double buttonX = offsetX + buttonLeft * scaleX;
-          final double buttonY = offsetY + (designHeight - buttonBottom - buttonHeight) * scaleY;
-
-          // 하단 네비게이션 바의 중앙(프로필) 버튼 영역 (디자인 축 기준 3등분)
-          const double navHeight = 88; // 바 높이 근사값
-          final double navTopDesign = designHeight - navHeight;
-          final double thirdWidthDesign = designWidth / 3;
-          final double profileLeftDesign = thirdWidthDesign; // 중앙 1/3 시작점
-
-          final double profileX = offsetX + profileLeftDesign * scaleX;
-          final double profileY = offsetY + navTopDesign * scaleY;
-          final double profileW = thirdWidthDesign * scaleX;
-          final double profileH = navHeight * scaleY;
-
-          // 우측 1/3: 채팅 버튼 영역
-          final double chatLeftDesign = thirdWidthDesign * 2;
-          final double chatX = offsetX + chatLeftDesign * scaleX;
-          final double chatY = profileY;
-          final double chatW = thirdWidthDesign * scaleX;
-          final double chatH = profileH;
-
-          return Stack(
+      body: SafeArea(
+        child: Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFFEAF3FF), Colors.white],
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Positioned(
-                left: offsetX,
-                top: offsetY,
-                width: imageWidth,
-                height: imageHeight,
-                child: Image.asset(
-                  'assets/images/Start Screen.png',
-                  fit: BoxFit.fill, // 주어진 박스 내에서만 채움 (비율은 박스에서 보장)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                child: Row(
+                  children: [
+                    Transform(
+                      alignment: Alignment.centerLeft,
+                      transform: Matrix4.diagonal3Values(1.08, 0.85, 1.0),
+                      child: Text(
+                        'TypeMate',
+                        style: TextStyle(
+                          fontSize: 23.sp,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.3,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      onPressed: () => Get.snackbar('설정', '설정 화면은 준비 중입니다.'),
+                      icon: const Icon(Icons.settings_outlined),
+                      color: Colors.black87,
+                    ),
+                  ],
                 ),
               ),
-              Positioned(
-                left: buttonX,
-                top: buttonY,
-                width: buttonWidthScaled,
-                height: buttonHeightScaled,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => Get.toNamed(AppRoutes.question),
-                  child: const SizedBox.expand(),
+              SizedBox(height: 36.h),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    SizedBox(height: 6.h),
+                    Text(
+                      '나의 MBTI 유형은?',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 27.sp,
+                        height: 1.22,
+                        letterSpacing: -0.4,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.black,
+                      ),
+                    ),
+                    SizedBox(height: 8.h),
+                    Text(
+                      '간단한 질문을 통해 나의 성격 유형을\n알아보고 더 나은 자신을 발견해보세요.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        height: 1.5,
+                        letterSpacing: -0.1,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              // 하단 프로필 버튼 터치 영역
-              Positioned(
-                left: profileX,
-                top: profileY,
-                width: profileW,
-                height: profileH,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => Get.toNamed(AppRoutes.profile),
-                  child: const SizedBox.expand(),
+              const SizedBox(height: 12),
+              Expanded(
+                child: Center(
+                  child: Image.asset(
+                    'assets/images/home_image.png',
+                    width: 356.w,
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
-              // 하단 채팅 버튼 터치 영역
-              Positioned(
-                left: chatX,
-                top: chatY,
-                width: chatW,
-                height: chatH,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => Get.toNamed(AppRoutes.chat),
-                  child: const SizedBox.expand(),
+              Transform.translate(
+                offset: Offset(0, -34.h),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: SizedBox(
+                    height: 60,
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => Get.toNamed(AppRoutes.question),
+                      style: ElevatedButton.styleFrom(
+                        // Start Screen.png 기준 보라색, 텍스트는 화이트로 고정
+                        backgroundColor: const Color(0xFF6C63FF),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: const StadiumBorder(),
+                      ),
+                      child: const Text(
+                        '테스트 시작하기',
+                        style: TextStyle(
+                          fontSize: 16,
+                          letterSpacing: 0.0,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
+              const SizedBox(height: 4),
             ],
-          );
+          ),
+        ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        currentIndex: 0,
+        onTap: (index) {
+          if (index == 1) {
+            Get.toNamed(AppRoutes.profile);
+          } else if (index == 2) {
+            Get.toNamed(AppRoutes.chat);
+          }
         },
+        showUnselectedLabels: true,
+        selectedItemColor: const Color(0xFF5C3DF7),
+        unselectedItemColor: Color(0xFF9FA4B0),
+        selectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        unselectedLabelStyle: const TextStyle(fontSize: 12),
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.auto_awesome),
+            activeIcon: Icon(Icons.auto_awesome),
+            label: 'MBTI 테스트',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: '프로필',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.chat_bubble_outline),
+            activeIcon: Icon(Icons.chat_bubble),
+            label: '채팅',
+          ),
+        ],
       ),
     );
   }
-  
 }

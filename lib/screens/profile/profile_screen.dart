@@ -2,30 +2,44 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:typetalk/routes/app_routes.dart';
+import 'package:typetalk/controllers/auth_controller.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final authController = Get.find<AuthController>();
+    
     return Scaffold(
       backgroundColor: const Color(0xFFF0F8FF), // Light blue background
       body: SafeArea(
         child: Column(
           children: [
-            // Header with title
+            // Header with title and logout button
             Padding(
-              padding: EdgeInsets.only(left: 24.w, top: 12.h, bottom: 16.h),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  '마이 프로필',
-                  style: TextStyle(
-                    fontSize: 20.sp,
-                    fontWeight: FontWeight.w800,
-                    color: const Color(0xFF1A1A1A),
+              padding: EdgeInsets.only(left: 24.w, top: 12.h, bottom: 16.h, right: 24.w),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '마이 프로필',
+                    style: TextStyle(
+                      fontSize: 20.sp,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF1A1A1A),
+                    ),
                   ),
-                ),
+                  IconButton(
+                    onPressed: () {
+                      authController.logout();
+                    },
+                    icon: const Icon(
+                      Icons.logout,
+                      color: Color(0xFF6C757D),
+                    ),
+                  ),
+                ],
               ),
             ),
             
@@ -40,33 +54,41 @@ class ProfileScreen extends StatelessWidget {
                       width: double.infinity,
                       padding: EdgeInsets.all(20.w),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Colors.transparent,
                         borderRadius: BorderRadius.circular(18.r),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.06),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
                       ),
                       child: Column(
                         children: [
-                          // Profile Picture
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(12.r),
-                            child: Image.asset(
-                              'assets/images/Profile.png',
-                              width: 68.w,
-                              height: 68.h,
-                              fit: BoxFit.cover,
+                          // Profile Icon
+                          Container(
+                            width: 80.w,
+                            height: 80.w,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16.r),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.blue.withOpacity(0.1),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(14.r),
+                              child: Image.asset(
+                                'assets/images/_icon_profile.png',
+                                width: 60.w,
+                                height: 60.w,
+                                fit: BoxFit.contain,
+                              ),
                             ),
                           ),
-                          SizedBox(height: 12.h),
+                          SizedBox(height: 16.h),
                           
                           // User Name
-                          Text(
-                            '김수한무거북이와두무리',
+                          Obx(() => Text(
+                            authController.currentUserName ?? '사용자',
                             style: TextStyle(
                               fontSize: 18.sp,
                               fontWeight: FontWeight.w700,
@@ -74,29 +96,41 @@ class ProfileScreen extends StatelessWidget {
                               height: 1.2,
                             ),
                             textAlign: TextAlign.center,
-                          ),
+                          )),
                           SizedBox(height: 8.h),
                           
                           // Email
-                          Text(
-                            '이메일: user@example.com',
+                          Obx(() => Text(
+                            '이메일: ${authController.currentUserEmail ?? ''}',
                             style: TextStyle(
                               fontSize: 13.sp,
                               color: const Color(0xFF6C757D),
                               height: 1.3,
                             ),
-                          ),
+                          )),
                           SizedBox(height: 4.h),
                           
                           // Join Date
-                          Text(
-                            '가입일: 2024.03.21',
-                            style: TextStyle(
-                              fontSize: 13.sp,
-                              color: const Color(0xFF6C757D),
-                              height: 1.3,
-                            ),
-                          ),
+                          Obx(() {
+                            final createdAt = authController.userProfile['createdAt'];
+                            String joinDate = '2024.03.21'; // 기본값
+                            if (createdAt != null) {
+                              try {
+                                final date = (createdAt as dynamic).toDate();
+                                joinDate = '${date.year}.${date.month.toString().padLeft(2, '0')}.${date.day.toString().padLeft(2, '0')}';
+                              } catch (e) {
+                                print('날짜 변환 오류: $e');
+                              }
+                            }
+                            return Text(
+                              '가입일: $joinDate',
+                              style: TextStyle(
+                                fontSize: 13.sp,
+                                color: const Color(0xFF6C757D),
+                                height: 1.3,
+                              ),
+                            );
+                          }),
                           SizedBox(height: 16.h),
                           
                           // Edit Information Button
@@ -176,14 +210,14 @@ class ProfileScreen extends StatelessWidget {
                               color: const Color(0xFF1A1A1A),
                             ),
                           ),
-                          Text(
-                            '3회',
+                          Obx(() => Text(
+                            '${authController.mbtiTestCount}회',
                             style: TextStyle(
                               fontSize: 15.sp,
                               fontWeight: FontWeight.w600,
                               color: const Color(0xFF1A1A1A),
                             ),
-                          ),
+                          )),
                         ],
                       ),
                     ),

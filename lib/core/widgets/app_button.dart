@@ -4,10 +4,11 @@ import 'package:typetalk/core/theme/app_text_styles.dart';
 
 class AppButton extends StatelessWidget {
   final String text;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final bool isSecondary;
   final bool isFullWidth;
   final bool isDisabled;
+  final bool loading;
 
   const AppButton({
     Key? key,
@@ -16,14 +17,17 @@ class AppButton extends StatelessWidget {
     this.isSecondary = false,
     this.isFullWidth = false,
     this.isDisabled = false,
+    this.loading = false,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final isButtonDisabled = isDisabled || loading || onPressed == null;
+    
     return SizedBox(
       width: isFullWidth ? double.infinity : null,
       child: ElevatedButton(
-        onPressed: isDisabled ? null : onPressed,
+        onPressed: isButtonDisabled ? null : onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: isSecondary ? AppColors.secondary : AppColors.primary,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -32,10 +36,19 @@ class AppButton extends StatelessWidget {
           ),
           elevation: 0,
         ),
-        child: Text(
-          text,
-          style: AppTextStyles.button,
-        ),
+        child: loading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : Text(
+                text,
+                style: AppTextStyles.button,
+              ),
       ),
     );
   }

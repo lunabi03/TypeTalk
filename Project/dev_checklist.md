@@ -31,9 +31,9 @@
     - [ ] Firebase 콘솔에서 프로젝트 생성 및 앱 등록(Android/iOS)
     - [ ] GoogleService-Info.plist, google-services.json 연동
     - [ ] 필수 패키지 설치 및 Firebase 초기화
-- [ ] 인증(회원가입/로그인) 기능
-    - [ ] Firebase Authentication(이메일/비밀번호) 연동
-    - [ ] 소셜 로그인(Google, Apple 등) 연동
+- [✔] 인증(회원가입/로그인) 기능
+    - [✔] Firebase Authentication(이메일/비밀번호) 연동
+    - [✔] 소셜 로그인(Google, Apple 등) 연동
     - [ ] 인증 상태 관리 및 자동 로그인 처리
     - [ ] 회원 정보 Firestore/Realtime Database에 저장
 - [ ] 프로필/매칭/추천 데이터 관리

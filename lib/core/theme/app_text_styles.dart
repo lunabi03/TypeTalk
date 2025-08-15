@@ -41,4 +41,11 @@ class AppTextStyles {
     fontWeight: FontWeight.w500,
     color: Colors.white,
   );
+
+  // 호환성을 위한 별칭들
+  static TextStyle get heading1 => h1;
+  static TextStyle get heading2 => h2;
+  static TextStyle get heading3 => h3;
+  static TextStyle get body1 => body;
+  static TextStyle get body2 => caption;
 }

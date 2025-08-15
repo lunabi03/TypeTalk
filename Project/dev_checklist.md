@@ -34,8 +34,8 @@
 - [✔] 인증(회원가입/로그인) 기능
     - [✔] Firebase Authentication(이메일/비밀번호) 연동
     - [✔] 소셜 로그인(Google, Apple 등) 연동
-    - [ ] 인증 상태 관리 및 자동 로그인 처리
-    - [ ] 회원 정보 Firestore/Realtime Database에 저장
+    - [✔] 인증 상태 관리 및 자동 로그인 처리
+    - [✔] 회원 정보 Firestore/Realtime Database에 저장
 - [ ] 프로필/매칭/추천 데이터 관리
     - [ ] Firestore/Realtime Database 구조 설계
     - [ ] 사용자 프로필 데이터 CRUD 구현

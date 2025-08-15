@@ -11,11 +11,16 @@ import 'package:typetalk/screens/result/result_screen.dart';
 import 'package:typetalk/screens/start/start_screen.dart';
 import 'package:typetalk/services/auth_service.dart';
 import 'package:typetalk/controllers/auth_controller.dart';
+import 'package:typetalk/middleware/auth_middleware.dart';
+import 'package:typetalk/services/firestore_service.dart';
+import 'package:typetalk/services/user_repository.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // 서비스 및 컨트롤러 등록
+  // 서비스 및 컨트롤러 등록 (의존성 순서 중요)
+  Get.put(DemoFirestoreService());
+  Get.put(UserRepository());
   Get.put(AuthService());
   Get.put(AuthController());
   
@@ -41,13 +46,41 @@ class MyApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         initialRoute: AppRoutes.start,
         getPages: [
-          GetPage(name: AppRoutes.login, page: () => const LoginScreen()),
-          GetPage(name: AppRoutes.signup, page: () => const SignupScreen()),
-          GetPage(name: AppRoutes.start, page: () => const StartScreen()),
-          GetPage(name: AppRoutes.question, page: () => const QuestionScreen()),
-          GetPage(name: AppRoutes.result, page: () => const ResultScreen()),
-          GetPage(name: AppRoutes.profile, page: () => const ProfileScreen()),
-          GetPage(name: AppRoutes.chat, page: () => const ChatScreen()),
+          GetPage(
+            name: AppRoutes.login, 
+            page: () => const LoginScreen(),
+            middlewares: [GuestMiddleware()],
+          ),
+          GetPage(
+            name: AppRoutes.signup, 
+            page: () => const SignupScreen(),
+            middlewares: [GuestMiddleware()],
+          ),
+          GetPage(
+            name: AppRoutes.start, 
+            page: () => const StartScreen(),
+            middlewares: [SessionMiddleware()],
+          ),
+          GetPage(
+            name: AppRoutes.question, 
+            page: () => const QuestionScreen(),
+            middlewares: [SessionMiddleware(), AuthMiddleware()],
+          ),
+          GetPage(
+            name: AppRoutes.result, 
+            page: () => const ResultScreen(),
+            middlewares: [SessionMiddleware(), AuthMiddleware()],
+          ),
+          GetPage(
+            name: AppRoutes.profile, 
+            page: () => const ProfileScreen(),
+            middlewares: [SessionMiddleware(), AuthMiddleware()],
+          ),
+          GetPage(
+            name: AppRoutes.chat, 
+            page: () => const ChatScreen(),
+            middlewares: [SessionMiddleware(), AuthMiddleware()],
+          ),
         ],
       ),
     );

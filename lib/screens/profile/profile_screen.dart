@@ -3,6 +3,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:typetalk/routes/app_routes.dart';
 import 'package:typetalk/controllers/auth_controller.dart';
+import 'package:typetalk/controllers/profile_controller.dart';
+import 'package:typetalk/core/theme/app_colors.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -10,6 +12,7 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authController = Get.find<AuthController>();
+    final profileController = Get.put(ProfileController());
     
     return Scaffold(
       backgroundColor: const Color(0xFFF0F8FF), // Light blue background
@@ -30,14 +33,41 @@ class ProfileScreen extends StatelessWidget {
                       color: const Color(0xFF1A1A1A),
                     ),
                   ),
-                  IconButton(
-                    onPressed: () {
-                      authController.logout();
-                    },
-                    icon: const Icon(
-                      Icons.logout,
-                      color: Color(0xFF6C757D),
-                    ),
+                  Row(
+                    children: [
+                      // 새로고침 버튼
+                      IconButton(
+                        onPressed: () {
+                          profileController.refreshProfile();
+                          authController.refreshProfile();
+                        },
+                        icon: const Icon(
+                          Icons.refresh,
+                          color: Color(0xFF007AFF),
+                        ),
+                        tooltip: '프로필 새로고침',
+                      ),
+                      // 디버그 버튼 (실제 Firebase 데이터 확인)
+                      IconButton(
+                        onPressed: () {
+                          authController.debugCheckUserData();
+                        },
+                        icon: const Icon(
+                          Icons.cloud_done,
+                          color: Color(0xFF007AFF),
+                        ),
+                        tooltip: 'Firebase 데이터 확인',
+                      ),
+                      IconButton(
+                        onPressed: () {
+                          authController.logout();
+                        },
+                        icon: const Icon(
+                          Icons.logout,
+                          color: Color(0xFF6C757D),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -88,7 +118,7 @@ class ProfileScreen extends StatelessWidget {
                           
                           // User Name
                           Obx(() => Text(
-                            authController.currentUserName ?? '사용자',
+                            authController.userName ?? '사용자',
                             style: TextStyle(
                               fontSize: 18.sp,
                               fontWeight: FontWeight.w700,
@@ -135,24 +165,34 @@ class ProfileScreen extends StatelessWidget {
                           
                           // Edit Information Button
                           Center(
-                            child: Container(
-                              width: 70.w,
-                              height: 32.h,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16.r),
-                                border: Border.all(
-                                  color: const Color(0xFFDEE2E6),
-                                  width: 1.2,
+                            child: GestureDetector(
+                              onTap: () => Get.toNamed('/profile/edit'),
+                              child: Container(
+                                width: 100.w,
+                                height: 36.h,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16.r),
+                                  border: Border.all(
+                                    color: const Color(0xFFDEE2E6),
+                                    width: 1.2,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.05),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  '내 정보 수정',
-                                  style: TextStyle(
-                                    fontSize: 10.sp,
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF495057),
+                                child: Center(
+                                  child: Text(
+                                    '내 정보 수정',
+                                    style: TextStyle(
+                                      fontSize: 11.sp,
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFF495057),
+                                    ),
                                   ),
                                 ),
                               ),
@@ -183,44 +223,130 @@ class ProfileScreen extends StatelessWidget {
                     
                     SizedBox(height: 16.h),
                     
-                    // MBTI Test Completion Card
-                    Container(
-                      width: double.infinity,
-                      height: 88.h,
-                      padding: EdgeInsets.all(18.w),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(18.r),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.06),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    // Profile Statistics Cards
+                    Obx(() {
+                      final stats = profileController.profileStats;
+                      return Column(
                         children: [
-                          Text(
-                            'MBTI 테스트 완료',
-                            style: TextStyle(
-                              fontSize: 15.sp,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF1A1A1A),
+                          // MBTI Test Completion Card
+                          Container(
+                            width: double.infinity,
+                            height: 88.h,
+                            padding: EdgeInsets.all(18.w),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(18.r),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.06),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        'MBTI 테스트 완료',
+                                        style: TextStyle(
+                                          fontSize: 15.sp,
+                                          fontWeight: FontWeight.w600,
+                                          color: const Color(0xFF1A1A1A),
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      SizedBox(height: 4.h),
+                                      Text(
+                                        '현재 유형: ${authController.currentUserMBTI ?? "미완료"}',
+                                        style: TextStyle(
+                                          fontSize: 12.sp,
+                                          color: const Color(0xFF6C757D),
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                SizedBox(width: 12.w),
+                                Text(
+                                  '${stats['mbtiTestCount'] ?? 0}회',
+                                  style: TextStyle(
+                                    fontSize: 15.sp,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF1A1A1A),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          Obx(() => Text(
-                            '${authController.mbtiTestCount}회',
-                            style: TextStyle(
-                              fontSize: 15.sp,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF1A1A1A),
+                          
+                          SizedBox(height: 16.h),
+                          
+                          // Profile Completeness Card
+                          Container(
+                            width: double.infinity,
+                            padding: EdgeInsets.all(18.w),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(18.r),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.06),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                             ),
-                          )),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      '프로필 완성도',
+                                      style: TextStyle(
+                                        fontSize: 15.sp,
+                                        fontWeight: FontWeight.w600,
+                                        color: const Color(0xFF1A1A1A),
+                                      ),
+                                    ),
+                                    Text(
+                                      '${(profileController.profileCompleteness * 100).toInt()}%',
+                                      style: TextStyle(
+                                        fontSize: 15.sp,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF007AFF),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 12.h),
+                                LinearProgressIndicator(
+                                  value: profileController.profileCompleteness,
+                                  backgroundColor: const Color(0xFFE9ECEF),
+                                  valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF007AFF)),
+                                  minHeight: 6.h,
+                                ),
+                                SizedBox(height: 8.h),
+                                Text(
+                                  profileController.profileCompletenessMessage,
+                                  style: TextStyle(
+                                    fontSize: 12.sp,
+                                    color: const Color(0xFF6C757D),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ],
-                      ),
-                    ),
+                      );
+                    }),
                     
                     SizedBox(height: 16.h),
                   ],

@@ -1,0 +1,493 @@
+import 'package:get/get.dart';
+import 'package:flutter/material.dart';
+import 'package:typetalk/controllers/auth_controller.dart';
+import 'package:typetalk/services/user_repository.dart';
+import 'package:typetalk/models/user_model.dart';
+
+/// 사용자 프로필 관리를 위한 컨트롤러
+/// 프로필 CRUD 기능을 담당합니다.
+class ProfileController extends GetxController {
+  static ProfileController get instance => Get.find<ProfileController>();
+
+  final AuthController _authController = Get.find<AuthController>();
+  final UserRepository _userRepository = Get.find<UserRepository>();
+
+  // 프로필 편집 상태
+  RxBool isEditing = false.obs;
+  RxBool isLoading = false.obs;
+  RxBool isSaving = false.obs;
+
+  // 프로필 편집 폼 컨트롤러
+  final nameController = TextEditingController();
+  final bioController = TextEditingController();
+  final emailController = TextEditingController();
+
+  // 현재 사용자 모델
+  Rx<UserModel?> currentUser = Rx<UserModel?>(null);
+
+  // 프로필 이미지 URL
+  RxString profileImageUrl = ''.obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+    _loadCurrentUserProfile();
+  }
+
+  @override
+  void onClose() {
+    nameController.dispose();
+    bioController.dispose();
+    emailController.dispose();
+    super.onClose();
+  }
+
+  /// 현재 사용자 프로필 로드
+  Future<void> _loadCurrentUserProfile() async {
+    try {
+      isLoading.value = true;
+      
+      final uid = _authController.userId;
+      if (uid != null) {
+        final user = await readUserProfile(uid);
+        if (user != null) {
+          currentUser.value = user;
+          _updateFormControllers(user);
+        }
+      }
+    } catch (e) {
+      print('프로필 로드 오류: $e');
+      Get.snackbar('오류', '프로필 정보를 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// 폼 컨트롤러 업데이트
+  void _updateFormControllers(UserModel user) {
+    nameController.text = user.name;
+    bioController.text = user.bio ?? '';
+    emailController.text = user.email;
+    profileImageUrl.value = user.profileImageUrl ?? '';
+  }
+
+  /// 사용자 프로필 생성 (Create)
+  Future<bool> createUserProfile({
+    required String uid,
+    required String email,
+    required String name,
+    String? bio,
+    String? profileImageUrl,
+    String? mbtiType,
+    String? loginProvider,
+  }) async {
+    try {
+      isLoading.value = true;
+
+      final newUser = UserModel(
+        uid: uid,
+        email: email,
+        name: name,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        bio: bio,
+        profileImageUrl: profileImageUrl,
+        mbtiType: mbtiType,
+        loginProvider: loginProvider,
+        preferences: UserPreferences(),
+        stats: UserStats(lastLoginAt: DateTime.now()),
+      );
+
+      await _userRepository.createUser(newUser);
+      currentUser.value = newUser;
+      _updateFormControllers(newUser);
+
+      Get.snackbar(
+        '성공',
+        '프로필이 성공적으로 생성되었습니다.',
+        backgroundColor: Colors.green.withOpacity(0.1),
+        colorText: Colors.green,
+      );
+
+      return true;
+    } catch (e) {
+      print('프로필 생성 오류: $e');
+      Get.snackbar(
+        '오류',
+        '프로필 생성 중 오류가 발생했습니다: ${e.toString()}',
+        backgroundColor: Colors.red.withOpacity(0.1),
+        colorText: Colors.red,
+      );
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// 사용자 프로필 조회 (Read)
+  Future<UserModel?> readUserProfile(String uid) async {
+    try {
+      isLoading.value = true;
+      
+      final user = await _userRepository.getUser(uid);
+      if (user != null) {
+        currentUser.value = user;
+        return user;
+      } else {
+        print('사용자를 찾을 수 없습니다: $uid');
+        return null;
+      }
+    } catch (e) {
+      print('프로필 조회 오류: $e');
+      Get.snackbar(
+        '오류',
+        '프로필 정보를 조회하는 중 오류가 발생했습니다: ${e.toString()}',
+        backgroundColor: Colors.red.withOpacity(0.1),
+        colorText: Colors.red,
+      );
+      return null;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// 사용자 프로필 수정 (Update)
+  Future<bool> updateUserProfile({
+    String? name,
+    String? bio,
+    String? profileImageUrl,
+  }) async {
+    try {
+      isSaving.value = true;
+
+      final uid = _authController.userId;
+      if (uid == null) {
+        throw Exception('로그인된 사용자가 없습니다.');
+      }
+
+      final currentUserData = currentUser.value;
+      if (currentUserData == null) {
+        throw Exception('현재 사용자 정보를 찾을 수 없습니다.');
+      }
+
+      // 업데이트할 데이터 준비
+      final updatedUser = currentUserData.updateProfile(
+        name: name ?? nameController.text.trim(),
+        bio: bio ?? bioController.text.trim(),
+        profileImageUrl: profileImageUrl ?? this.profileImageUrl.value,
+      );
+
+      // Firestore 업데이트
+      await _userRepository.updateUser(updatedUser);
+
+      // 로컬 상태 업데이트
+      currentUser.value = updatedUser;
+      _updateFormControllers(updatedUser);
+
+      // AuthController도 업데이트
+      await _authController.refreshProfile();
+
+      Get.snackbar(
+        '성공',
+        '프로필이 성공적으로 업데이트되었습니다.',
+        backgroundColor: Colors.green.withOpacity(0.1),
+        colorText: Colors.green,
+      );
+
+      return true;
+    } catch (e) {
+      print('프로필 업데이트 오류: $e');
+      Get.snackbar(
+        '오류',
+        '프로필 업데이트 중 오류가 발생했습니다: ${e.toString()}',
+        backgroundColor: Colors.red.withOpacity(0.1),
+        colorText: Colors.red,
+      );
+      return false;
+    } finally {
+      isSaving.value = false;
+    }
+  }
+
+  /// 사용자 프로필 삭제 (Delete)
+  Future<bool> deleteUserProfile({bool confirmDelete = false}) async {
+    try {
+      if (!confirmDelete) {
+        // 삭제 확인 다이얼로그 표시
+        final shouldDelete = await _showDeleteConfirmDialog();
+        if (!shouldDelete) return false;
+      }
+
+      isLoading.value = true;
+
+      final uid = _authController.userId;
+      if (uid == null) {
+        throw Exception('로그인된 사용자가 없습니다.');
+      }
+
+      // Firestore에서 사용자 삭제
+      await _userRepository.deleteUser(uid);
+
+      // 로컬 상태 초기화
+      currentUser.value = null;
+      nameController.clear();
+      bioController.clear();
+      emailController.clear();
+      profileImageUrl.value = '';
+
+      // 로그아웃 처리
+      await _authController.logout();
+
+      Get.snackbar(
+        '완료',
+        '사용자 프로필이 삭제되었습니다.',
+        backgroundColor: Colors.orange.withOpacity(0.1),
+        colorText: Colors.orange,
+      );
+
+      return true;
+    } catch (e) {
+      print('프로필 삭제 오류: $e');
+      Get.snackbar(
+        '오류',
+        '프로필 삭제 중 오류가 발생했습니다: ${e.toString()}',
+        backgroundColor: Colors.red.withOpacity(0.1),
+        colorText: Colors.red,
+      );
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// 삭제 확인 다이얼로그
+  Future<bool> _showDeleteConfirmDialog() async {
+    final result = await Get.dialog<bool>(
+      AlertDialog(
+        title: const Text('프로필 삭제'),
+        content: const Text(
+          '정말로 프로필을 삭제하시겠습니까?\n\n'
+          '이 작업은 되돌릴 수 없으며, 모든 프로필 정보가 영구적으로 삭제됩니다.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Get.back(result: true),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+            child: const Text('삭제'),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
+  /// MBTI 테스트 결과 업데이트
+  Future<bool> updateMBTIResult(String mbtiType) async {
+    try {
+      isSaving.value = true;
+
+      final uid = _authController.userId;
+      if (uid == null) {
+        throw Exception('로그인된 사용자가 없습니다.');
+      }
+
+      await _userRepository.updateUserMBTI(uid, mbtiType);
+
+      // 프로필 새로고침
+      await _loadCurrentUserProfile();
+      await _authController.refreshProfile();
+
+      Get.snackbar(
+        '성공',
+        'MBTI 결과가 업데이트되었습니다: $mbtiType',
+        backgroundColor: Colors.green.withOpacity(0.1),
+        colorText: Colors.green,
+      );
+
+      return true;
+    } catch (e) {
+      print('MBTI 업데이트 오류: $e');
+      Get.snackbar(
+        '오류',
+        'MBTI 결과 업데이트 중 오류가 발생했습니다: ${e.toString()}',
+        backgroundColor: Colors.red.withOpacity(0.1),
+        colorText: Colors.red,
+      );
+      return false;
+    } finally {
+      isSaving.value = false;
+    }
+  }
+
+  /// 사용자 설정 업데이트
+  Future<bool> updateUserPreferences(UserPreferences preferences) async {
+    try {
+      isSaving.value = true;
+
+      final uid = _authController.userId;
+      if (uid == null) {
+        throw Exception('로그인된 사용자가 없습니다.');
+      }
+
+      await _userRepository.updateUserPreferences(uid, preferences);
+
+      // 프로필 새로고침
+      await _loadCurrentUserProfile();
+
+      Get.snackbar(
+        '성공',
+        '설정이 업데이트되었습니다.',
+        backgroundColor: Colors.green.withOpacity(0.1),
+        colorText: Colors.green,
+      );
+
+      return true;
+    } catch (e) {
+      print('설정 업데이트 오류: $e');
+      Get.snackbar(
+        '오류',
+        '설정 업데이트 중 오류가 발생했습니다: ${e.toString()}',
+        backgroundColor: Colors.red.withOpacity(0.1),
+        colorText: Colors.red,
+      );
+      return false;
+    } finally {
+      isSaving.value = false;
+    }
+  }
+
+  /// 프로필 편집 모드 토글
+  void toggleEditMode() {
+    isEditing.value = !isEditing.value;
+    
+    if (!isEditing.value) {
+      // 편집 취소 시 원래 값으로 복원
+      final user = currentUser.value;
+      if (user != null) {
+        _updateFormControllers(user);
+      }
+    }
+  }
+
+  /// 프로필 편집 저장
+  Future<void> saveProfileEdit() async {
+    final success = await updateUserProfile();
+    if (success) {
+      isEditing.value = false;
+    }
+  }
+
+  /// 프로필 정보 유효성 검증
+  bool validateProfileData() {
+    if (nameController.text.trim().isEmpty) {
+      Get.snackbar('오류', '이름을 입력해주세요.');
+      return false;
+    }
+
+    if (nameController.text.trim().length < 2) {
+      Get.snackbar('오류', '이름은 2자 이상 입력해주세요.');
+      return false;
+    }
+
+    if (bioController.text.length > 200) {
+      Get.snackbar('오류', '소개는 200자 이내로 입력해주세요.');
+      return false;
+    }
+
+    return true;
+  }
+
+  /// 프로필 새로고침
+  Future<void> refreshProfile() async {
+    await _loadCurrentUserProfile();
+  }
+
+  /// 다른 사용자 프로필 조회 (공개 정보만)
+  Future<UserModel?> getPublicUserProfile(String uid) async {
+    try {
+      final user = await _userRepository.getUser(uid);
+      return user;
+    } catch (e) {
+      print('공개 프로필 조회 오류: $e');
+      return null;
+    }
+  }
+
+  /// 사용자 검색
+  Future<List<UserModel>> searchUsers(String query) async {
+    try {
+      if (query.trim().isEmpty) return [];
+      
+      final users = await _userRepository.searchUsers(query);
+      return users;
+    } catch (e) {
+      print('사용자 검색 오류: $e');
+      return [];
+    }
+  }
+
+  /// MBTI별 사용자 조회
+  Future<List<UserModel>> getUsersByMBTI(String mbtiType) async {
+    try {
+      final users = await _userRepository.getUsersByMBTI(mbtiType);
+      return users;
+    } catch (e) {
+      print('MBTI별 사용자 조회 오류: $e');
+      return [];
+    }
+  }
+
+  /// 프로필 통계 정보
+  Map<String, dynamic> get profileStats {
+    final user = currentUser.value;
+    if (user == null) return {};
+
+    return {
+      'chatCount': user.stats.chatCount,
+      'friendCount': user.stats.friendCount,
+      'mbtiTestCount': user.mbtiTestCount,
+      'joinDate': user.createdAt,
+      'lastLogin': user.stats.lastLoginAt,
+    };
+  }
+
+  /// 프로필 완성도 계산
+  double get profileCompleteness {
+    final user = currentUser.value;
+    if (user == null) return 0.0;
+
+    double score = 0.0;
+    
+    // 기본 정보 (50%)
+    if (user.name.isNotEmpty) score += 20.0;
+    if (user.email.isNotEmpty) score += 20.0;
+    if (user.bio?.isNotEmpty == true) score += 10.0;
+    
+    // 추가 정보 (50%)
+    if (user.profileImageUrl?.isNotEmpty == true) score += 20.0;
+    if (user.mbtiType?.isNotEmpty == true) score += 30.0;
+
+    return score / 100.0;
+  }
+
+  /// 프로필 완성 상태 메시지
+  String get profileCompletenessMessage {
+    final completeness = profileCompleteness;
+    
+    if (completeness >= 1.0) {
+      return '프로필이 완성되었습니다! 🎉';
+    } else if (completeness >= 0.8) {
+      return '프로필이 거의 완성되었어요! 👍';
+    } else if (completeness >= 0.5) {
+      return '프로필을 더 완성해보세요! 📝';
+    } else {
+      return '프로필 정보를 입력해주세요! ✏️';
+    }
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "name": "typetalk-security-test",
+  "version": "1.0.0",
+  "description": "Firebase Security Rules Test for TypeTalk",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest test/firestore_security_test.js",
+    "test:watch": "jest test/firestore_security_test.js --watch",
+    "test:coverage": "jest test/firestore_security_test.js --coverage",
+    "emulator:start": "firebase emulators:start --only firestore,auth",
+    "emulator:test": "firebase emulators:exec --only firestore,auth 'npm test'",
+    "rules:validate": "firebase firestore:rules:validate",
+    "rules:deploy": "firebase deploy --only firestore:rules",
+    "rules:test": "firebase firestore:rules:test --test-file=test/firestore_security_test.js"
+  },
+  "keywords": [
+    "firebase",
+    "firestore",
+    "security",
+    "rules",
+    "testing",
+    "typetalk"
+  ],
+  "author": "TypeTalk Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@firebase/testing": "^0.20.11",
+    "jest": "^29.5.0",
+    "firebase-tools": "^12.4.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testTimeout": 30000,
+    "verbose": true,
+    "collectCoverageFrom": [
+      "test/**/*.js"
+    ],
+    "coverageDirectory": "coverage",
+    "coverageReporters": [
+      "text",
+      "lcov",
+      "html"
+    ]
+  }
+}

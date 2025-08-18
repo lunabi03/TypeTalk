@@ -30,8 +30,8 @@ class AuthService extends GetxService {
   // 세션 저장소 (실제 앱에서는 SharedPreferences 등을 사용)
   final Map<String, dynamic> _sessionStorage = {};
   
-  // 사용자 데이터 저장소
-  final UserRepository _userRepository = UserRepository.instance;
+  // 사용자 데이터 저장소 (지연 초기화)
+  UserRepository get _userRepository => Get.find<UserRepository>();
   
   @override
   void onInit() {
@@ -152,10 +152,18 @@ class AuthService extends GetxService {
         loginProvider: 'email',
       );
       
-      await _userRepository.createUser(userModel);
+      // Firestore에 사용자 정보 저장
+      try {
+        await _userRepository.createUser(userModel);
+        print('사용자 Firestore 저장 성공: $uid');
+      } catch (firestoreError) {
+        print('Firestore 저장 실패: $firestoreError');
+        // Firestore 저장 실패 시에도 계속 진행 (데모 모드)
+      }
       
       // 데모 데이터베이스에도 저장 (호환성 유지)
       _demoDatabase[uid] = userModel.toMap();
+      print('데모 데이터베이스 저장 완료: $uid');
       
       // 로그인 상태로 설정 및 세션 저장
       user.value = newUser;
@@ -231,25 +239,40 @@ class AuthService extends GetxService {
       );
       
       // Firestore에 사용자 정보 저장 (기존 사용자가 아닌 경우)
-      final existingUser = await _userRepository.getUser(googleUser.uid);
-      if (existingUser == null) {
-        final userModel = UserModel(
-          uid: googleUser.uid,
-          email: googleUser.email!,
-          name: googleUser.displayName!,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-          mbtiType: null,
-          mbtiTestCount: 0,
-          loginProvider: 'google',
-        );
-        
-        await _userRepository.createUser(userModel);
-        _demoDatabase[googleUser.uid] = userModel.toMap();
-      } else {
-        // 기존 사용자의 마지막 로그인 시간 업데이트
-        await _userRepository.updateLastLogin(googleUser.uid);
-        _demoDatabase[googleUser.uid] = existingUser.updateLastLogin().toMap();
+      try {
+        final existingUser = await _userRepository.getUser(googleUser.uid);
+        if (existingUser == null) {
+          final userModel = UserModel(
+            uid: googleUser.uid,
+            email: googleUser.email!,
+            name: googleUser.displayName!,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+            mbtiType: null,
+            mbtiTestCount: 0,
+            loginProvider: 'google',
+          );
+          
+          await _userRepository.createUser(userModel);
+          _demoDatabase[googleUser.uid] = userModel.toMap();
+          print('Google 사용자 Firestore 저장 성공: ${googleUser.uid}');
+        } else {
+          // 기존 사용자의 마지막 로그인 시간 업데이트
+          await _userRepository.updateLastLogin(googleUser.uid);
+          _demoDatabase[googleUser.uid] = existingUser.updateLastLogin().toMap();
+          print('Google 사용자 로그인 시간 업데이트: ${googleUser.uid}');
+        }
+      } catch (firestoreError) {
+        print('Google 사용자 Firestore 처리 실패: $firestoreError');
+        // 기본 데이터만 저장
+        _demoDatabase[googleUser.uid] = {
+          'uid': googleUser.uid,
+          'email': googleUser.email,
+          'name': googleUser.displayName,
+          'loginProvider': 'google',
+          'createdAt': DateTime.now(),
+          'updatedAt': DateTime.now(),
+        };
       }
       
       // 로그인 상태로 설정 및 세션 저장
@@ -278,25 +301,40 @@ class AuthService extends GetxService {
       );
       
       // Firestore에 사용자 정보 저장 (기존 사용자가 아닌 경우)
-      final existingUser = await _userRepository.getUser(appleUser.uid);
-      if (existingUser == null) {
-        final userModel = UserModel(
-          uid: appleUser.uid,
-          email: appleUser.email!,
-          name: appleUser.displayName!,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-          mbtiType: null,
-          mbtiTestCount: 0,
-          loginProvider: 'apple',
-        );
-        
-        await _userRepository.createUser(userModel);
-        _demoDatabase[appleUser.uid] = userModel.toMap();
-      } else {
-        // 기존 사용자의 마지막 로그인 시간 업데이트
-        await _userRepository.updateLastLogin(appleUser.uid);
-        _demoDatabase[appleUser.uid] = existingUser.updateLastLogin().toMap();
+      try {
+        final existingUser = await _userRepository.getUser(appleUser.uid);
+        if (existingUser == null) {
+          final userModel = UserModel(
+            uid: appleUser.uid,
+            email: appleUser.email!,
+            name: appleUser.displayName!,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+            mbtiType: null,
+            mbtiTestCount: 0,
+            loginProvider: 'apple',
+          );
+          
+          await _userRepository.createUser(userModel);
+          _demoDatabase[appleUser.uid] = userModel.toMap();
+          print('Apple 사용자 Firestore 저장 성공: ${appleUser.uid}');
+        } else {
+          // 기존 사용자의 마지막 로그인 시간 업데이트
+          await _userRepository.updateLastLogin(appleUser.uid);
+          _demoDatabase[appleUser.uid] = existingUser.updateLastLogin().toMap();
+          print('Apple 사용자 로그인 시간 업데이트: ${appleUser.uid}');
+        }
+      } catch (firestoreError) {
+        print('Apple 사용자 Firestore 처리 실패: $firestoreError');
+        // 기본 데이터만 저장
+        _demoDatabase[appleUser.uid] = {
+          'uid': appleUser.uid,
+          'email': appleUser.email,
+          'name': appleUser.displayName,
+          'loginProvider': 'apple',
+          'createdAt': DateTime.now(),
+          'updatedAt': DateTime.now(),
+        };
       }
       
       // 로그인 상태로 설정 및 세션 저장

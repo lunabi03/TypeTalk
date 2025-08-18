@@ -36,11 +36,11 @@
     - [✔] 소셜 로그인(Google, Apple 등) 연동
     - [✔] 인증 상태 관리 및 자동 로그인 처리
     - [✔] 회원 정보 Firestore/Realtime Database에 저장
-- [ ] 프로필/매칭/추천 데이터 관리
-    - [ ] Firestore/Realtime Database 구조 설계
-    - [ ] 사용자 프로필 데이터 CRUD 구현
-    - [ ] 매칭/추천 알고리즘 데이터 저장 및 조회
-    - [ ] 데이터 보안 규칙(Firebase Rules) 설정
+- [✔] 프로필/매칭/추천 데이터 관리
+    - [✔] Firestore/Realtime Database 구조 설계
+    - [✔] 사용자 프로필 데이터 CRUD 구현
+    - [✔] 매칭/추천 알고리즘 데이터 저장 및 조회
+    - [✔] 데이터 보안 규칙(Firebase Rules) 설정
 - [ ] 실시간 채팅 기능
     - [ ] 채팅방/메시지 데이터 구조 설계
     - [ ] 메시지 전송/수신 로직 구현 (Firestore/Realtime Database)

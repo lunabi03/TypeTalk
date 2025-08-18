@@ -48,4 +48,32 @@ class AppTextStyles {
   static TextStyle get heading3 => h3;
   static TextStyle get body1 => body;
   static TextStyle get body2 => caption;
+  
+  // 추가 스타일 정의
+  static TextStyle get titleMedium => GoogleFonts.roboto(
+    fontSize: 18,
+    fontWeight: FontWeight.w600,
+    color: AppColors.textPrimary,
+  );
+  
+  static TextStyle get headlineSmall => GoogleFonts.roboto(
+    fontSize: 22,
+    fontWeight: FontWeight.bold,
+    color: AppColors.textPrimary,
+  );
+  
+  static TextStyle get bodyMedium => GoogleFonts.roboto(
+    fontSize: 16,
+    color: AppColors.textPrimary,
+  );
+  
+  static TextStyle get bodySmall => GoogleFonts.roboto(
+    fontSize: 14,
+    color: AppColors.textSecondary,
+  );
+  
+  static TextStyle get bodyLarge => GoogleFonts.roboto(
+    fontSize: 18,
+    color: AppColors.textPrimary,
+  );
 }

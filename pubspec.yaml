@@ -13,6 +13,13 @@ dependencies:
   google_fonts: ^6.1.0
   flutter_screenutil: ^5.9.0
   get: ^4.6.6
+  
+  # Firebase (임시 비활성화)
+  # firebase_core: ^2.24.2
+  # firebase_auth: ^4.15.3
+  # cloud_firestore: ^4.13.6
+  # firebase_analytics: ^10.7.4
+  # firebase_crashlytics: ^3.4.9
 
 dev_dependencies:
   flutter_test:

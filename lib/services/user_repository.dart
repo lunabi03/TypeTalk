@@ -6,7 +6,7 @@ import 'package:typetalk/models/user_model.dart';
 class UserRepository extends GetxService {
   static UserRepository get instance => Get.find<UserRepository>();
 
-  final DemoFirestoreService _firestore = DemoFirestoreService.instance;
+  DemoFirestoreService get _firestore => Get.find<DemoFirestoreService>();
   static const String _collectionName = 'users';
 
   // 사용자 생성

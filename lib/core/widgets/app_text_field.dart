@@ -5,6 +5,7 @@ import 'package:typetalk/core/theme/app_text_styles.dart';
 class AppTextField extends StatelessWidget {
   final String? hint;
   final String? placeholder;
+  final String? label;
   final TextEditingController? controller;
   final bool isPassword;
   final bool obscureText;
@@ -17,6 +18,7 @@ class AppTextField extends StatelessWidget {
     Key? key,
     this.hint,
     this.placeholder,
+    this.label,
     this.controller,
     this.isPassword = false,
     this.obscureText = false,
@@ -28,39 +30,53 @@ class AppTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hintText = placeholder ?? hint;
+    final hintText = placeholder ?? hint ?? label;
     
-    return TextFormField(
-      controller: controller,
-      obscureText: obscureText || isPassword,
-      keyboardType: keyboardType,
-      validator: validator,
-      maxLines: maxLines,
-      style: AppTextStyles.body,
-      decoration: InputDecoration(
-        hintText: hintText,
-        hintStyle: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
-        suffixIcon: suffixIcon,
-        filled: true,
-        fillColor: Colors.white,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Colors.transparent),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (label != null) ...[
+          Text(
+            label!,
+            style: AppTextStyles.bodyMedium.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+        TextFormField(
+          controller: controller,
+          obscureText: obscureText || isPassword,
+          keyboardType: keyboardType,
+          validator: validator,
+          maxLines: maxLines,
+          style: AppTextStyles.body,
+          decoration: InputDecoration(
+            hintText: hintText,
+            hintStyle: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+            suffixIcon: suffixIcon,
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Colors.transparent),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: AppColors.textSecondary.withOpacity(0.3)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: AppColors.primary),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: AppColors.error),
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: AppColors.textSecondary.withOpacity(0.3)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppColors.primary),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppColors.error),
-        ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      ),
+      ],
     );
   }
 }

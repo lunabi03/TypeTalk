@@ -1,0 +1,330 @@
+rules_version = '2';
+
+// Firebase Firestore 보안 규칙
+// TypeTalk 앱의 데이터 보안을 위한 종합적인 규칙 설정
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ================================
+    // 글로벌 함수 정의
+    // ================================
+    
+    // 사용자 인증 확인
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // 본인 확인 (문서 소유자 확인)
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    // 관리자 권한 확인
+    function isAdmin() {
+      return isAuthenticated() && 
+             request.auth.token.admin == true;
+    }
+    
+    // 유효한 사용자 데이터 검증
+    function isValidUserData() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['uid', 'email', 'name', 'createdAt', 'updatedAt']) &&
+             data.uid is string &&
+             data.email is string &&
+             data.name is string &&
+             data.email.matches('.*@.*\\..*') &&
+             data.name.size() >= 2 &&
+             data.name.size() <= 50;
+    }
+    
+    // 유효한 MBTI 타입 확인
+    function isValidMBTI(mbtiType) {
+      return mbtiType == null || 
+             mbtiType in ['ENFP', 'INTJ', 'INFJ', 'ENFJ', 'ENTP', 'INFP', 
+                         'INTP', 'ENTJ', 'ISFJ', 'ESFJ', 'ISFP', 'ESFP', 
+                         'ISTJ', 'ESTJ', 'ISTP', 'ESTP'];
+    }
+    
+    // 프로필 이미지 URL 검증
+    function isValidProfileImageUrl(url) {
+      return url == null || 
+             (url is string && 
+              url.size() <= 500 &&
+              (url.matches('https://.*') || url.matches('http://.*')));
+    }
+    
+    // 타임스탬프 검증
+    function isValidTimestamp(timestamp) {
+      return timestamp is timestamp;
+    }
+    
+    // 점수 범위 검증 (0-100)
+    function isValidScore(score) {
+      return score is number && score >= 0 && score <= 100;
+    }
+    
+    // ================================
+    // 사용자 컬렉션 보안 규칙
+    // ================================
+    
+    match /users/{userId} {
+      // 읽기 권한: 인증된 사용자만 가능
+      allow read: if isAuthenticated();
+      
+      // 생성 권한: 본인 문서만 생성 가능
+      allow create: if isAuthenticated() &&
+                   isOwner(userId) &&
+                   isValidUserData() &&
+                   isValidMBTI(request.resource.data.get('mbtiType', null)) &&
+                   isValidProfileImageUrl(request.resource.data.get('profileImageUrl', null)) &&
+                   isValidTimestamp(request.resource.data.createdAt) &&
+                   isValidTimestamp(request.resource.data.updatedAt);
+      
+      // 수정 권한: 본인 문서만 수정 가능 + 특정 필드만 수정 허용
+      allow update: if isAuthenticated() &&
+                   isOwner(userId) &&
+                   // 수정 불가능한 필드 보호
+                   !request.resource.data.diff(resource.data).affectedKeys()
+                     .hasAny(['uid', 'email', 'createdAt']) &&
+                   // 필수 필드 존재 확인
+                   request.resource.data.keys().hasAll(['uid', 'email', 'name']) &&
+                   // 데이터 유효성 검증
+                   isValidMBTI(request.resource.data.get('mbtiType', null)) &&
+                   isValidProfileImageUrl(request.resource.data.get('profileImageUrl', null)) &&
+                   isValidTimestamp(request.resource.data.updatedAt);
+      
+      // 삭제 권한: 본인 문서만 삭제 가능
+      allow delete: if isAuthenticated() &&
+                   isOwner(userId);
+    }
+    
+    // ================================
+    // 추천 컬렉션 보안 규칙
+    // ================================
+    
+    match /recommendations/{recommendationId} {
+      // 읽기 권한: 추천 받는 사용자만 가능
+      allow read: if isAuthenticated() &&
+                 isOwner(resource.data.userId);
+      
+      // 생성 권한: 시스템에서만 생성 (서버 사이드)
+      allow create: if isAuthenticated() &&
+                   isOwner(request.resource.data.userId) &&
+                   request.resource.data.keys().hasAll(['recommendationId', 'userId', 'type', 'targetId', 'score', 'reasons', 'createdAt']) &&
+                   request.resource.data.type in ['user', 'chat'] &&
+                   isValidScore(request.resource.data.score) &&
+                   request.resource.data.reasons is list &&
+                   isValidTimestamp(request.resource.data.createdAt);
+      
+      // 수정 권한: 추천 받는 사용자가 상태 변경만 가능
+      allow update: if isAuthenticated() &&
+                   isOwner(resource.data.userId) &&
+                   // 수정 가능한 필드만 허용 (viewedAt, actionTaken)
+                   request.resource.data.diff(resource.data).affectedKeys()
+                     .hasOnly(['viewedAt', 'actionTaken']) &&
+                   // actionTaken 값 검증
+                   (request.resource.data.get('actionTaken', null) == null ||
+                    request.resource.data.actionTaken in ['accepted', 'rejected', 'ignored']);
+      
+      // 삭제 권한: 관리자만 가능
+      allow delete: if isAdmin();
+    }
+    
+    // ================================
+    // 채팅 컬렉션 보안 규칙
+    // ================================
+    
+    match /chats/{chatId} {
+      // 읽기 권한: 모든 인증된 사용자 (채팅방 탐색용)
+      allow read: if isAuthenticated();
+      
+      // 생성 권한: 인증된 사용자가 자신을 참여자로 포함한 채팅방 생성
+      allow create: if isAuthenticated() &&
+                   request.resource.data.createdBy == request.auth.uid &&
+                   request.resource.data.participants.hasAll([request.auth.uid]) &&
+                   request.resource.data.keys().hasAll(['chatId', 'type', 'title', 'createdBy', 'createdAt', 'updatedAt', 'participants']) &&
+                   request.resource.data.type in ['group', 'private'] &&
+                   request.resource.data.title is string &&
+                   request.resource.data.title.size() >= 1 &&
+                   request.resource.data.title.size() <= 100 &&
+                   isValidTimestamp(request.resource.data.createdAt) &&
+                   isValidTimestamp(request.resource.data.updatedAt);
+      
+      // 수정 권한: 채팅방 참여자만 가능 + 제한적 수정
+      allow update: if isAuthenticated() &&
+                   request.auth.uid in resource.data.participants &&
+                   // 기본 정보 보호
+                   !request.resource.data.diff(resource.data).affectedKeys()
+                     .hasAny(['chatId', 'createdBy', 'createdAt']) &&
+                   // 참여자 변경 시 본인만 추가/제거 가능
+                   (request.resource.data.participants == resource.data.participants ||
+                    (request.resource.data.participants.toSet().difference(resource.data.participants.toSet()) == [request.auth.uid].toSet() ||
+                     resource.data.participants.toSet().difference(request.resource.data.participants.toSet()) == [request.auth.uid].toSet()));
+      
+      // 삭제 권한: 채팅방 생성자 또는 관리자만 가능
+      allow delete: if isAuthenticated() &&
+                   (request.auth.uid == resource.data.createdBy || isAdmin());
+    }
+    
+    // ================================
+    // 메시지 컬렉션 보안 규칙
+    // ================================
+    
+    match /messages/{messageId} {
+      // 읽기 권한: 해당 채팅방 참여자만 가능
+      allow read: if isAuthenticated() &&
+                 exists(/databases/$(database)/documents/chats/$(resource.data.chatId)) &&
+                 request.auth.uid in get(/databases/$(database)/documents/chats/$(resource.data.chatId)).data.participants;
+      
+      // 생성 권한: 채팅방 참여자만 가능
+      allow create: if isAuthenticated() &&
+                   request.resource.data.senderId == request.auth.uid &&
+                   exists(/databases/$(database)/documents/chats/$(request.resource.data.chatId)) &&
+                   request.auth.uid in get(/databases/$(database)/documents/chats/$(request.resource.data.chatId)).data.participants &&
+                   request.resource.data.keys().hasAll(['messageId', 'chatId', 'senderId', 'content', 'type', 'createdAt']) &&
+                   request.resource.data.type in ['text', 'image', 'file'] &&
+                   request.resource.data.content is string &&
+                   request.resource.data.content.size() >= 1 &&
+                   request.resource.data.content.size() <= 1000 &&
+                   isValidTimestamp(request.resource.data.createdAt);
+      
+      // 수정 권한: 메시지 작성자만 가능 + 제한적 수정
+      allow update: if isAuthenticated() &&
+                   isOwner(resource.data.senderId) &&
+                   // 수정 가능한 필드만 허용
+                   request.resource.data.diff(resource.data).affectedKeys()
+                     .hasOnly(['content', 'updatedAt', 'status']) &&
+                   // 내용 길이 제한
+                   request.resource.data.content.size() >= 1 &&
+                   request.resource.data.content.size() <= 1000;
+      
+      // 삭제 권한: 메시지 작성자 또는 채팅방 생성자, 관리자만 가능
+      allow delete: if isAuthenticated() &&
+                   (isOwner(resource.data.senderId) ||
+                    request.auth.uid == get(/databases/$(database)/documents/chats/$(resource.data.chatId)).data.createdBy ||
+                    isAdmin());
+    }
+    
+    // ================================
+    // MBTI 테스트 결과 컬렉션 보안 규칙
+    // ================================
+    
+    match /mbti_tests/{testId} {
+      // 읽기 권한: 테스트 수행자만 가능
+      allow read: if isAuthenticated() &&
+                 isOwner(resource.data.userId);
+      
+      // 생성 권한: 본인 테스트 결과만 생성 가능
+      allow create: if isAuthenticated() &&
+                   isOwner(request.resource.data.userId) &&
+                   request.resource.data.keys().hasAll(['testId', 'userId', 'result', 'completedAt']) &&
+                   isValidMBTI(request.resource.data.result) &&
+                   isValidTimestamp(request.resource.data.completedAt) &&
+                   // 점수 데이터 검증
+                   request.resource.data.get('scores', {}).keys().hasAll(['E_I', 'S_N', 'T_F', 'J_P']) &&
+                   request.resource.data.scores.E_I is number &&
+                   request.resource.data.scores.S_N is number &&
+                   request.resource.data.scores.T_F is number &&
+                   request.resource.data.scores.J_P is number;
+      
+      // 수정 권한: 허용하지 않음 (테스트 결과는 불변)
+      allow update: if false;
+      
+      // 삭제 권한: 본인 또는 관리자만 가능
+      allow delete: if isAuthenticated() &&
+                   (isOwner(resource.data.userId) || isAdmin());
+    }
+    
+    // ================================
+    // 시스템 설정 컬렉션 보안 규칙
+    // ================================
+    
+    match /system_config/{configId} {
+      // 읽기 권한: 모든 인증된 사용자
+      allow read: if isAuthenticated();
+      
+      // 쓰기 권한: 관리자만 가능
+      allow write: if isAdmin();
+    }
+    
+    // ================================
+    // 사용자 활동 로그 컬렉션 보안 규칙
+    // ================================
+    
+    match /user_activity_logs/{logId} {
+      // 읽기 권한: 본인 로그만 조회 가능
+      allow read: if isAuthenticated() &&
+                 isOwner(resource.data.userId);
+      
+      // 생성 권한: 본인 활동만 기록 가능
+      allow create: if isAuthenticated() &&
+                   isOwner(request.resource.data.userId) &&
+                   request.resource.data.keys().hasAll(['logId', 'userId', 'action', 'timestamp']) &&
+                   request.resource.data.action is string &&
+                   isValidTimestamp(request.resource.data.timestamp);
+      
+      // 수정/삭제 권한: 허용하지 않음 (로그는 불변)
+      allow update, delete: if false;
+    }
+    
+    // ================================
+    // 신고 컬렉션 보안 규칙
+    // ================================
+    
+    match /reports/{reportId} {
+      // 읽기 권한: 신고자 또는 관리자만 가능
+      allow read: if isAuthenticated() &&
+                 (isOwner(resource.data.reporterId) || isAdmin());
+      
+      // 생성 권한: 인증된 사용자가 신고 가능
+      allow create: if isAuthenticated() &&
+                   isOwner(request.resource.data.reporterId) &&
+                   request.resource.data.keys().hasAll(['reportId', 'reporterId', 'targetType', 'targetId', 'reason', 'createdAt']) &&
+                   request.resource.data.targetType in ['user', 'message', 'chat'] &&
+                   request.resource.data.reason is string &&
+                   request.resource.data.reason.size() >= 10 &&
+                   request.resource.data.reason.size() <= 500 &&
+                   isValidTimestamp(request.resource.data.createdAt);
+      
+      // 수정 권한: 관리자만 가능 (처리 상태 업데이트)
+      allow update: if isAdmin();
+      
+      // 삭제 권한: 관리자만 가능
+      allow delete: if isAdmin();
+    }
+    
+    // ================================
+    // 차단 목록 컬렉션 보안 규칙
+    // ================================
+    
+    match /blocked_users/{blockId} {
+      // 읽기 권한: 차단한 사용자만 가능
+      allow read: if isAuthenticated() &&
+                 isOwner(resource.data.blockerId);
+      
+      // 생성 권한: 본인이 다른 사용자 차단 가능
+      allow create: if isAuthenticated() &&
+                   isOwner(request.resource.data.blockerId) &&
+                   request.resource.data.blockerId != request.resource.data.blockedUserId &&
+                   request.resource.data.keys().hasAll(['blockId', 'blockerId', 'blockedUserId', 'createdAt']) &&
+                   isValidTimestamp(request.resource.data.createdAt);
+      
+      // 수정 권한: 허용하지 않음
+      allow update: if false;
+      
+      // 삭제 권한: 차단한 사용자만 가능 (차단 해제)
+      allow delete: if isAuthenticated() &&
+                   isOwner(resource.data.blockerId);
+    }
+    
+    // ================================
+    // 기본 거부 규칙
+    // ================================
+    
+    // 명시적으로 허용되지 않은 모든 요청은 거부
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -409,10 +409,8 @@ class _SignupScreenState extends State<SignupScreen> {
     });
 
     try {
-      final result = await _authController.signInWithGoogle();
-      if (result != null) {
-        Get.offAllNamed(AppRoutes.start);
-      }
+      await _authController.signInWithGoogle();
+      // signInWithGoogle이 성공하면 자동으로 리다이렉트됨
     } catch (e) {
       Get.snackbar('오류', 'Google 로그인 중 오류가 발생했습니다.');
     } finally {
@@ -433,10 +431,8 @@ class _SignupScreenState extends State<SignupScreen> {
     });
 
     try {
-      final result = await _authController.signInWithApple();
-      if (result != null) {
-        Get.offAllNamed(AppRoutes.start);
-      }
+      await _authController.signInWithApple();
+      // signInWithApple이 성공하면 자동으로 리다이렉트됨
     } catch (e) {
       Get.snackbar('오류', 'Apple 로그인 중 오류가 발생했습니다.');
     } finally {

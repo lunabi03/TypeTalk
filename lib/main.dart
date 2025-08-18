@@ -1,31 +1,50 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+// import 'package:firebase_core/firebase_core.dart';
+// import 'firebase_options.dart';
 import 'package:typetalk/routes/app_routes.dart';
 import 'package:typetalk/screens/auth/login_screen.dart';
 import 'package:typetalk/screens/auth/signup_screen.dart';
 import 'package:typetalk/screens/chat/chat_screen.dart';
 import 'package:typetalk/screens/profile/profile_screen.dart';
+import 'package:typetalk/screens/profile/profile_edit_screen.dart';
+import 'package:typetalk/screens/recommendation/recommendation_screen.dart';
 import 'package:typetalk/screens/question/question_screen.dart';
 import 'package:typetalk/screens/result/result_screen.dart';
 import 'package:typetalk/screens/start/start_screen.dart';
+
+// 실제 Firebase 서비스들 (임시 비활성화)
+// import 'package:typetalk/services/real_firebase_service.dart';
+// import 'package:typetalk/services/real_user_repository.dart';
+// import 'package:typetalk/services/real_auth_service.dart';
+
+// 데모 서비스들 (활성화)
 import 'package:typetalk/services/auth_service.dart';
-import 'package:typetalk/controllers/auth_controller.dart';
-import 'package:typetalk/middleware/auth_middleware.dart';
 import 'package:typetalk/services/firestore_service.dart';
 import 'package:typetalk/services/user_repository.dart';
+import 'package:typetalk/services/recommendation_service.dart';
+
+import 'package:typetalk/controllers/auth_controller.dart';
+import 'package:typetalk/middleware/auth_middleware.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // 서비스 및 컨트롤러 등록 (의존성 순서 중요)
+  // Firebase 비활성화 - 데모 모드로 실행
+  print('데모 모드로 실행합니다.');
+  
+  // 데모 서비스들 등록 (Firebase 없이 로컬에서 동작)
   Get.put(DemoFirestoreService());
   Get.put(UserRepository());
   Get.put(AuthService());
+  Get.put(RecommendationService());
   Get.put(AuthController());
   
   runApp(const MyApp());
 }
+
+// MyApp 클래스
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -74,6 +93,16 @@ class MyApp extends StatelessWidget {
           GetPage(
             name: AppRoutes.profile, 
             page: () => const ProfileScreen(),
+            middlewares: [SessionMiddleware(), AuthMiddleware()],
+          ),
+          GetPage(
+            name: AppRoutes.profileEdit, 
+            page: () => const ProfileEditScreen(),
+            middlewares: [SessionMiddleware(), AuthMiddleware()],
+          ),
+          GetPage(
+            name: AppRoutes.recommendation, 
+            page: () => const RecommendationScreen(),
             middlewares: [SessionMiddleware(), AuthMiddleware()],
           ),
           GetPage(

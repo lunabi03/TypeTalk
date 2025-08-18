@@ -9,6 +9,8 @@ class AppButton extends StatelessWidget {
   final bool isFullWidth;
   final bool isDisabled;
   final bool loading;
+  final Color? backgroundColor;
+  final Color? textColor;
 
   const AppButton({
     Key? key,
@@ -18,6 +20,8 @@ class AppButton extends StatelessWidget {
     this.isFullWidth = false,
     this.isDisabled = false,
     this.loading = false,
+    this.backgroundColor,
+    this.textColor,
   }) : super(key: key);
 
   @override
@@ -29,7 +33,7 @@ class AppButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: isButtonDisabled ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: isSecondary ? AppColors.secondary : AppColors.primary,
+          backgroundColor: backgroundColor ?? (isSecondary ? AppColors.secondary : AppColors.primary),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
@@ -47,7 +51,9 @@ class AppButton extends StatelessWidget {
               )
             : Text(
                 text,
-                style: AppTextStyles.button,
+                style: AppTextStyles.button.copyWith(
+                  color: textColor ?? Colors.white,
+                ),
               ),
       ),
     );

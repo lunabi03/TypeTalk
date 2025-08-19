@@ -24,6 +24,9 @@ import 'package:typetalk/services/auth_service.dart';
 import 'package:typetalk/services/firestore_service.dart';
 import 'package:typetalk/services/user_repository.dart';
 import 'package:typetalk/services/recommendation_service.dart';
+import 'package:typetalk/services/chat_stats_service.dart';
+import 'package:typetalk/services/chat_search_service.dart';
+import 'package:typetalk/services/chat_notification_service.dart';
 
 import 'package:typetalk/controllers/auth_controller.dart';
 import 'package:typetalk/middleware/auth_middleware.dart';
@@ -39,6 +42,9 @@ void main() async {
   Get.put(UserRepository());
   Get.put(AuthService());
   Get.put(RecommendationService());
+  Get.put(ChatStatsService());
+  Get.put(ChatSearchService());
+  Get.put(ChatNotificationService());
   Get.put(AuthController());
   
   runApp(const MyApp());

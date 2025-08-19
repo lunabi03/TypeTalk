@@ -194,6 +194,7 @@ class DemoFirestoreService extends GetxService {
     _initializeUserSamples();
     _initializeChatSamples();
     _initializeMessageSamples();
+    _initializeNotificationSamples();
     _initializeMBTITestSamples();
     _initializeRecommendationSamples();
 
@@ -496,6 +497,75 @@ class DemoFirestoreService extends GetxService {
     }
   }
 
+  // 알림 샘플 데이터
+  void _initializeNotificationSamples() {
+    final now = DateTime.now();
+    
+    final sampleNotifications = [
+      {
+        'notificationId': 'notif-001',
+        'userId': 'demo-user-001',
+        'chatId': 'chat-enfp-001',
+        'messageId': 'msg-002',
+        'type': 'message',
+        'title': 'ESFJ 사용자님이 메시지를 보냈습니다',
+        'body': '와! 정말 좋은 아이디어네요! 참여하고 싶어요 😊',
+        'status': 'unread',
+        'createdAt': now.subtract(Duration(hours: 2)),
+        'readAt': null,
+        'dismissedAt': null,
+        'metadata': {
+          'imageUrl': null,
+          'actionUrl': null,
+          'customData': null,
+          'badgeCount': 1,
+        },
+      },
+      {
+        'notificationId': 'notif-002',
+        'userId': 'demo-user-001',
+        'chatId': 'chat-thinking-002',
+        'messageId': null,
+        'type': 'invite',
+        'title': 'INTJ 사용자님이 초대했습니다',
+        'body': '함수형 프로그래밍 채팅방에 초대되었습니다',
+        'status': 'unread',
+        'createdAt': now.subtract(Duration(days: 1)),
+        'readAt': null,
+        'dismissedAt': null,
+        'metadata': {
+          'imageUrl': null,
+          'actionUrl': null,
+          'customData': null,
+          'badgeCount': 1,
+        },
+      },
+      {
+        'notificationId': 'notif-003',
+        'userId': 'demo-user-002',
+        'chatId': 'chat-thinking-002',
+        'messageId': 'msg-003',
+        'type': 'reaction',
+        'title': 'ESFJ 사용자님이 반응했습니다',
+        'body': '👍 반응을 받았습니다',
+        'status': 'read',
+        'createdAt': now.subtract(Duration(days: 2)),
+        'readAt': now.subtract(Duration(days: 1)),
+        'dismissedAt': null,
+        'metadata': {
+          'imageUrl': null,
+          'actionUrl': null,
+          'customData': null,
+          'badgeCount': null,
+        },
+      }
+    ];
+
+    for (final notification in sampleNotifications) {
+      _documents['notifications/${notification['notificationId']}'] = notification;
+    }
+  }
+
   // MBTI 테스트 샘플 데이터
   void _initializeMBTITestSamples() {
     final now = DateTime.now();
@@ -651,6 +721,15 @@ class DemoFirestoreService extends GetxService {
   DemoCollectionReference collection(String path) {
     return DemoCollectionReference(path, this);
   }
+
+  // 주요 컬렉션들에 대한 getter
+  DemoCollectionReference get users => collection('users');
+  DemoCollectionReference get chats => collection('chats');
+  DemoCollectionReference get messages => collection('messages');
+  DemoCollectionReference get chatParticipants => collection('chatParticipants');
+  DemoCollectionReference get chatInvites => collection('chatInvites');
+  DemoCollectionReference get notifications => collection('notifications');
+  DemoCollectionReference get recommendations => collection('recommendations');
 
   // 문서 참조 가져오기
   DemoDocumentReference doc(String path) {

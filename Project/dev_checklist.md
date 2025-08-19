@@ -42,8 +42,9 @@
     - [✔] 매칭/추천 알고리즘 데이터 저장 및 조회
     - [✔] 데이터 보안 규칙(Firebase Rules) 설정
 - [ ] 실시간 채팅 기능
-    - [ ] 채팅방/메시지 데이터 구조 설계
-    - [ ] 메시지 전송/수신 로직 구현 (Firestore/Realtime Database)
+    - [x] 채팅방/메시지 데이터 구조 설계
+    - [ ] 메시지 전송    - [ ] 채팅방/메시지 데이터 구조 설계
+ Database)
     - [ ] 채팅 알림(푸시) 연동
     - [ ] 채팅 데이터 정합성 및 삭제 처리
 - [ ] 알림/푸시 기능
@@ -52,8 +53,25 @@
     - [ ] 이벤트 발생 시 푸시 알림 전송
     - [ ] 알림 수신 및 앱 내 처리
 
+- [✔] **채팅방/메시지 데이터 구조 설계 및 구현**
+  - [✔] ChatModel 개선 (통계 정보 추가, DateTime 파싱 수정)
+  - [✔] MessageModel 개선 (DateTime 파싱 수정)
+  - [✔] ChatParticipantModel 개선 (DateTime 파싱 수정)
+  - [✔] ChatInviteModel 개선 (DateTime 파싱 수정)
+  - [✔] ChatNotificationModel 생성 (알림 시스템)
+  - [✔] ChatSearchModel 생성 (검색 시스템)
+  - [✔] ChatStatsService 생성 (통계 관리)
+  - [✔] ChatSearchService 생성 (검색 관리)
+  - [✔] ChatNotificationService 생성 (알림 관리)
+  - [✔] FirestoreService 확장 (컬렉션 getter, 샘플 데이터)
+
 ## 5. 테스트 및 검증
-- [ ] **flutter analyze**로 코드 정적 분석 및 오류 사전 점검
+- [✔] **flutter analyze**로 코드 정적 분석 및 오류 사전 점검
+  - [✔] SearchStats 클래스에 const 생성자 추가
+  - [✔] NotificationMetadata 클래스에 const 생성자 추가
+  - [✔] ChatSearchService의 nullability 문제 수정
+  - [✔] 모든 서비스를 main.dart에 등록
+  - [✔] 빌드 오류 해결 및 성공적인 빌드 완료
 - [ ] 각 화면별 UI/UX 테스트
 - [ ] 주요 기능별 단위 테스트
 - [ ] 통합 테스트 및 시나리오 테스트

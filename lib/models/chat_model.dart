@@ -58,11 +58,23 @@ class ChatStats {
   final int messageCount;
   final int activeMembers;
   final DateTime lastActivity;
+  final int totalParticipants;
+  final int onlineParticipants;
+  final Map<String, int> messageTypeCount;
+  final Map<String, int> reactionCount;
+  final DateTime? firstMessageAt;
+  final DateTime? lastMessageAt;
 
   ChatStats({
     this.messageCount = 0,
     this.activeMembers = 0,
     required this.lastActivity,
+    this.totalParticipants = 0,
+    this.onlineParticipants = 0,
+    this.messageTypeCount = const {},
+    this.reactionCount = const {},
+    this.firstMessageAt,
+    this.lastMessageAt,
   });
 
   Map<String, dynamic> toMap() {
@@ -70,6 +82,12 @@ class ChatStats {
       'messageCount': messageCount,
       'activeMembers': activeMembers,
       'lastActivity': lastActivity,
+      'totalParticipants': totalParticipants,
+      'onlineParticipants': onlineParticipants,
+      'messageTypeCount': messageTypeCount,
+      'reactionCount': reactionCount,
+      'firstMessageAt': firstMessageAt,
+      'lastMessageAt': lastMessageAt,
     };
   }
 
@@ -77,22 +95,115 @@ class ChatStats {
     return ChatStats(
       messageCount: map['messageCount'] ?? 0,
       activeMembers: map['activeMembers'] ?? 0,
-      lastActivity: map['lastActivity'] is DateTime 
-          ? map['lastActivity'] 
-          : DateTime.now(),
+      lastActivity: _parseDateTime(map['lastActivity']),
+      totalParticipants: map['totalParticipants'] ?? 0,
+      onlineParticipants: map['onlineParticipants'] ?? 0,
+      messageTypeCount: map['messageTypeCount'] != null 
+          ? Map<String, int>.from(map['messageTypeCount'])
+          : {},
+      reactionCount: map['reactionCount'] != null 
+          ? Map<String, int>.from(map['reactionCount'])
+          : {},
+      firstMessageAt: _parseDateTime(map['firstMessageAt']),
+      lastMessageAt: _parseDateTime(map['lastMessageAt']),
     );
+  }
+
+  static DateTime _parseDateTime(dynamic value) {
+    if (value is DateTime) return value;
+    if (value is String) {
+      try {
+        return DateTime.parse(value);
+      } catch (e) {
+        return DateTime.now();
+      }
+    }
+    return DateTime.now();
   }
 
   ChatStats copyWith({
     int? messageCount,
     int? activeMembers,
     DateTime? lastActivity,
+    int? totalParticipants,
+    int? onlineParticipants,
+    Map<String, int>? messageTypeCount,
+    Map<String, int>? reactionCount,
+    DateTime? firstMessageAt,
+    DateTime? lastMessageAt,
   }) {
     return ChatStats(
       messageCount: messageCount ?? this.messageCount,
       activeMembers: activeMembers ?? this.activeMembers,
       lastActivity: lastActivity ?? this.lastActivity,
+      totalParticipants: totalParticipants ?? this.totalParticipants,
+      onlineParticipants: onlineParticipants ?? this.onlineParticipants,
+      messageTypeCount: messageTypeCount ?? this.messageTypeCount,
+      reactionCount: reactionCount ?? this.reactionCount,
+      firstMessageAt: firstMessageAt ?? this.firstMessageAt,
+      lastMessageAt: lastMessageAt ?? this.lastMessageAt,
     );
+  }
+
+  // 메시지 수 증가
+  ChatStats incrementMessageCount(String messageType) {
+    final newMessageTypeCount = Map<String, int>.from(messageTypeCount);
+    newMessageTypeCount[messageType] = (newMessageTypeCount[messageType] ?? 0) + 1;
+    
+    return copyWith(
+      messageCount: messageCount + 1,
+      lastActivity: DateTime.now(),
+      messageTypeCount: newMessageTypeCount,
+      firstMessageAt: firstMessageAt ?? DateTime.now(),
+      lastMessageAt: DateTime.now(),
+    );
+  }
+
+  // 참여자 수 업데이트
+  ChatStats updateParticipantCount(int total, int online) {
+    return copyWith(
+      totalParticipants: total,
+      onlineParticipants: online,
+      lastActivity: DateTime.now(),
+    );
+  }
+
+  // 반응 수 업데이트
+  ChatStats updateReactionCount(String emoji, int count) {
+    final newReactionCount = Map<String, int>.from(reactionCount);
+    newReactionCount[emoji] = count;
+    
+    return copyWith(
+      reactionCount: newReactionCount,
+      lastActivity: DateTime.now(),
+    );
+  }
+
+  // 활성 멤버 수 업데이트
+  ChatStats updateActiveMembers(int count) {
+    return copyWith(
+      activeMembers: count,
+      lastActivity: DateTime.now(),
+    );
+  }
+
+  // 평균 메시지 길이 계산
+  double get averageMessageLength {
+    if (messageCount == 0) return 0.0;
+    // 실제 구현에서는 메시지 길이를 추적해야 함
+    return 0.0;
+  }
+
+  // 참여율 계산
+  double get participationRate {
+    if (totalParticipants == 0) return 0.0;
+    return (activeMembers / totalParticipants) * 100;
+  }
+
+  // 온라인 참여율 계산
+  double get onlineRate {
+    if (totalParticipants == 0) return 0.0;
+    return (onlineParticipants / totalParticipants) * 100;
   }
 }
 
@@ -127,11 +238,21 @@ class LastMessage {
       content: map['content'] ?? '',
       senderId: map['senderId'] ?? '',
       senderName: map['senderName'] ?? '',
-      timestamp: map['timestamp'] is DateTime 
-          ? map['timestamp'] 
-          : DateTime.now(),
+      timestamp: _parseDateTime(map['timestamp']),
       type: map['type'] ?? 'text',
     );
+  }
+
+  static DateTime _parseDateTime(dynamic value) {
+    if (value is DateTime) return value;
+    if (value is String) {
+      try {
+        return DateTime.parse(value);
+      } catch (e) {
+        return DateTime.now();
+      }
+    }
+    return DateTime.now();
   }
 }
 
@@ -200,12 +321,8 @@ class ChatModel {
       title: map['title'] ?? '',
       description: map['description'],
       createdBy: map['createdBy'] ?? '',
-      createdAt: map['createdAt'] is DateTime 
-          ? map['createdAt'] 
-          : DateTime.now(),
-      updatedAt: map['updatedAt'] is DateTime 
-          ? map['updatedAt'] 
-          : DateTime.now(),
+      createdAt: _parseDateTime(map['createdAt']),
+      updatedAt: _parseDateTime(map['updatedAt']),
       participants: List<String>.from(map['participants'] ?? []),
       participantCount: map['participantCount'] ?? 0,
       maxParticipants: map['maxParticipants'],
@@ -223,6 +340,18 @@ class ChatModel {
           ? LastMessage.fromMap(map['lastMessage']) 
           : null,
     );
+  }
+
+  static DateTime _parseDateTime(dynamic value) {
+    if (value is DateTime) return value;
+    if (value is String) {
+      try {
+        return DateTime.parse(value);
+      } catch (e) {
+        return DateTime.now();
+      }
+    }
+    return DateTime.now();
   }
 
   // Firestore 문서 스냅샷에서 생성

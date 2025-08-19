@@ -192,12 +192,8 @@ class MessageModel {
       senderMBTI: map['senderMBTI'],
       content: map['content'] ?? '',
       type: map['type'] ?? 'text',
-      createdAt: map['createdAt'] is DateTime 
-          ? map['createdAt'] 
-          : DateTime.now(),
-      updatedAt: map['updatedAt'] is DateTime 
-          ? map['updatedAt'] 
-          : null,
+      createdAt: _parseDateTime(map['createdAt']),
+      updatedAt: map['updatedAt'] != null ? _parseDateTime(map['updatedAt']) : null,
       media: map['media'] != null 
           ? MessageMedia.fromMap(map['media']) 
           : null,
@@ -213,6 +209,18 @@ class MessageModel {
           ? MessageReply.fromMap(map['replyTo']) 
           : null,
     );
+  }
+
+  static DateTime _parseDateTime(dynamic value) {
+    if (value is DateTime) return value;
+    if (value is String) {
+      try {
+        return DateTime.parse(value);
+      } catch (e) {
+        return DateTime.now();
+      }
+    }
+    return DateTime.now();
   }
 
   // Firestore 문서 스냅샷에서 생성

@@ -6,6 +6,7 @@ import 'package:typetalk/core/theme/app_colors.dart';
 import 'package:typetalk/core/theme/app_text_styles.dart';
 import 'package:typetalk/models/message_model.dart';
 import 'package:typetalk/services/user_repository.dart';
+import 'package:typetalk/routes/app_routes.dart';
 
 class ChatScreen extends StatelessWidget {
   const ChatScreen({super.key});
@@ -56,36 +57,133 @@ class ChatScreen extends StatelessWidget {
           ),
         );
       }
-      return ListView.separated(
-        padding: EdgeInsets.symmetric(vertical: 8.h),
-        itemCount: chats.length,
-        separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey[200]),
-        itemBuilder: (context, index) {
-          final chat = chats[index];
-          return ListTile(
-            leading: Container(
-              width: 40.w,
-              height: 40.w,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10.r),
-              ),
-              child: Center(
-                child: Text(
-                  chat.title.isNotEmpty ? chat.title.characters.first : 'C',
-                  style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+      return Column(
+        children: [
+          // 검색/정렬 바
+          Padding(
+            padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 4.h),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12.w),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12.r),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.search, color: Colors.grey),
+                        SizedBox(width: 8.w),
+                        Expanded(
+                          child: TextField(
+                            onChanged: (v) => controller.searchQuery.value = v,
+                            decoration: const InputDecoration(
+                              hintText: '대화 검색',
+                              border: InputBorder.none,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
+                SizedBox(width: 12.w),
+                Obx(() {
+                  final desc = controller.sortByRecentDesc.value;
+                  return GestureDetector(
+                    onTap: () => controller.sortByRecentDesc.value = !desc,
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12.r),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(desc ? Icons.south : Icons.north, size: 16.sp, color: AppColors.textSecondary),
+                          SizedBox(width: 4.w),
+                          Text('최근순', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+              ],
             ),
-            title: Text(chat.title),
-            subtitle: Text(chat.lastMessage?.content ?? '메시지가 없습니다'),
-            trailing: Text(
-              controller.formatMessageTime(chat.stats.lastActivity),
-              style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
-            ),
-            onTap: () => controller.openChat(chat),
-          );
-        },
+          ),
+          Expanded(
+            child: Obx(() {
+              final filtered = controller.visibleChats;
+              return ListView.separated(
+                padding: EdgeInsets.symmetric(vertical: 8.h),
+                itemCount: filtered.length,
+                separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey[200]),
+                itemBuilder: (context, index) {
+                  final chat = filtered[index];
+                  final unread = controller.getUnreadCount(chat);
+                  return ListTile(
+                    leading: Stack(
+                      children: [
+                        Container(
+                          width: 40.w,
+                          height: 40.w,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(10.r),
+                          ),
+                          child: Center(
+                            child: Text(
+                              chat.title.isNotEmpty ? chat.title.characters.first : 'C',
+                              style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                        if (unread > 0)
+                          Positioned(
+                            right: -2,
+                            top: -2,
+                            child: Container(
+                              padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                              decoration: BoxDecoration(
+                                color: Colors.redAccent,
+                                borderRadius: BorderRadius.circular(12.r),
+                              ),
+                              child: Text(
+                                '$unread',
+                                style: const TextStyle(color: Colors.white, fontSize: 10),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    title: Text(chat.title),
+                    subtitle: Text(chat.lastMessage?.content ?? '메시지가 없습니다'),
+                    trailing: Text(
+                      controller.formatMessageTime(chat.stats.lastActivity),
+                      style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+                    ),
+                    onTap: () => controller.openChat(chat),
+                  );
+                },
+              );
+            }),
+          ),
+        ],
       );
     });
   }
@@ -96,7 +194,15 @@ class ChatScreen extends StatelessWidget {
       backgroundColor: Colors.white,
       elevation: 1,
       leading: IconButton(
-        onPressed: () => controller.leaveChat(),
+        onPressed: () {
+          if (controller.currentChat.value != null) {
+            // 채팅 중일 때: 목록으로 돌아가기
+            controller.leaveChat();
+          } else {
+            // 목록 화면일 때: 메인으로 돌아가기
+            Get.offAllNamed(AppRoutes.start);
+          }
+        },
         icon: Icon(
           Icons.arrow_back_ios,
           color: AppColors.textPrimary,

@@ -6,6 +6,7 @@ import 'package:typetalk/models/chat_model.dart';
 import 'package:typetalk/services/user_repository.dart';
 import 'package:typetalk/models/user_model.dart';
 import 'package:typetalk/services/firestore_service.dart';
+import 'package:typetalk/routes/app_routes.dart';
 
 /// 채팅 화면 컨트롤러
 /// 실시간 메시지 전송/수신 및 채팅방 관리를 담당합니다.
@@ -20,8 +21,11 @@ class ChatController extends GetxController {
   Rx<ChatModel?> currentChat = Rx<ChatModel?>(null);
   RxString chatId = ''.obs;
   
-  // 내 채팅방 목록
+  // 내 채팅방 목록 및 검색/정렬 상태
   RxList<ChatModel> chatList = <ChatModel>[].obs;
+  RxString searchQuery = ''.obs;
+  RxBool sortByRecentDesc = true.obs;
+  final Map<String, DateTime> _lastReadAt = {};
   
   // 메시지 목록
   RxList<MessageModel> messages = <MessageModel>[].obs;
@@ -53,10 +57,12 @@ class ChatController extends GetxController {
       isLoading.value = true;
       final myId = authController.userId ?? 'current-user';
       final snapshots = await _firestore.chats.get();
-      final loaded = snapshots
+      var loaded = snapshots
           .map((s) => ChatModel.fromSnapshot(s))
           .where((c) => c.participants.contains(myId))
           .toList();
+      // 기본 정렬: 최근 활동 내림차순
+      loaded.sort((a, b) => b.stats.lastActivity.compareTo(a.stats.lastActivity));
       chatList.assignAll(loaded);
     } catch (e) {
       print('채팅방 목록 로드 실패: $e');
@@ -66,11 +72,28 @@ class ChatController extends GetxController {
     }
   }
 
+  /// 검색/정렬 적용된 채팅 목록
+  List<ChatModel> get visibleChats {
+    var list = chatList.toList();
+    final q = searchQuery.value.trim().toLowerCase();
+    if (q.isNotEmpty) {
+      list = list.where((c) =>
+        c.title.toLowerCase().contains(q) ||
+        (c.description?.toLowerCase().contains(q) ?? false)
+      ).toList();
+    }
+    list.sort((a, b) => sortByRecentDesc.value
+        ? b.stats.lastActivity.compareTo(a.stats.lastActivity)
+        : a.stats.lastActivity.compareTo(b.stats.lastActivity));
+    return list;
+  }
+
   /// 채팅 열기
   Future<void> openChat(ChatModel chat) async {
     currentChat.value = chat;
     chatId.value = chat.chatId;
     await loadMessagesForChat(chat.chatId);
+    _lastReadAt[chat.chatId] = DateTime.now();
     _scrollToBottom();
   }
 
@@ -90,6 +113,18 @@ class ChatController extends GetxController {
     } finally {
       isLoading.value = false;
     }
+  }
+
+  /// 채팅별 안 읽은 개수 (데모: 마지막 메시지 시간과 마지막 읽은 시간 비교, 내 메시지는 제외)
+  int getUnreadCount(ChatModel chat) {
+    final lastRead = _lastReadAt[chat.chatId] ?? DateTime.fromMillisecondsSinceEpoch(0);
+    if (chat.lastMessage != null && chat.lastMessage!.timestamp.isAfter(lastRead)) {
+      final myId = authController.userId ?? 'current-user';
+      if (chat.lastMessage!.senderId != myId) {
+        return 1;
+      }
+    }
+    return 0;
   }
 
   /// 데모 채팅방 초기화
@@ -416,6 +451,7 @@ class ChatController extends GetxController {
     currentChat.value = null;
     chatId.value = '';
     messages.clear();
+    // 채팅 목록으로 돌아가기 (메인으로는 뒤로가기 버튼에서 처리)
   }
 
   /// 채팅방 설정

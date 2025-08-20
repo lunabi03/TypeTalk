@@ -5,6 +5,7 @@ import 'package:typetalk/controllers/chat_controller.dart';
 import 'package:typetalk/core/theme/app_colors.dart';
 import 'package:typetalk/core/theme/app_text_styles.dart';
 import 'package:typetalk/models/message_model.dart';
+import 'package:typetalk/models/user_model.dart';
 import 'package:typetalk/services/user_repository.dart';
 import 'package:typetalk/routes/app_routes.dart';
 
@@ -695,11 +696,16 @@ class ChatScreen extends StatelessWidget {
     );
   }
 
-  /// 사용자 선택 UI (데모: 샘플 사용자 목록에서 선택)
+  /// 사용자 선택 UI (검색 및 MBTI 필터링 포함)
   void _openUserPicker(ChatController controller) async {
-    final users = await Get.find<UserRepository>().getRecentUsers(limit: 20);
+    final users = await Get.find<UserRepository>().getRecentUsers(limit: 50);
+    final searchController = TextEditingController();
+    final selectedMBTI = 'all'.obs;
+    final searchQuery = ''.obs;
+    
     Get.bottomSheet(
       Container(
+        height: Get.height * 0.8,
         padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -708,39 +714,78 @@ class ChatScreen extends StatelessWidget {
         child: SafeArea(
           top: false,
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // 제목
               Text(
                 '대화할 사용자 선택',
                 style: AppTextStyles.titleMedium,
               ),
-              SizedBox(height: 12.h),
-              Flexible(
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  itemCount: users.length,
-                  separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey[200]),
-                  itemBuilder: (context, index) {
-                    final user = users[index];
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: AppColors.primary.withOpacity(0.2),
-                        child: Text(
-                          user.name.isNotEmpty ? user.name[0] : '?',
-                          style: TextStyle(color: AppColors.primary),
-                        ),
-                      ),
-                      title: Text(user.name),
-                      subtitle: Text(user.email),
-                      trailing: Text(user.mbtiType ?? 'MBTI'),
-                      onTap: () {
-                        Get.back();
-                        controller.startPrivateChatWith(user);
-                      },
-                    );
-                  },
+              SizedBox(height: 16.h),
+              
+              // 검색 바
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 12.w),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(12.r),
                 ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.search, color: Colors.grey),
+                    SizedBox(width: 8.w),
+                    Expanded(
+                      child: TextField(
+                        controller: searchController,
+                        decoration: const InputDecoration(
+                          hintText: '이름이나 이메일로 검색',
+                          border: InputBorder.none,
+                        ),
+                        onChanged: (value) {
+                          searchQuery.value = value;
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 12.h),
+              
+              // MBTI 필터
+              Text(
+                'MBTI 필터',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              SizedBox(height: 8.h),
+              Wrap(
+                spacing: 8.w,
+                runSpacing: 8.h,
+                children: [
+                  _buildMBTIFilterChip('all', '전체', selectedMBTI),
+                  _buildMBTIFilterChip('NT', '분석가', selectedMBTI),
+                  _buildMBTIFilterChip('NF', '외교관', selectedMBTI),
+                  _buildMBTIFilterChip('SJ', '관리자', selectedMBTI),
+                  _buildMBTIFilterChip('SP', '탐험가', selectedMBTI),
+                ],
+              ),
+              SizedBox(height: 16.h),
+              
+              // 사용자 목록
+              Expanded(
+                child: Obx(() {
+                  final filteredUsers = _filterUsers(users, searchQuery.value, selectedMBTI.value);
+                  return ListView.separated(
+                    itemCount: filteredUsers.length,
+                    separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey[200]),
+                    itemBuilder: (context, index) {
+                      final user = filteredUsers[index];
+                      return _buildUserListTile(user, controller);
+                    },
+                  );
+                }),
               ),
             ],
           ),
@@ -748,6 +793,154 @@ class ChatScreen extends StatelessWidget {
       ),
       isScrollControlled: true,
     );
+  }
+
+  /// MBTI 필터 칩 위젯
+  Widget _buildMBTIFilterChip(String value, String label, RxString selectedMBTI) {
+    return GestureDetector(
+      onTap: () => selectedMBTI.value = value,
+      child: Obx(() => Container(
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+        decoration: BoxDecoration(
+          color: selectedMBTI.value == value 
+              ? AppColors.primary 
+              : Colors.grey[200],
+          borderRadius: BorderRadius.circular(20.r),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selectedMBTI.value == value 
+                ? Colors.white 
+                : AppColors.textPrimary,
+            fontSize: 12.sp,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      )),
+    );
+  }
+
+  /// 사용자 필터링
+  List<UserModel> _filterUsers(List<UserModel> users, String searchQuery, String selectedMBTI) {
+    var filtered = users;
+    
+    // MBTI 카테고리 필터링
+    if (selectedMBTI != 'all') {
+      filtered = filtered.where((user) {
+        final mbti = user.mbtiType ?? '';
+        switch (selectedMBTI) {
+          case 'NT': return mbti.contains('NT');
+          case 'NF': return mbti.contains('NF');
+          case 'SJ': return mbti.contains('SJ');
+          case 'SP': return mbti.contains('SP');
+          default: return true;
+        }
+      }).toList();
+    }
+    
+    // 검색어 필터링
+    if (searchQuery.isNotEmpty) {
+      final query = searchQuery.toLowerCase();
+      filtered = filtered.where((user) =>
+        user.name.toLowerCase().contains(query) ||
+        user.email.toLowerCase().contains(query) ||
+        (user.mbtiType?.toLowerCase().contains(query) ?? false)
+      ).toList();
+    }
+    
+    return filtered;
+  }
+
+  /// 사용자 목록 아이템 위젯
+  Widget _buildUserListTile(UserModel user, ChatController controller) {
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: _getMBTIColor(user.mbtiType),
+        child: Text(
+          user.name.isNotEmpty ? user.name[0] : '?',
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+      ),
+      title: Row(
+        children: [
+          Text(user.name),
+          SizedBox(width: 8.w),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+            decoration: BoxDecoration(
+              color: _getMBTIColor(user.mbtiType).withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+            child: Text(
+              user.mbtiType ?? 'MBTI',
+              style: TextStyle(
+                color: _getMBTIColor(user.mbtiType),
+                fontSize: 10.sp,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(user.email),
+          if (user.bio != null && user.bio!.isNotEmpty) ...[
+            SizedBox(height: 4.h),
+            Text(
+              user.bio!,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textSecondary,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ],
+      ),
+      trailing: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(
+            '${user.stats.friendCount}명',
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+          Text(
+            '${user.stats.chatCount}채팅',
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+      onTap: () {
+        Get.back();
+        controller.startPrivateChatWith(user);
+      },
+    );
+  }
+
+  /// MBTI 색상 반환
+  Color _getMBTIColor(String? mbti) {
+    if (mbti == null) return Colors.grey;
+    
+    switch (mbti.substring(0, 2)) {
+      case 'EN':
+        return const Color(0xFF6C63FF); // 보라색 - 외향적 직관
+      case 'IN':
+        return const Color(0xFF4ECDC4); // 청록색 - 내향적 직관
+      case 'ES':
+        return const Color(0xFFFF6B6B); // 빨간색 - 외향적 감각
+      case 'IS':
+        return const Color(0xFF45B7D1); // 파란색 - 내향적 감각
+      default:
+        return Colors.grey;
+    }
   }
 
   /// 반응 버튼

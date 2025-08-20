@@ -5,6 +5,7 @@ import 'package:typetalk/controllers/chat_controller.dart';
 import 'package:typetalk/core/theme/app_colors.dart';
 import 'package:typetalk/core/theme/app_text_styles.dart';
 import 'package:typetalk/models/message_model.dart';
+import 'package:typetalk/services/user_repository.dart';
 
 class ChatScreen extends StatelessWidget {
   const ChatScreen({super.key});
@@ -16,17 +17,77 @@ class ChatScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF0F8FF), // 연한 파란색 배경
       appBar: _buildAppBar(chatController),
-      body: Column(
-        children: [
-          // 메시지 목록
-          Expanded(
-            child: _buildMessageList(chatController),
-          ),
-          // 메시지 입력창
-          _buildMessageInput(chatController),
-        ],
-      ),
+      body: Obx(() {
+        // 채팅방이 선택되지 않은 경우: 채팅 목록 또는 빈 상태 표시
+        if (chatController.currentChat.value == null) {
+          return _buildChatListOrEmpty(chatController);
+        }
+        // 채팅방이 선택된 경우: 메시지 UI
+        return Column(
+          children: [
+            Expanded(child: _buildMessageList(chatController)),
+            _buildMessageInput(chatController),
+          ],
+        );
+      }),
     );
+  }
+
+  /// 채팅 목록 또는 빈 상태
+  Widget _buildChatListOrEmpty(ChatController controller) {
+    return Obx(() {
+      if (controller.isLoading.value) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      final chats = controller.chatList;
+      if (chats.isEmpty) {
+        return Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.chat_bubble_outline, size: 56.sp, color: Colors.grey),
+              SizedBox(height: 12.h),
+              Text(
+                '대화창이 없습니다\n지금 바로 대화를 시작해보세요!',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+              ),
+            ],
+          ),
+        );
+      }
+      return ListView.separated(
+        padding: EdgeInsets.symmetric(vertical: 8.h),
+        itemCount: chats.length,
+        separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey[200]),
+        itemBuilder: (context, index) {
+          final chat = chats[index];
+          return ListTile(
+            leading: Container(
+              width: 40.w,
+              height: 40.w,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10.r),
+              ),
+              child: Center(
+                child: Text(
+                  chat.title.isNotEmpty ? chat.title.characters.first : 'C',
+                  style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+            title: Text(chat.title),
+            subtitle: Text(chat.lastMessage?.content ?? '메시지가 없습니다'),
+            trailing: Text(
+              controller.formatMessageTime(chat.stats.lastActivity),
+              style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+            ),
+            onTap: () => controller.openChat(chat),
+          );
+        },
+      );
+    });
   }
 
   /// 앱바 구성
@@ -44,53 +105,48 @@ class ChatScreen extends StatelessWidget {
       ),
       title: Obx(() {
         final chat = controller.currentChat.value;
+        if (chat == null) {
+          return Text('채팅');
+        }
         return Row(
           children: [
-            // 프로필 아이콘
             Container(
               width: 36.w,
               height: 36.w,
               decoration: BoxDecoration(
-                color: controller.getMBTIColor('ENFP'),
+                color: AppColors.primary,
                 borderRadius: BorderRadius.circular(8.r),
               ),
               child: Center(
                 child: Text(
-                  'E',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  chat.title.isNotEmpty ? chat.title.characters.first : 'C',
+                  style: TextStyle(color: Colors.white, fontSize: 16.sp, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
             SizedBox(width: 12.w),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    chat?.title ?? '채팅',
-                    style: AppTextStyles.titleMedium.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  Text(
-                    '온라인', // 실제로는 마지막 접속 시간 표시
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: Colors.green,
-                      fontSize: 11.sp,
-                    ),
-                  ),
-                ],
+              child: Text(
+                chat.title,
+                style: AppTextStyles.titleMedium.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
               ),
             ),
           ],
         );
       }),
       actions: [
+        IconButton(
+          tooltip: '사용자 선택',
+          onPressed: () => _openUserPicker(controller),
+          icon: Icon(
+            Icons.person_add_alt_1,
+            color: AppColors.textPrimary,
+            size: 20.sp,
+          ),
+        ),
         IconButton(
           onPressed: () => controller.openChatSettings(),
           icon: Icon(
@@ -530,6 +586,61 @@ class ChatScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  /// 사용자 선택 UI (데모: 샘플 사용자 목록에서 선택)
+  void _openUserPicker(ChatController controller) async {
+    final users = await Get.find<UserRepository>().getRecentUsers(limit: 20);
+    Get.bottomSheet(
+      Container(
+        padding: EdgeInsets.all(16.w),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '대화할 사용자 선택',
+                style: AppTextStyles.titleMedium,
+              ),
+              SizedBox(height: 12.h),
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: users.length,
+                  separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey[200]),
+                  itemBuilder: (context, index) {
+                    final user = users[index];
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: AppColors.primary.withOpacity(0.2),
+                        child: Text(
+                          user.name.isNotEmpty ? user.name[0] : '?',
+                          style: TextStyle(color: AppColors.primary),
+                        ),
+                      ),
+                      title: Text(user.name),
+                      subtitle: Text(user.email),
+                      trailing: Text(user.mbtiType ?? 'MBTI'),
+                      onTap: () {
+                        Get.back();
+                        controller.startPrivateChatWith(user);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      isScrollControlled: true,
     );
   }
 

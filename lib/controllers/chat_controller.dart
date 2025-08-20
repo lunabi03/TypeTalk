@@ -4,6 +4,7 @@ import 'package:typetalk/controllers/auth_controller.dart';
 import 'package:typetalk/models/message_model.dart';
 import 'package:typetalk/models/chat_model.dart';
 import 'package:typetalk/services/user_repository.dart';
+import 'package:typetalk/models/user_model.dart';
 import 'package:typetalk/services/firestore_service.dart';
 
 /// 채팅 화면 컨트롤러
@@ -19,6 +20,9 @@ class ChatController extends GetxController {
   Rx<ChatModel?> currentChat = Rx<ChatModel?>(null);
   RxString chatId = ''.obs;
   
+  // 내 채팅방 목록
+  RxList<ChatModel> chatList = <ChatModel>[].obs;
+  
   // 메시지 목록
   RxList<MessageModel> messages = <MessageModel>[].obs;
   
@@ -33,7 +37,7 @@ class ChatController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _initializeDemoChat();
+    loadChatList();
   }
 
   @override
@@ -41,6 +45,51 @@ class ChatController extends GetxController {
     messageController.dispose();
     scrollController.dispose();
     super.onClose();
+  }
+
+  /// 현재 사용자 채팅방 목록 로드 (데모 Firestore 기준)
+  Future<void> loadChatList() async {
+    try {
+      isLoading.value = true;
+      final myId = authController.userId ?? 'current-user';
+      final snapshots = await _firestore.chats.get();
+      final loaded = snapshots
+          .map((s) => ChatModel.fromSnapshot(s))
+          .where((c) => c.participants.contains(myId))
+          .toList();
+      chatList.assignAll(loaded);
+    } catch (e) {
+      print('채팅방 목록 로드 실패: $e');
+      chatList.clear();
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// 채팅 열기
+  Future<void> openChat(ChatModel chat) async {
+    currentChat.value = chat;
+    chatId.value = chat.chatId;
+    await loadMessagesForChat(chat.chatId);
+    _scrollToBottom();
+  }
+
+  /// 메시지 목록 로드 (데모 Firestore)
+  Future<void> loadMessagesForChat(String id) async {
+    try {
+      isLoading.value = true;
+      final snapshots = await _firestore.messages
+          .where('chatId', isEqualTo: id)
+          .orderBy('createdAt', descending: false)
+          .get();
+      final loaded = snapshots.map((s) => MessageModel.fromSnapshot(s)).toList();
+      messages.assignAll(loaded);
+    } catch (e) {
+      print('메시지 목록 로드 실패: $e');
+      messages.clear();
+    } finally {
+      isLoading.value = false;
+    }
   }
 
   /// 데모 채팅방 초기화
@@ -147,6 +196,54 @@ class ChatController extends GetxController {
     ];
 
     messages.assignAll(demoMessages);
+    _scrollToBottom();
+  }
+
+  /// 선택한 사용자와 개인 채팅 시작
+  Future<void> startPrivateChatWith(UserModel otherUser) async {
+    final currentUserId = authController.userId ?? 'current-user';
+    final otherUserId = otherUser.uid;
+
+    // 정렬된 조합으로 일관된 개인 채팅 ID 생성
+    final ids = [currentUserId, otherUserId]..sort();
+    final privateChatId = 'private-${ids.join('-')}';
+
+    final newChat = ChatModel(
+      chatId: privateChatId,
+      type: 'private',
+      title: otherUser.name.isNotEmpty ? otherUser.name : '개인 채팅',
+      description: null,
+      createdBy: currentUserId,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      participants: [currentUserId, otherUserId],
+      participantCount: 2,
+      maxParticipants: 2,
+      targetMBTI: null,
+      mbtiCategory: null,
+      settings: ChatSettings(
+        isPrivate: true,
+        allowInvites: false,
+        moderatedMode: false,
+        autoDelete: false,
+      ),
+      stats: ChatStats(
+        messageCount: 0,
+        activeMembers: 2,
+        lastActivity: DateTime.now(),
+      ),
+    );
+
+    currentChat.value = newChat;
+    chatId.value = newChat.chatId;
+    messages.clear();
+
+    // 시스템 메시지로 시작 알림 추가 (데모)
+    final systemMessage = MessageCreationHelper.createSystemMessage(
+      chatId: newChat.chatId,
+      content: '${otherUser.name}님과의 채팅을 시작했습니다.',
+    );
+    messages.add(systemMessage);
     _scrollToBottom();
   }
 
@@ -316,7 +413,9 @@ class ChatController extends GetxController {
 
   /// 채팅방 나가기
   void leaveChat() {
-    Get.back();
+    currentChat.value = null;
+    chatId.value = '';
+    messages.clear();
   }
 
   /// 채팅방 설정

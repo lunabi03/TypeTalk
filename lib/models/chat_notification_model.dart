@@ -6,7 +6,9 @@ enum NotificationType {
   mention('mention'),
   reaction('reaction'),
   invite('invite'),
-  system('system');
+  system('system'),
+  chatMessage('chatMessage'),
+  chatInvite('chatInvite');
 
   const NotificationType(this.value);
   final String value;
@@ -23,7 +25,10 @@ enum NotificationType {
 enum NotificationStatus {
   unread('unread'),
   read('read'),
-  dismissed('dismissed');
+  dismissed('dismissed'),
+  pending('pending'),
+  sent('sent'),
+  failed('failed');
 
   const NotificationStatus(this.value);
   final String value;
@@ -42,12 +47,22 @@ class NotificationMetadata {
   final String? actionUrl;
   final Map<String, dynamic>? customData;
   final int? badgeCount;
+  final String? chatId;
+  final String? senderName;
+  final String? messagePreview;
+  final String? chatTitle;
+  final String? inviterName;
 
   const NotificationMetadata({
     this.imageUrl,
     this.actionUrl,
     this.customData,
     this.badgeCount,
+    this.chatId,
+    this.senderName,
+    this.messagePreview,
+    this.chatTitle,
+    this.inviterName,
   });
 
   Map<String, dynamic> toMap() {
@@ -56,6 +71,11 @@ class NotificationMetadata {
       'actionUrl': actionUrl,
       'customData': customData,
       'badgeCount': badgeCount,
+      'chatId': chatId,
+      'senderName': senderName,
+      'messagePreview': messagePreview,
+      'chatTitle': chatTitle,
+      'inviterName': inviterName,
     };
   }
 
@@ -67,6 +87,11 @@ class NotificationMetadata {
           ? Map<String, dynamic>.from(map['customData'])
           : null,
       badgeCount: map['badgeCount'],
+      chatId: map['chatId'],
+      senderName: map['senderName'],
+      messagePreview: map['messagePreview'],
+      chatTitle: map['chatTitle'],
+      inviterName: map['inviterName'],
     );
   }
 
@@ -75,12 +100,22 @@ class NotificationMetadata {
     String? actionUrl,
     Map<String, dynamic>? customData,
     int? badgeCount,
+    String? chatId,
+    String? senderName,
+    String? messagePreview,
+    String? chatTitle,
+    String? inviterName,
   }) {
     return NotificationMetadata(
       imageUrl: imageUrl ?? this.imageUrl,
       actionUrl: actionUrl ?? this.actionUrl,
       customData: customData ?? this.customData,
       badgeCount: badgeCount ?? this.badgeCount,
+      chatId: chatId ?? this.chatId,
+      senderName: senderName ?? this.senderName,
+      messagePreview: messagePreview ?? this.messagePreview,
+      chatTitle: chatTitle ?? this.chatTitle,
+      inviterName: inviterName ?? this.inviterName,
     );
   }
 }

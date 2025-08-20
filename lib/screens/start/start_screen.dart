@@ -94,7 +94,7 @@ class StartScreen extends StatelessWidget {
                 ),
               ),
               Transform.translate(
-                offset: Offset(0, -34.h),
+                offset: Offset(0, -5.h),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: SizedBox(
@@ -122,7 +122,32 @@ class StartScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 12),
+              // FCM 데모 버튼
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: SizedBox(
+                  height: 48,
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => Get.toNamed(AppRoutes.fcmDemo),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFF6C63FF)),
+                      shape: const StadiumBorder(),
+                    ),
+                    child: const Text(
+                      'FCM 데모 화면',
+                      style: TextStyle(
+                        fontSize: 14,
+                        letterSpacing: 0.0,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF6C63FF),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
             ],
           ),
         ),

@@ -13,6 +13,7 @@ import 'package:typetalk/screens/recommendation/recommendation_screen.dart';
 import 'package:typetalk/screens/question/question_screen.dart';
 import 'package:typetalk/screens/result/result_screen.dart';
 import 'package:typetalk/screens/start/start_screen.dart';
+import 'package:typetalk/screens/fcm/fcm_demo_screen.dart';
 
 // 실제 Firebase 서비스들 (임시 비활성화)
 // import 'package:typetalk/services/real_firebase_service.dart';
@@ -27,6 +28,7 @@ import 'package:typetalk/services/recommendation_service.dart';
 import 'package:typetalk/services/chat_stats_service.dart';
 import 'package:typetalk/services/chat_search_service.dart';
 import 'package:typetalk/services/chat_notification_service.dart';
+import 'package:typetalk/services/fcm_service.dart';
 
 import 'package:typetalk/controllers/auth_controller.dart';
 import 'package:typetalk/middleware/auth_middleware.dart';
@@ -45,6 +47,7 @@ void main() async {
   Get.put(ChatStatsService());
   Get.put(ChatSearchService());
   Get.put(ChatNotificationService());
+  Get.put(FCMService());
   Get.put(AuthController());
   
   runApp(const MyApp());
@@ -115,6 +118,11 @@ class MyApp extends StatelessWidget {
             name: AppRoutes.chat, 
             page: () => const ChatScreen(),
             middlewares: [SessionMiddleware(), AuthMiddleware()],
+          ),
+          GetPage(
+            name: AppRoutes.fcmDemo, 
+            page: () => const FCMDemoScreen(),
+            middlewares: [SessionMiddleware()],
           ),
         ],
       ),

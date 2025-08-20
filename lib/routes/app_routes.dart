@@ -9,4 +9,5 @@ class AppRoutes {
   static const String recommendation = '/recommendation';
   static const String chat = '/chat';
   static const String home = '/home';
+  static const String fcmDemo = '/fcm-demo';
 }

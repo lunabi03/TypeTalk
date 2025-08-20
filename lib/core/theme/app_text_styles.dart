@@ -21,6 +21,24 @@ class AppTextStyles {
     color: AppColors.textPrimary,
   );
 
+  static TextStyle h4 = GoogleFonts.roboto(
+    fontSize: 16,
+    fontWeight: FontWeight.bold,
+    color: AppColors.textPrimary,
+  );
+
+  static TextStyle h5 = GoogleFonts.roboto(
+    fontSize: 14,
+    fontWeight: FontWeight.bold,
+    color: AppColors.textPrimary,
+  );
+
+  static TextStyle h6 = GoogleFonts.roboto(
+    fontSize: 12,
+    fontWeight: FontWeight.bold,
+    color: AppColors.textPrimary,
+  );
+
   static TextStyle body = GoogleFonts.roboto(
     fontSize: 16,
     color: AppColors.textPrimary,

@@ -1,9 +1,10 @@
 import 'dart:async';
-// import 'package:cloud_firestore/cloud_firestore.dart';
-// import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 import 'package:typetalk/models/message_model.dart';
 import 'package:typetalk/models/chat_model.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' show FieldValue;
 
 class RealtimeMessageService extends GetxService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;

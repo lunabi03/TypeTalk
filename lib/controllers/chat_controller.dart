@@ -1,11 +1,12 @@
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:typetalk/controllers/auth_controller.dart';
 import 'package:typetalk/models/message_model.dart';
 import 'package:typetalk/models/chat_model.dart';
-import 'package:typetalk/services/user_repository.dart';
+import 'package:typetalk/services/real_user_repository.dart';
 import 'package:typetalk/models/user_model.dart';
-import 'package:typetalk/services/firestore_service.dart';
+import 'package:typetalk/services/real_firebase_service.dart';
 import 'package:typetalk/routes/app_routes.dart';
 
 /// 채팅 화면 컨트롤러
@@ -14,8 +15,8 @@ class ChatController extends GetxController {
   static ChatController get instance => Get.find<ChatController>();
 
   final AuthController authController = Get.find<AuthController>();
-  final UserRepository _userRepository = Get.find<UserRepository>();
-  final DemoFirestoreService _firestore = Get.find<DemoFirestoreService>();
+  final RealUserRepository _userRepository = Get.find<RealUserRepository>();
+  final RealFirebaseService _firestore = Get.find<RealFirebaseService>();
 
   // 현재 채팅방 정보
   Rx<ChatModel?> currentChat = Rx<ChatModel?>(null);
@@ -51,15 +52,20 @@ class ChatController extends GetxController {
     super.onClose();
   }
 
-  /// 현재 사용자 채팅방 목록 로드 (데모 Firestore 기준)
+  /// 현재 사용자 채팅방 목록 로드 (실제 Firestore 기준)
   Future<void> loadChatList() async {
     try {
       isLoading.value = true;
       final myId = authController.userId ?? 'current-user';
-      final snapshots = await _firestore.chats.get();
-      var loaded = snapshots
+      final snapshots = await _firestore.queryDocuments(
+        'chats',
+        field: 'participants',
+        arrayContains: myId,
+        orderByField: 'stats.lastActivity',
+        descending: true,
+      );
+      var loaded = snapshots.docs
           .map((s) => ChatModel.fromSnapshot(s))
-          .where((c) => c.participants.contains(myId))
           .toList();
       // 기본 정렬: 최근 활동 내림차순
       loaded.sort((a, b) => b.stats.lastActivity.compareTo(a.stats.lastActivity));
@@ -97,15 +103,18 @@ class ChatController extends GetxController {
     _scrollToBottom();
   }
 
-  /// 메시지 목록 로드 (데모 Firestore)
+  /// 메시지 목록 로드 (실제 Firestore)
   Future<void> loadMessagesForChat(String id) async {
     try {
       isLoading.value = true;
-      final snapshots = await _firestore.messages
-          .where('chatId', isEqualTo: id)
-          .orderBy('createdAt', descending: false)
-          .get();
-      final loaded = snapshots.map((s) => MessageModel.fromSnapshot(s)).toList();
+      final snapshots = await _firestore.queryDocuments(
+        'messages',
+        field: 'chatId',
+        isEqualTo: id,
+        orderByField: 'createdAt',
+        descending: false,
+      );
+      final loaded = snapshots.docs.map((s) => MessageModel.fromSnapshot(s)).toList();
       messages.assignAll(loaded);
     } catch (e) {
       print('메시지 목록 로드 실패: $e');
@@ -450,25 +459,19 @@ class ChatController extends GetxController {
 
       // Firestore에 메시지 저장
       try {
-        await _firestore.messages.doc(newMessage.messageId).set(newMessage.toMap());
+        await _firestore.setDocument('messages/${newMessage.messageId}', newMessage.toMap());
         
-        // 채팅방의 마지막 메시지 정보 업데이트 (데모용)
+        // 채팅방의 마지막 메시지 정보 업데이트
         try {
-          final chatDoc = await _firestore.chats.doc(chatId.value).get();
-          if (chatDoc.exists) {
-            final chatData = chatDoc.data;
-            final currentCount = chatData['stats']?['messageCount'] ?? 0;
-            
-            await _firestore.chats.doc(chatId.value).update({
-              'lastMessage': {
-                'content': content,
-                'timestamp': newMessage.createdAt.toIso8601String(),
-                'senderId': newMessage.senderId,
-              },
-              'stats.lastActivity': newMessage.createdAt.toIso8601String(),
-              'stats.messageCount': currentCount + 1,
-            });
-          }
+          await _firestore.updateDocument('chats/${chatId.value}', {
+            'lastMessage': {
+              'content': content,
+              'timestamp': newMessage.createdAt.toIso8601String(),
+              'senderId': newMessage.senderId,
+            },
+            'stats.lastActivity': newMessage.createdAt.toIso8601String(),
+            'stats.messageCount': FieldValue.increment(1),
+          });
         } catch (e) {
           print('채팅방 업데이트 오류: $e');
         }
@@ -863,7 +866,7 @@ class ChatController extends GetxController {
         messages[messageIndex] = message.copyWith(status: updatedStatus);
         
         // Firestore에도 업데이트
-        _firestore.messages.doc(messageId).update({
+        _firestore.updateDocument('messages/$messageId', {
           'status.readBy': updatedReadBy,
         });
       }
@@ -875,5 +878,232 @@ class ChatController extends GetxController {
   /// 채팅방 설정
   void openChatSettings() {
     Get.snackbar('설정', '채팅방 설정 기능은 곧 추가될 예정입니다.');
+  }
+
+  // ============================================================================
+  // 데이터 정합성 및 삭제 처리 기능
+  // ============================================================================
+
+  /// 채팅방 완전 삭제
+  Future<void> deleteChatPermanently(String chatId) async {
+    try {
+      final currentUserId = authController.userId ?? 'current-user';
+      
+      // 권한 확인
+      final chat = chatList.firstWhereOrNull((c) => c.chatId == chatId);
+      if (chat == null) {
+        Get.snackbar('오류', '채팅방을 찾을 수 없습니다.');
+        return;
+      }
+      
+      if (chat.createdBy != currentUserId) {
+        Get.snackbar('오류', '채팅방 삭제 권한이 없습니다.');
+        return;
+      }
+
+      // 삭제 처리
+      isLoading.value = true;
+      
+      // 1. 채팅방의 모든 메시지 삭제
+      final messageSnapshots = await _firestore.messages
+          .where('chatId', isEqualTo: chatId)
+          .get();
+      
+      for (final messageSnapshot in messageSnapshots.docs) {
+        await _firestore.messages.doc(messageSnapshot.id).delete();
+      }
+      
+      // 2. 채팅방 삭제
+      await _firestore.chats.doc(chatId).delete();
+      
+      // 3. 로컬 데이터 정리
+      chatList.removeWhere((c) => c.chatId == chatId);
+      if (currentChat.value?.chatId == chatId) {
+        leaveChat();
+      }
+      
+      Get.snackbar('완료', '채팅방이 삭제되었습니다.');
+    } catch (e) {
+      Get.snackbar('오류', '채팅방 삭제 실패: ${e.toString()}');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// 메시지 삭제
+  Future<void> deleteMessage(String messageId) async {
+    try {
+      final currentUserId = authController.userId ?? 'current-user';
+      
+      final messageIndex = messages.indexWhere((m) => m.messageId == messageId);
+      if (messageIndex == -1) {
+        Get.snackbar('오류', '메시지를 찾을 수 없습니다.');
+        return;
+      }
+      
+      final message = messages[messageIndex];
+      
+      // 권한 확인 (메시지 발송자만 삭제 가능)
+      if (message.senderId != currentUserId) {
+        Get.snackbar('오류', '메시지 삭제 권한이 없습니다.');
+        return;
+      }
+
+      // 소프트 삭제 처리
+      final deletedMessage = message.markAsDeleted(currentUserId);
+      
+      // Firestore 업데이트
+      await _firestore.messages.doc(messageId).update(deletedMessage.toMap());
+      
+      // 로컬 업데이트
+      messages[messageIndex] = deletedMessage;
+      
+      Get.snackbar('완료', '메시지가 삭제되었습니다.');
+    } catch (e) {
+      Get.snackbar('오류', '메시지 삭제 실패: ${e.toString()}');
+    }
+  }
+
+  /// 고아 데이터 정리 (관리자 기능)
+  Future<void> cleanupOrphanedData() async {
+    try {
+      isLoading.value = true;
+      
+      // 1. 존재하지 않는 채팅방을 참조하는 메시지들 정리
+      final allMessages = await _firestore.messages.get();
+      final allChats = await _firestore.chats.get();
+      
+      final existingChatIds = allChats.docs.map((chat) => chat.id).toSet();
+      int deletedMessages = 0;
+      
+      for (final messageSnapshot in allMessages.docs) {
+        final message = MessageModel.fromSnapshot(messageSnapshot);
+        if (!existingChatIds.contains(message.chatId)) {
+          await _firestore.messages.doc(message.messageId).delete();
+          deletedMessages++;
+        }
+      }
+      
+      // 로컬 데이터도 정리
+      await loadChatList();
+      if (currentChat.value != null) {
+        await loadMessagesForChat(currentChat.value!.chatId);
+      }
+      
+      Get.snackbar('완료', '고아 메시지 $deletedMessages개 정리가 완료되었습니다.');
+    } catch (e) {
+      Get.snackbar('오류', '고아 데이터 정리 실패: ${e.toString()}');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// 데이터 정합성 검증
+  Future<Map<String, dynamic>?> validateDataIntegrity() async {
+    try {
+      isLoading.value = true;
+      
+      final report = <String, dynamic>{
+        'timestamp': DateTime.now(),
+        'totalChats': 0,
+        'totalMessages': 0,
+        'orphanedMessages': 0,
+        'issues': <String>[],
+      };
+      
+      // 전체 데이터 개수 확인
+      final allChats = await _firestore.chats.get();
+      final allMessages = await _firestore.messages.get();
+      
+      report['totalChats'] = allChats.docs.length;
+      report['totalMessages'] = allMessages.docs.length;
+      
+      // 채팅방 ID 목록
+      final existingChatIds = allChats.docs.map((chat) => chat.id).toSet();
+      
+      // 고아 메시지 확인
+      int orphanedMessages = 0;
+      for (final messageSnapshot in allMessages.docs) {
+        final message = MessageModel.fromSnapshot(messageSnapshot);
+        if (!existingChatIds.contains(message.chatId)) {
+          orphanedMessages++;
+        }
+      }
+      
+      report['orphanedMessages'] = orphanedMessages;
+      
+      // 문제 항목 정리
+      final issues = <String>[];
+      if (orphanedMessages > 0) issues.add('고아 메시지 $orphanedMessages개 발견');
+      
+      report['issues'] = issues;
+      report['isHealthy'] = issues.isEmpty;
+      
+      if (report['isHealthy'] == true) {
+        Get.snackbar('완료', '데이터 정합성 검증 통과: 모든 데이터가 정상입니다.');
+      } else {
+        final issueList = report['issues'] as List<String>;
+        Get.snackbar(
+          '주의', 
+          '데이터 정합성 문제 발견:\n${issueList.join('\n')}',
+          duration: const Duration(seconds: 5),
+        );
+      }
+      
+      return report;
+    } catch (e) {
+      Get.snackbar('오류', '데이터 정합성 검증 실패: ${e.toString()}');
+      return null;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// 채팅방 삭제 확인 다이얼로그
+  void showDeleteChatDialog(String chatId, String chatTitle) {
+    Get.dialog(
+      AlertDialog(
+        title: const Text('채팅방 삭제'),
+        content: Text('정말로 "$chatTitle" 채팅방을 삭제하시겠습니까?\n\n삭제된 채팅방과 모든 메시지는 복구할 수 없습니다.'),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () {
+              Get.back();
+              deleteChatPermanently(chatId);
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('삭제'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 메시지 삭제 확인 다이얼로그
+  void showDeleteMessageDialog(String messageId, String messageContent) {
+    Get.dialog(
+      AlertDialog(
+        title: const Text('메시지 삭제'),
+        content: Text('정말로 이 메시지를 삭제하시겠습니까?\n\n"${messageContent.length > 50 ? '${messageContent.substring(0, 50)}...' : messageContent}"\n\n삭제된 메시지는 복구할 수 없습니다.'),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () {
+              Get.back();
+              deleteMessage(messageId);
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('삭제'),
+          ),
+        ],
+      ),
+    );
   }
 }

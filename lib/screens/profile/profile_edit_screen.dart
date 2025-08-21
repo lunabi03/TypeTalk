@@ -195,6 +195,7 @@ class ProfileEditScreen extends StatelessWidget {
           label: '이메일',
           controller: controller.emailController,
           hint: '이메일',
+          enabled: false, // 읽기 전용
         ),
 
         SizedBox(height: 16.h),

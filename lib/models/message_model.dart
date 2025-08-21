@@ -1,4 +1,4 @@
-import 'package:typetalk/services/firestore_service.dart';
+// import removed: demo Firestore
 
 // 메시지 타입 열거형
 enum MessageType {
@@ -32,6 +32,12 @@ class MessageMedia {
     required this.size,
     required this.mimeType,
   });
+
+  // 파일명 getter (UI에서 사용)
+  String get fileName => filename;
+  
+  // 파일 크기 getter (UI에서 사용)
+  int get fileSize => size;
 
   Map<String, dynamic> toMap() {
     return {
@@ -114,6 +120,9 @@ class MessageReply {
     required this.senderId,
   });
 
+  // 발신자 이름 (UI에서 사용)
+  String get senderName => senderId; // 실제 구현에서는 사용자 정보를 조회해야 함
+
   Map<String, dynamic> toMap() {
     return {
       'messageId': messageId,
@@ -162,6 +171,9 @@ class MessageModel {
     this.reactions = const {},
     this.replyTo,
   });
+
+  // 읽음 상태 확인
+  bool get isRead => status.readBy.isNotEmpty;
 
   // Firestore 문서로 변환
   Map<String, dynamic> toMap() {
@@ -224,11 +236,11 @@ class MessageModel {
   }
 
   // Firestore 문서 스냅샷에서 생성
-  factory MessageModel.fromSnapshot(DemoDocumentSnapshot snapshot) {
+  factory MessageModel.fromSnapshot(dynamic snapshot) {
     if (!snapshot.exists) {
       throw Exception('메시지 문서가 존재하지 않습니다.');
     }
-    return MessageModel.fromMap(snapshot.data);
+    return MessageModel.fromMap(snapshot.data() as Map<String, dynamic>);
   }
 
   // 메시지 업데이트
@@ -273,8 +285,17 @@ class MessageModel {
     );
   }
 
-  // 메시지 삭제
+  // 메시지 삭제 (소프트 삭제)
   MessageModel delete() {
+    return copyWith(
+      content: '삭제된 메시지입니다.',
+      updatedAt: DateTime.now(),
+      status: status.copyWith(isDeleted: true),
+    );
+  }
+
+  // 메시지를 삭제됨으로 표시 (삭제한 사용자 정보 포함)
+  MessageModel markAsDeleted(String deletedBy) {
     return copyWith(
       content: '삭제된 메시지입니다.',
       updatedAt: DateTime.now(),
@@ -519,6 +540,28 @@ class MessageCreationHelper {
     return createSystemMessage(
       chatId: chatId,
       content: '$creatorName님이 채팅방을 생성했습니다.',
+    );
+  }
+
+  // 채팅방 소유권 이전 시스템 메시지
+  static MessageModel createOwnershipTransferMessage({
+    required String chatId,
+    required String newOwnerName,
+  }) {
+    return createSystemMessage(
+      chatId: chatId,
+      content: '$newOwnerName님이 새로운 채팅방 관리자가 되었습니다.',
+    );
+  }
+
+  // 채팅방 삭제 알림 시스템 메시지
+  static MessageModel createChatDeletedMessage({
+    required String chatId,
+    required String deletedBy,
+  }) {
+    return createSystemMessage(
+      chatId: chatId,
+      content: '채팅방이 $deletedBy님에 의해 삭제되었습니다.',
     );
   }
 }

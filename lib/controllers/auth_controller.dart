@@ -1,19 +1,20 @@
 import 'package:get/get.dart';
 import 'package:typetalk/routes/app_routes.dart';
 
-// 데모 서비스들 (활성화)
-import 'package:typetalk/services/auth_service.dart';
-import 'package:typetalk/services/user_repository.dart';
+// 실제 Firebase 서비스들 (활성화)
+import 'package:typetalk/services/real_auth_service.dart';
+import 'package:typetalk/services/real_user_repository.dart';
 
 import 'package:typetalk/models/user_model.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Added for User model
 
 class AuthController extends GetxController {
   static AuthController get instance => Get.find<AuthController>();
   
-  AuthService get _authService => Get.find<AuthService>();
-  UserRepository get _userRepository => Get.find<UserRepository>();
+  RealAuthService get _authService => Get.find<RealAuthService>();
+  RealUserRepository get _userRepository => Get.find<RealUserRepository>();
   
-  // 사용자 정보 (데모 모드)
+  // 사용자 정보 (실제 Firebase)
   RxString currentUserId = ''.obs;
   RxString currentUserEmail = ''.obs;
   RxString currentUserName = ''.obs;
@@ -28,34 +29,66 @@ class AuthController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    // 데모 모드 - 자동 로그인
-    _initDemoUser();
+    // 실제 Firebase 모드 - 사용자 상태 감지
+    _initRealUser();
   }
   
   @override
   void onReady() {
     super.onReady();
-    // 데모 모드 - 초기화 완료
-    print('AuthController 초기화 완료 (데모 모드)');
+    // 실제 Firebase 모드 - 초기화 완료
+    print('AuthController 초기화 완료 (실제 Firebase 모드)');
   }
   
-  // 데모 사용자 초기화
-  void _initDemoUser() {
-    currentUserId.value = 'demo_user_001';
-    currentUserEmail.value = 'demo@typetalk.com';
-    currentUserName.value = '데모 사용자';
+  // 실제 Firebase 사용자 초기화
+  void _initRealUser() {
+    // Firebase Auth 상태 변화 감지
+    ever(_authService.user, (User? firebaseUser) {
+      if (firebaseUser != null) {
+        _onUserLogin(firebaseUser);
+      } else {
+        _onUserLogout();
+      }
+    });
     
-    // 데모 프로필 설정
-    userProfile.value = {
-      'name': '데모 사용자',
-      'email': 'demo@typetalk.com',
-      'mbti': 'ENFP',
-      'bio': '안녕하세요! TypeTalk 데모 사용자입니다.',
-      'age': 25,
-      'profileImageUrl': null,
-    };
+    // 현재 사용자 상태 확인
+    final currentUser = _authService.user.value;
+    if (currentUser != null) {
+      _onUserLogin(currentUser);
+    } else {
+      // 로그인되지 않은 경우 초기화만 완료
+      print('로그인되지 않은 사용자 - 초기화 완료');
+      // 초기화 시에는 네비게이션하지 않음 (main.dart에서 initialRoute로 처리)
+    }
+  }
+
+  // 사용자 로그인 시 호출
+  void _onUserLogin(User firebaseUser) {
+    currentUserId.value = firebaseUser.uid;
+    currentUserEmail.value = firebaseUser.email ?? '';
+    currentUserName.value = firebaseUser.displayName ?? '';
     
-    print('데모 사용자 로그인 완료');
+    // Firestore에서 사용자 프로필 로드
+    loadUserProfile();
+    
+    // 로그인 성공 시 start 화면으로 이동
+    Get.offNamed(AppRoutes.start);
+    
+    print('실제 Firebase 사용자 로그인: ${firebaseUser.uid}');
+  }
+
+  // 사용자 로그아웃 시 호출
+  void _onUserLogout() {
+    currentUserId.value = '';
+    currentUserEmail.value = '';
+    currentUserName.value = '';
+    userProfile.value = <String, dynamic>{};
+    userModel.value = null;
+    
+    // 로그아웃 시 로그인 화면으로 이동
+    Get.offNamed(AppRoutes.login);
+    
+    print('실제 Firebase 사용자 로그아웃');
   }
 
   // 인증이 필요한 페이지 접근 가드
@@ -79,7 +112,7 @@ class AuthController extends GetxController {
     Get.offNamed(AppRoutes.login);
   }
 
-  // 사용자 프로필 로드 (데모 모드에서는 이미 설정됨)
+  // 사용자 프로필 로드 (실제 Firebase)
   Future<void> loadUserProfile() async {
     if (currentUserId.value.isEmpty) {
       print('로그인된 사용자가 없습니다.');
@@ -89,9 +122,25 @@ class AuthController extends GetxController {
     try {
       isLoading.value = true;
       
-      // 데모 모드에서는 이미 설정된 프로필 사용
-      print('현재 로그인 사용자 UID: ${currentUserId.value}');
-      print('프로필 정보: ${userProfile.value}');
+      // Firestore에서 사용자 프로필 로드
+      final userData = await _userRepository.getUser(currentUserId.value);
+      if (userData != null) {
+        userModel.value = userData;
+        userProfile.value = {
+          'name': userData.name,
+          'email': userData.email,
+          'mbti': userData.mbtiType,
+          'bio': userData.bio ?? '자기소개를 입력해주세요.',
+          'age': userData.age,
+          'profileImageUrl': userData.profileImageUrl,
+          'mbtiTestCount': userData.mbtiTestCount ?? 0,
+          'lastMBTITestDate': userData.lastMBTITestDate,
+          'createdAt': userData.createdAt,
+        };
+        print('사용자 프로필 로드 완료: ${userData.name}, MBTI: ${userData.mbtiType}, 테스트 횟수: ${userData.mbtiTestCount ?? 0}');
+      } else {
+        print('사용자 프로필을 찾을 수 없습니다.');
+      }
       
     } catch (e) {
       print('프로필 로드 실패: $e');
@@ -101,22 +150,24 @@ class AuthController extends GetxController {
     }
   }
 
-  // 사용자 프로필 업데이트 (데모 모드)
+  // 사용자 프로필 업데이트 (실제 Firebase)
   Future<void> updateUserProfile(Map<String, dynamic> data) async {
     if (currentUserId.value.isEmpty) {
-      Get.snackbar('오류', '로그인이 필요합니다.');
+      print('로그인된 사용자가 없습니다.');
       return;
     }
 
     try {
       isLoading.value = true;
       
-      // 데모 모드에서는 로컬 저장만
+      // Firestore에 사용자 프로필 업데이트
+      await _userRepository.updateUserFields(currentUserId.value, data);
+      
+      // 로컬 프로필도 업데이트
       userProfile.value = {...userProfile.value, ...data};
       
       print('프로필 업데이트 완료: $data');
       Get.snackbar('성공', '프로필이 업데이트되었습니다.');
-      
     } catch (e) {
       print('프로필 업데이트 실패: $e');
       Get.snackbar('오류', '프로필 업데이트에 실패했습니다.');
@@ -132,23 +183,42 @@ class AuthController extends GetxController {
   String? get userName => userProfile['name'] ?? currentUserName.value;
   String? get currentUserMBTI => userProfile['mbti'];
 
-  // 사용자 MBTI 업데이트 (데모 모드)
+  // 사용자 MBTI 업데이트 (실제 Firebase)
   Future<void> updateUserMBTI(String mbtiType) async {
     if (currentUserId.value.isEmpty) {
-      Get.snackbar('오류', '로그인이 필요합니다.');
+      print('로그인된 사용자가 없습니다.');
       return;
     }
 
     try {
       isLoading.value = true;
       
-      // 데모 모드에서는 로컬 업데이트만
+      // 현재 MBTI 테스트 완료 횟수 가져오기
+      int currentTestCount = 0;
+      if (userProfile['mbtiTestCount'] != null) {
+        currentTestCount = (userProfile['mbtiTestCount'] is int) 
+            ? userProfile['mbtiTestCount'] 
+            : int.tryParse(userProfile['mbtiTestCount'].toString()) ?? 0;
+      }
+      
+      // MBTI 테스트 완료 횟수 증가
+      int newTestCount = currentTestCount + 1;
+      
+      // Firestore에 MBTI와 테스트 완료 횟수 업데이트
+      await _userRepository.updateUserFields(currentUserId.value, {
+        'mbtiType': mbtiType,
+        'mbtiTestCount': newTestCount,
+        'lastMBTITestDate': DateTime.now().toIso8601String(),
+      });
+      
+      // 로컬 프로필도 업데이트
       userProfile['mbti'] = mbtiType;
+      userProfile['mbtiTestCount'] = newTestCount;
+      userProfile['lastMBTITestDate'] = DateTime.now().toIso8601String();
       userProfile.refresh();
       
-      print('MBTI 업데이트 완료: $mbtiType');
+      print('MBTI 업데이트 완료: $mbtiType, 테스트 완료 횟수: $newTestCount');
       Get.snackbar('성공', 'MBTI가 업데이트되었습니다.');
-      
     } catch (e) {
       print('MBTI 업데이트 실패: $e');
       Get.snackbar('오류', 'MBTI 업데이트에 실패했습니다.');
@@ -157,70 +227,57 @@ class AuthController extends GetxController {
     }
   }
 
-  // 이메일 로그인 (데모 모드)
+  // 이메일 로그인 (실제 Firebase)
   Future<void> signInWithEmailAndPassword(String email, String password) async {
     try {
       isSigningIn.value = true;
       
-      // 데모 모드 - 항상 성공
-      await Future.delayed(const Duration(seconds: 1)); // 로딩 시뮬레이션
+      // Firebase Auth 로그인
+      await _authService.signInWithEmailAndPassword(email: email, password: password);
       
-      _initDemoUser();
       _redirectToMain();
-      
       Get.snackbar('성공', '로그인 되었습니다.');
       
     } catch (e) {
       print('로그인 실패: $e');
-      Get.snackbar('오류', '로그인에 실패했습니다.');
+      Get.snackbar('오류', '로그인에 실패했습니다: ${e.toString()}');
     } finally {
       isSigningIn.value = false;
     }
   }
 
-  // 회원가입 (데모 모드)
+  // 회원가입 (실제 Firebase)
   Future<void> createUserWithEmailAndPassword(String email, String password, String name) async {
     try {
       isSigningUp.value = true;
       
-      // 데모 모드 - 항상 성공
-      await Future.delayed(const Duration(seconds: 1)); // 로딩 시뮬레이션
-      
-      currentUserId.value = 'demo_user_001';
-      currentUserEmail.value = email;
-      currentUserName.value = name;
-      
-      userProfile.value = {
-        'name': name,
-        'email': email,
-        'mbti': null,
-        'bio': '',
-        'age': null,
-        'profileImageUrl': null,
-      };
+      // Firebase Auth 회원가입
+      await _authService.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+        name: name,
+      );
       
       _redirectToMain();
       Get.snackbar('성공', '회원가입이 완료되었습니다.');
       
     } catch (e) {
       print('회원가입 실패: $e');
-      Get.snackbar('오류', '회원가입에 실패했습니다.');
+      Get.snackbar('오류', '회원가입에 실패했습니다: ${e.toString()}');
     } finally {
       isSigningUp.value = false;
     }
   }
 
-  // Google 로그인 (데모 모드)
+  // Google 로그인 (실제 Firebase)
   Future<void> signInWithGoogle() async {
     try {
       isSigningIn.value = true;
       
-      // 데모 모드 - 항상 성공
-      await Future.delayed(const Duration(seconds: 1)); // 로딩 시뮬레이션
+      // Firebase Auth Google 로그인
+      await _authService.signInWithGoogle();
       
-      _initDemoUser();
       _redirectToMain();
-      
       Get.snackbar('성공', 'Google 로그인이 완료되었습니다.');
       
     } catch (e) {
@@ -231,17 +288,15 @@ class AuthController extends GetxController {
     }
   }
 
-  // Apple 로그인 (데모 모드)
+  // Apple 로그인 (실제 Firebase)
   Future<void> signInWithApple() async {
     try {
       isSigningIn.value = true;
       
-      // 데모 모드 - 항상 성공
-      await Future.delayed(const Duration(seconds: 1)); // 로딩 시뮬레이션
+      // Firebase Auth Apple 로그인
+      await _authService.signInWithApple();
       
-      _initDemoUser();
       _redirectToMain();
-      
       Get.snackbar('성공', 'Apple 로그인이 완료되었습니다.');
       
     } catch (e) {
@@ -252,17 +307,31 @@ class AuthController extends GetxController {
     }
   }
 
-  // 로그아웃 (데모 모드)
+  // 비밀번호 재설정 이메일 전송 (실제 Firebase)
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      isLoading.value = true;
+      
+      // Firebase Auth 비밀번호 재설정 이메일 전송
+      await _authService.sendPasswordResetEmail(email);
+      
+      print('비밀번호 재설정 이메일 전송 완료: $email');
+      
+    } catch (e) {
+      print('비밀번호 재설정 이메일 전송 실패: $e');
+      throw Exception('비밀번호 재설정 이메일 전송에 실패했습니다: ${e.toString()}');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  // 로그아웃 (실제 Firebase)
   Future<void> signOut() async {
     try {
       isLoading.value = true;
       
-      // 데모 모드 - 상태 초기화
-      currentUserId.value = '';
-      currentUserEmail.value = '';
-      currentUserName.value = '';
-      userProfile.clear();
-      userModel.value = null;
+      // Firebase Auth 로그아웃
+      await _authService.signOut();
       
       _redirectToLogin();
       Get.snackbar('알림', '로그아웃 되었습니다.');
@@ -295,7 +364,7 @@ class AuthController extends GetxController {
   }
 
   bool isSessionValid() {
-    // 데모 모드에서는 항상 유효
+    // 실제 Firebase 모드에서는 항상 유효
     return isLoggedIn;
   }
 

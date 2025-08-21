@@ -1,14 +1,14 @@
 import 'dart:convert';
 import 'package:get/get.dart';
 import 'package:typetalk/models/chat_notification_model.dart';
-import 'package:typetalk/services/firestore_service.dart';
+import 'package:typetalk/services/real_firebase_service.dart';
 
 /// Firebase Cloud Messaging (FCM) 서비스
 /// 푸시 알림 전송, 수신, 토큰 관리를 담당합니다.
 class FCMService extends GetxService {
   static FCMService get instance => Get.find<FCMService>();
   
-  final DemoFirestoreService _firestore = Get.find<DemoFirestoreService>();
+  final RealFirebaseService _firestore = Get.find<RealFirebaseService>();
   
   // FCM 토큰
   RxString fcmToken = ''.obs;
@@ -72,7 +72,7 @@ class FCMService extends GetxService {
   Future<void> _saveFCMToken(String token) async {
     try {
       // 실제 구현에서는 사용자 문서에 FCM 토큰 저장
-      await _firestore.users.doc('current_user').set({
+      await _firestore.setDocument('users/current_user', {
         'fcmToken': token,
         'lastTokenUpdate': DateTime.now().toIso8601String(),
       });
@@ -130,7 +130,7 @@ class FCMService extends GetxService {
       );
       
       // 알림을 Firestore에 저장
-      await _firestore.notifications.add(notification.toMap());
+      await _firestore.setDocument('notifications/${notification.notificationId}', notification.toMap());
       
       // 실제 FCM 전송 (모의 구현)
       await _simulateFCMDelivery(notification);
@@ -177,7 +177,7 @@ class FCMService extends GetxService {
       );
       
       // 알림을 Firestore에 저장
-      await _firestore.notifications.add(notification.toMap());
+      await _firestore.setDocument('notifications/${notification.notificationId}', notification.toMap());
       
       // 실제 FCM 전송 (모의 구현)
       await _simulateFCMDelivery(notification);
@@ -221,7 +221,7 @@ class FCMService extends GetxService {
       );
       
       // 알림을 Firestore에 저장
-      await _firestore.notifications.add(notification.toMap());
+      await _firestore.setDocument('notifications/${notification.notificationId}', notification.toMap());
       
       // 실제 FCM 전송 (모의 구현)
       await _simulateFCMDelivery(notification);
@@ -241,7 +241,7 @@ class FCMService extends GetxService {
       await Future.delayed(const Duration(milliseconds: 100));
       
       // 알림 상태를 전송됨으로 업데이트
-      await _firestore.notifications.doc(notification.notificationId).update({
+      await _firestore.updateDocument('notifications/${notification.notificationId}', {
         'status': NotificationStatus.sent.value,
       });
       
@@ -249,10 +249,10 @@ class FCMService extends GetxService {
     } catch (e) {
       print('FCM 전송 오류: $e');
       
-      // 전송 실패 시 상태 업데이트
-      await _firestore.notifications.doc(notification.notificationId).update({
-        'status': NotificationStatus.failed.value,
-      });
+              // 전송 실패 시 상태 업데이트
+        await _firestore.updateDocument('notifications/${notification.notificationId}', {
+          'status': NotificationStatus.failed.value,
+        });
     }
   }
   
@@ -268,7 +268,7 @@ class FCMService extends GetxService {
       if (vibration != null) isVibrationEnabled.value = vibration;
       
       // 설정을 Firestore에 저장
-      await _firestore.users.doc('current_user').update({
+      await _firestore.updateDocument('users/current_user', {
         'notificationSettings': {
           'enabled': isNotificationEnabled.value,
           'sound': isSoundEnabled.value,
@@ -341,7 +341,7 @@ class FCMService extends GetxService {
   /// 알림 읽음 처리
   Future<void> markNotificationAsRead(String notificationId) async {
     try {
-      await _firestore.notifications.doc(notificationId).update({
+      await _firestore.updateDocument('notifications/$notificationId', {
         'status': NotificationStatus.read.value,
         'readAt': DateTime.now().toIso8601String(),
       });
@@ -355,13 +355,18 @@ class FCMService extends GetxService {
   /// 모든 알림 읽음 처리
   Future<void> markAllNotificationsAsRead() async {
     try {
-      final notifications = await _firestore.notifications
-          .where('userId', isEqualTo: 'current_user')
-          .where('status', isEqualTo: NotificationStatus.sent.value)
-          .get();
+      final notifications = await _firestore.queryDocuments(
+        'notifications',
+        field: 'userId',
+        isEqualTo: 'current_user',
+      );
       
-      for (final doc in notifications) {
-        await _firestore.notifications.doc(doc.id).update({
+      final sentNotifications = notifications.docs.where(
+        (doc) => (doc.data() as Map<String, dynamic>)['status'] == NotificationStatus.sent.value
+      );
+      
+      for (final doc in sentNotifications) {
+        await _firestore.updateDocument('notifications/${doc.id}', {
           'status': NotificationStatus.read.value,
           'readAt': DateTime.now().toIso8601String(),
         });

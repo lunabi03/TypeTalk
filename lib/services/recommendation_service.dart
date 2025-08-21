@@ -2,16 +2,16 @@ import 'package:get/get.dart';
 import 'package:typetalk/models/recommendation_model.dart';
 import 'package:typetalk/models/user_model.dart';
 import 'package:typetalk/models/chat_model.dart';
-import 'package:typetalk/services/user_repository.dart';
-import 'package:typetalk/services/firestore_service.dart';
+import 'package:typetalk/services/real_user_repository.dart';
+import 'package:typetalk/services/real_firebase_service.dart';
 
 /// 추천 알고리즘 서비스
 /// MBTI 기반 사용자 및 채팅방 추천을 담당합니다.
 class RecommendationService extends GetxService {
   static RecommendationService get instance => Get.find<RecommendationService>();
 
-  final UserRepository _userRepository = Get.find<UserRepository>();
-  final DemoFirestoreService _firestore = Get.find<DemoFirestoreService>();
+  final RealUserRepository _userRepository = Get.find<RealUserRepository>();
+  final RealFirebaseService _firestore = Get.find<RealFirebaseService>();
   
   static const String _collectionName = 'recommendations';
 
@@ -225,10 +225,7 @@ class RecommendationService extends GetxService {
   /// 추천 저장
   Future<void> saveRecommendation(RecommendationModel recommendation) async {
     try {
-      await _firestore
-          .collection(_collectionName)
-          .doc(recommendation.recommendationId)
-          .set(recommendation.toMap());
+      await _firestore.setDocument('$_collectionName/${recommendation.recommendationId}', recommendation.toMap());
       
       print('추천 저장 완료: ${recommendation.recommendationId}');
     } catch (e) {
@@ -255,7 +252,7 @@ class RecommendationService extends GetxService {
       query = query.limit(limit);
 
       final snapshots = await query.get();
-      return snapshots
+      return snapshots.docs
           .map((snapshot) => RecommendationModel.fromSnapshot(snapshot))
           .toList();
     } catch (e) {
@@ -267,10 +264,7 @@ class RecommendationService extends GetxService {
   /// 추천 업데이트 (조회, 수락, 거절 등)
   Future<void> updateRecommendation(RecommendationModel recommendation) async {
     try {
-      await _firestore
-          .collection(_collectionName)
-          .doc(recommendation.recommendationId)
-          .update(recommendation.toMap());
+      await _firestore.updateDocument('$_collectionName/${recommendation.recommendationId}', recommendation.toMap());
       
       print('추천 업데이트 완료: ${recommendation.recommendationId}');
     } catch (e) {
@@ -282,12 +276,9 @@ class RecommendationService extends GetxService {
   /// 추천 조회 표시
   Future<void> markRecommendationAsViewed(String recommendationId) async {
     try {
-      await _firestore
-          .collection(_collectionName)
-          .doc(recommendationId)
-          .update({
-            'viewedAt': DateTime.now(),
-          });
+      await _firestore.updateDocument('$_collectionName/$recommendationId', {
+        'viewedAt': DateTime.now(),
+      });
       
       print('추천 조회 표시 완료: $recommendationId');
     } catch (e) {
@@ -298,13 +289,10 @@ class RecommendationService extends GetxService {
   /// 추천 수락
   Future<void> acceptRecommendation(String recommendationId) async {
     try {
-      await _firestore
-          .collection(_collectionName)
-          .doc(recommendationId)
-          .update({
-            'actionTaken': 'accepted',
-            'viewedAt': DateTime.now(),
-          });
+      await _firestore.updateDocument('$_collectionName/$recommendationId', {
+        'actionTaken': 'accepted',
+        'viewedAt': DateTime.now(),
+      });
       
       print('추천 수락 완료: $recommendationId');
     } catch (e) {
@@ -316,13 +304,10 @@ class RecommendationService extends GetxService {
   /// 추천 거절
   Future<void> rejectRecommendation(String recommendationId) async {
     try {
-      await _firestore
-          .collection(_collectionName)
-          .doc(recommendationId)
-          .update({
-            'actionTaken': 'rejected',
-            'viewedAt': DateTime.now(),
-          });
+      await _firestore.updateDocument('$_collectionName/$recommendationId', {
+        'actionTaken': 'rejected',
+        'viewedAt': DateTime.now(),
+      });
       
       print('추천 거절 완료: $recommendationId');
     } catch (e) {
@@ -418,7 +403,7 @@ class RecommendationService extends GetxService {
           .orderBy('updatedAt', descending: true)
           .get();
       
-      return snapshots
+      return snapshots.docs
           .map((snapshot) => ChatModel.fromSnapshot(snapshot))
           .toList();
     } catch (e) {
@@ -470,14 +455,11 @@ class RecommendationService extends GetxService {
           .where('createdAt', isLessThan: cutoffDate)
           .get();
       
-      for (final recommendation in oldRecommendations) {
-        await _firestore
-            .collection(_collectionName)
-            .doc(recommendation.id)
-            .delete();
+      for (final doc in oldRecommendations.docs) {
+              await _firestore.deleteDocument('$_collectionName/${doc.id}');
       }
       
-      print('오래된 추천 정리 완료: ${oldRecommendations.length}개');
+      print('오래된 추천 정리 완료: ${oldRecommendations.docs.length}개');
     } catch (e) {
       print('추천 정리 오류: $e');
     }

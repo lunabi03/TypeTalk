@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:typetalk/core/theme/app_colors.dart';
+import 'package:typetalk/controllers/auth_controller.dart';
 
 class ResultScreen extends StatelessWidget {
   const ResultScreen({super.key});
@@ -113,7 +114,7 @@ class ResultScreen extends StatelessWidget {
                     height: 56,
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () => Get.snackbar('프리미엄', '상세 분석보기(프리미엄)를 눌렀습니다.'),
+                      onPressed: () => _saveMBTIResult(),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         elevation: 0,
@@ -122,7 +123,7 @@ class ResultScreen extends StatelessWidget {
                         ),
                       ),
                       child: const Text(
-                        '상세 분석보기(프리미엄)',
+                        '프로필에 저장하기',
                         style: TextStyle(
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
@@ -138,6 +139,37 @@ class ResultScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  // MBTI 결과를 Firebase에 저장하고 프로필로 이동
+  void _saveMBTIResult() async {
+    final mbtiType = Get.arguments?['type'] as String?;
+    if (mbtiType == null || mbtiType.isEmpty) {
+      Get.snackbar('오류', 'MBTI 결과를 찾을 수 없습니다.');
+      return;
+    }
+
+    try {
+      final authController = Get.find<AuthController>();
+      
+      // MBTI 결과를 Firebase에 저장
+      await authController.updateUserMBTI(mbtiType);
+      
+      // 성공 메시지 표시
+      Get.snackbar(
+        '성공', 
+        'MBTI 결과가 프로필에 저장되었습니다!',
+        duration: const Duration(seconds: 2),
+      );
+      
+      // 잠시 후 프로필 화면으로 이동
+      Future.delayed(const Duration(seconds: 2), () {
+        Get.offAllNamed('/profile');
+      });
+      
+    } catch (e) {
+      Get.snackbar('오류', 'MBTI 결과 저장에 실패했습니다: ${e.toString()}');
+    }
   }
 }
 

@@ -143,7 +143,7 @@ class RecommendationModel {
   }
 
   // Firestore 문서 스냅샷에서 생성
-  factory RecommendationModel.fromSnapshot(DemoDocumentSnapshot snapshot) {
+  factory RecommendationModel.fromSnapshot(dynamic snapshot) {
     if (!snapshot.exists) {
       throw Exception('추천 문서가 존재하지 않습니다.');
     }

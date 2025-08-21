@@ -6,7 +6,7 @@ import 'package:typetalk/core/theme/app_colors.dart';
 import 'package:typetalk/core/theme/app_text_styles.dart';
 import 'package:typetalk/models/message_model.dart';
 import 'package:typetalk/models/user_model.dart';
-import 'package:typetalk/services/user_repository.dart';
+import 'package:typetalk/services/real_user_repository.dart';
 import 'package:typetalk/routes/app_routes.dart';
 
 class ChatScreen extends StatelessWidget {
@@ -698,7 +698,7 @@ class ChatScreen extends StatelessWidget {
 
   /// 사용자 선택 UI (검색 및 MBTI 필터링 포함)
   void _openUserPicker(ChatController controller) async {
-    final users = await Get.find<UserRepository>().getRecentUsers(limit: 50);
+    final users = await Get.find<RealUserRepository>().getRecentUsers(limit: 50);
     final searchController = TextEditingController();
     final selectedMBTI = 'all'.obs;
     final searchQuery = ''.obs;

@@ -4,7 +4,7 @@ import 'package:typetalk/controllers/auth_controller.dart';
 import 'package:typetalk/services/recommendation_service.dart';
 import 'package:typetalk/models/recommendation_model.dart';
 import 'package:typetalk/models/user_model.dart';
-import 'package:typetalk/services/user_repository.dart';
+import 'package:typetalk/services/real_user_repository.dart';
 
 /// 추천 및 매칭 관리 컨트롤러
 /// 사용자 추천, 채팅방 추천, 매칭 기능을 담당합니다.
@@ -13,7 +13,7 @@ class RecommendationController extends GetxController {
 
   final AuthController _authController = Get.find<AuthController>();
   final RecommendationService _recommendationService = Get.find<RecommendationService>();
-  final UserRepository _userRepository = Get.find<UserRepository>();
+  final RealUserRepository _userRepository = Get.find<RealUserRepository>();
 
   // 추천 데이터
   RxList<RecommendationModel> userRecommendations = <RecommendationModel>[].obs;

@@ -75,6 +75,19 @@ class RealAuthService extends GetxService {
     }
   }
 
+  // 이메일/비밀번호 회원가입 (별칭)
+  Future<UserCredential?> createUserWithEmailAndPassword({
+    required String email,
+    required String password,
+    required String name,
+  }) async {
+    return await signUpWithEmailAndPassword(
+      email: email,
+      password: password,
+      name: name,
+    );
+  }
+
   // 이메일/비밀번호 로그인
   Future<UserCredential?> signInWithEmailAndPassword({
     required String email,

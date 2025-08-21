@@ -40,17 +40,47 @@ class RealUserRepository extends GetxService {
     }
   }
 
-  // 사용자 업데이트
-  Future<void> updateUser(UserModel user) async {
+  // 사용자 업데이트 (전체 업데이트 또는 부분 업데이트)
+  Future<void> updateUser(dynamic userData) async {
     try {
-      await _firebase.updateDocument(
-        '$_collectionName/${user.uid}',
-        _convertUserModelToFirestore(user),
-      );
-      
-      print('실제 Firebase 사용자 업데이트 완료: ${user.uid}');
+      if (userData is UserModel) {
+        // 전체 사용자 모델로 업데이트
+        await _firebase.updateDocument(
+          '$_collectionName/${userData.uid}',
+          _convertUserModelToFirestore(userData),
+        );
+        print('실제 Firebase 사용자 전체 업데이트 완료: ${userData.uid}');
+      } else if (userData is Map<String, dynamic>) {
+        // 부분 업데이트 (uid와 data가 포함된 Map)
+        final uid = userData['uid'];
+        final data = Map<String, dynamic>.from(userData);
+        data.remove('uid'); // uid는 경로에 사용하므로 제거
+        
+        await _firebase.updateDocument(
+          '$_collectionName/$uid',
+          data,
+        );
+        print('실제 Firebase 사용자 부분 업데이트 완료: $uid');
+      } else {
+        throw ArgumentError('userData는 UserModel 또는 Map<String, dynamic>이어야 합니다.');
+      }
     } catch (e) {
       print('실제 Firebase 사용자 업데이트 실패: $e');
+      throw Exception('사용자 업데이트 중 오류가 발생했습니다: ${e.toString()}');
+    }
+  }
+
+  // 사용자 부분 업데이트 (별도 메서드)
+  Future<void> updateUserFields(String uid, Map<String, dynamic> data) async {
+    try {
+      await _firebase.updateDocument(
+        '$_collectionName/$uid',
+        data,
+      );
+      
+      print('실제 Firebase 사용자 부분 업데이트 완료: $uid');
+    } catch (e) {
+      print('실제 Firebase 사용자 부분 업데이트 실패: $e');
       throw Exception('사용자 업데이트 중 오류가 발생했습니다: ${e.toString()}');
     }
   }

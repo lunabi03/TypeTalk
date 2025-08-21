@@ -36,7 +36,7 @@ class _MessageDemoScreenState extends State<MessageDemoScreen> {
       title: '메시지 전송 데모',
       description: '메시지 전송 기능을 테스트하는 데모 채팅방입니다.',
       createdBy: 'demo_user',
-      type: ChatType.group,
+      type: ChatType.group.value,
       settings: ChatSettings(),
       stats: ChatStats(lastActivity: DateTime.now()),
       participants: ['demo_user', 'user1', 'user2'],
@@ -326,6 +326,8 @@ class _MessageDemoScreenState extends State<MessageDemoScreen> {
     );
   }
 
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -375,7 +377,7 @@ class _MessageDemoScreenState extends State<MessageDemoScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _chatController.currentChat.value?.title ?? '데모 채팅방',
+                        _chatController.currentChat?.title ?? '데모 채팅방',
                         style: AppTextStyles.h6.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
@@ -431,21 +433,18 @@ class _MessageDemoScreenState extends State<MessageDemoScreen> {
                 );
               }
               
-              return MessageList(
-                messages: _chatController.messages,
-                currentUserId: 'demo_user',
-                scrollController: _scrollController,
-                onLoadMore: () {
-                  // TODO: 더 많은 메시지 로드 구현
-                  Get.snackbar(
-                    '알림',
-                    '더 많은 메시지 로드 기능은 개발 중입니다.',
-                    backgroundColor: AppColors.primary,
-                    colorText: AppColors.white,
+              return ListView.builder(
+                controller: _scrollController,
+                reverse: true,
+                itemCount: _chatController.messages.length,
+                itemBuilder: (context, index) {
+                  final message = _chatController.messages[index];
+                  return MessageBubble(
+                    message: message,
+                    isOwnMessage: message.senderId == 'demo_user',
+                    onLongPress: () => _showMessageOptions(message),
                   );
                 },
-                isLoadingMore: _chatController.isLoadingMore.value,
-                hasMoreMessages: _chatController.hasMoreMessages.value,
               );
             }),
           ),
@@ -489,9 +488,17 @@ class _MessageDemoScreenState extends State<MessageDemoScreen> {
           
           // 메시지 입력
           MessageInput(
-            replyToMessageId: _replyToMessageId,
-            onMessageSent: _handleMessageSent,
-            onCancelReply: _handleCancelReply,
+            onSendMessage: (text) {
+              // TODO: 메시지 전송 로직 구현
+              Get.snackbar('알림', '메시지 전송 기능은 개발 중입니다.');
+            },
+            replyTo: _replyToMessageId != null ? MessageReply(
+              messageId: _replyToMessageId!,
+              content: '답장할 메시지',
+              senderId: 'demo_user',
+            ) : null,
+            onMessageSent: (text) => _handleMessageSent(),
+            onCancelReply: () => _handleCancelReply(),
           ),
         ],
       ),

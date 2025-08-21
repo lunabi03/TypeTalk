@@ -2,11 +2,11 @@ import 'package:get/get.dart';
 import 'package:typetalk/models/chat_model.dart';
 import 'package:typetalk/models/message_model.dart';
 import 'package:typetalk/models/chat_search_model.dart';
-import 'package:typetalk/services/firestore_service.dart';
+import 'package:typetalk/services/real_firebase_service.dart';
 
 // 채팅 검색 서비스 클래스
 class ChatSearchService extends GetxService {
-  final DemoFirestoreService _firestoreService = DemoFirestoreService();
+  final RealFirebaseService _firestoreService = Get.find<RealFirebaseService>();
   
   // 검색 결과
   final RxList<SearchResult> searchResults = <SearchResult>[].obs;
@@ -143,11 +143,11 @@ class ChatSearchService extends GetxService {
   // 채팅방 검색
   Future<List<ChatSearchResult>> _searchChats(String query, SearchFilter? filter) async {
     try {
-      final chatsSnapshot = await _firestoreService.chats.get();
+      final chatsSnapshot = await _firestoreService.getCollectionDocuments('chats');
       final results = <ChatSearchResult>[];
       
-      for (final chatSnapshot in chatsSnapshot) {
-        final chat = ChatModel.fromMap(chatSnapshot.data);
+      for (final chatSnapshot in chatsSnapshot.docs) {
+        final chat = ChatModel.fromMap(chatSnapshot.data() as Map<String, dynamic>);
         
         // 검색어 관련성 계산
         double relevance = 0.0;
@@ -207,11 +207,11 @@ class ChatSearchService extends GetxService {
   // 메시지 검색
   Future<List<MessageSearchResult>> _searchMessages(String query, SearchFilter? filter) async {
     try {
-      final messagesSnapshot = await _firestoreService.messages.get();
+      final messagesSnapshot = await _firestoreService.getCollectionDocuments('messages');
       final results = <MessageSearchResult>[];
       
-      for (final messageSnapshot in messagesSnapshot) {
-        final message = MessageModel.fromMap(messageSnapshot.data);
+      for (final messageSnapshot in messagesSnapshot.docs) {
+        final message = MessageModel.fromMap(messageSnapshot.data() as Map<String, dynamic>);
         
         // 검색어 관련성 계산
         double relevance = 0.0;

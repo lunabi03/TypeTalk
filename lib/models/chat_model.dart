@@ -1,4 +1,20 @@
-import 'package:typetalk/services/firestore_service.dart';
+// import removed: demo Firestore
+
+// 채팅방 타입 열거형
+enum ChatType {
+  group('group'),
+  private('private');
+
+  const ChatType(this.value);
+  final String value;
+
+  static ChatType fromString(String value) {
+    return ChatType.values.firstWhere(
+      (type) => type.value == value,
+      orElse: () => ChatType.group,
+    );
+  }
+}
 
 // 채팅방 설정 모델
 class ChatSettings {
@@ -292,6 +308,9 @@ class ChatModel {
     this.lastMessage,
   });
 
+  // ID getter (Firestore 문서 ID와 호환)
+  String get id => chatId;
+
   // Firestore 문서로 변환
   Map<String, dynamic> toMap() {
     return {
@@ -355,11 +374,11 @@ class ChatModel {
   }
 
   // Firestore 문서 스냅샷에서 생성
-  factory ChatModel.fromSnapshot(DemoDocumentSnapshot snapshot) {
+  factory ChatModel.fromSnapshot(dynamic snapshot) {
     if (!snapshot.exists) {
       throw Exception('채팅방 문서가 존재하지 않습니다.');
     }
-    return ChatModel.fromMap(snapshot.data);
+    return ChatModel.fromMap(snapshot.data() as Map<String, dynamic>);
   }
 
   // 채팅방 정보 업데이트
@@ -470,6 +489,22 @@ class ChatModel {
       return true; // 제한이 없으면 모든 MBTI 허용
     }
     return targetMBTI!.contains(userMBTI);
+  }
+
+  // 마지막 메시지 지우기 (모든 메시지가 삭제된 경우)
+  ChatModel clearLastMessage() {
+    return copyWith(
+      lastMessage: null,
+      updatedAt: DateTime.now(),
+    );
+  }
+
+  // 채팅방 소유권 이전
+  ChatModel transferOwnership(String newOwnerId) {
+    return copyWith(
+      createdBy: newOwnerId,
+      updatedAt: DateTime.now(),
+    );
   }
 
   @override

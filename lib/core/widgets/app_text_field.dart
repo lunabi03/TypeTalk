@@ -13,6 +13,7 @@ class AppTextField extends StatelessWidget {
   final String? Function(String?)? validator;
   final int? maxLines;
   final Widget? suffixIcon;
+  final bool enabled;
 
   const AppTextField({
     Key? key,
@@ -26,6 +27,7 @@ class AppTextField extends StatelessWidget {
     this.validator,
     this.maxLines = 1,
     this.suffixIcon,
+    this.enabled = true,
   }) : super(key: key);
 
   @override
@@ -50,6 +52,7 @@ class AppTextField extends StatelessWidget {
           keyboardType: keyboardType,
           validator: validator,
           maxLines: maxLines,
+          enabled: enabled,
           style: AppTextStyles.body,
           decoration: InputDecoration(
             hintText: hintText,

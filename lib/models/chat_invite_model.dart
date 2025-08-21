@@ -217,11 +217,11 @@ class ChatInviteModel {
   }
 
   // Firestore 문서 스냅샷에서 생성
-  factory ChatInviteModel.fromSnapshot(DemoDocumentSnapshot snapshot) {
+  factory ChatInviteModel.fromSnapshot(dynamic snapshot) {
     if (!snapshot.exists) {
       throw Exception('초대 문서가 존재하지 않습니다.');
     }
-    return ChatInviteModel.fromMap(snapshot.data);
+    return ChatInviteModel.fromMap(snapshot.data());
   }
 
   // 초대 정보 업데이트

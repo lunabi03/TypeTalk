@@ -11,6 +11,8 @@ class MessageInput extends StatefulWidget {
   final bool isTyping;
   final VoidCallback? onTypingStart;
   final VoidCallback? onTypingStop;
+  final Function(String)? onMessageSent;
+  final VoidCallback? onCancelReply;
 
   const MessageInput({
     Key? key,
@@ -21,6 +23,8 @@ class MessageInput extends StatefulWidget {
     this.isTyping = false,
     this.onTypingStart,
     this.onTypingStop,
+    this.onMessageSent,
+    this.onCancelReply,
   }) : super(key: key);
 
   @override
@@ -70,9 +74,13 @@ class _MessageInputState extends State<MessageInput> {
   void _handleSubmitted(String text) {
     if (text.trim().isEmpty) return;
     
-    widget.onSendMessage(text.trim());
+    final messageText = text.trim();
+    widget.onSendMessage(messageText);
     _textController.clear();
     _isComposing = false;
+    
+    // 메시지 전송 완료 콜백
+    widget.onMessageSent?.call(messageText);
     
     // 답글 상태 초기화
     if (widget.replyTo != null) {
@@ -82,6 +90,7 @@ class _MessageInputState extends State<MessageInput> {
 
   void _clearReply() {
     widget.onReplyChanged?.call(null);
+    widget.onCancelReply?.call();
   }
 
   @override

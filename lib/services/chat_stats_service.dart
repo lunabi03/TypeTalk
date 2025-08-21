@@ -2,11 +2,11 @@ import 'package:get/get.dart';
 import 'package:typetalk/models/chat_model.dart';
 import 'package:typetalk/models/message_model.dart';
 import 'package:typetalk/models/chat_participant_model.dart';
-import 'package:typetalk/services/firestore_service.dart';
+import 'package:typetalk/services/real_firebase_service.dart';
 
 // 채팅 통계 서비스 클래스
 class ChatStatsService extends GetxService {
-  final DemoFirestoreService _firestoreService = DemoFirestoreService();
+  final RealFirebaseService _firestoreService = Get.find<RealFirebaseService>();
   
   // 통계 데이터
   final RxMap<String, ChatStats> chatStats = <String, ChatStats>{}.obs;
@@ -32,20 +32,20 @@ class ChatStatsService extends GetxService {
   // 전역 통계 로드
   Future<void> _loadGlobalStats() async {
     try {
-      // 채팅방 통계
-      final chatsSnapshot = await _firestoreService.chats.get();
-      totalChats.value = chatsSnapshot.length;
+            // 채팅방 통계
+      final chatsSnapshot = await _firestoreService.getCollectionDocuments('chats');
+      totalChats.value = chatsSnapshot.docs.length;
       
       // 메시지 통계
-      final messagesSnapshot = await _firestoreService.messages.get();
-      totalMessages.value = messagesSnapshot.length;
+      final messagesSnapshot = await _firestoreService.getCollectionDocuments('messages');
+      totalMessages.value = messagesSnapshot.docs.length;
       
       // 참여자 통계
-      final participantsSnapshot = await _firestoreService.chatParticipants.get();
-      totalParticipants.value = participantsSnapshot.length;
+      final participantsSnapshot = await _firestoreService.getCollectionDocuments('chatParticipants');
+      totalParticipants.value = participantsSnapshot.docs.length;
       
       // MBTI별 통계 계산
-      _calculateMBTIStats(chatsSnapshot, messagesSnapshot, participantsSnapshot);
+      _calculateMBTIStats(chatsSnapshot.docs, messagesSnapshot.docs, participantsSnapshot.docs);
       
     } catch (e) {
       print('전역 통계 로드 실패: $e');
@@ -54,9 +54,9 @@ class ChatStatsService extends GetxService {
 
   // MBTI별 통계 계산
   void _calculateMBTIStats(
-    List<DemoDocumentSnapshot> chats,
-    List<DemoDocumentSnapshot> messages,
-    List<DemoDocumentSnapshot> participants,
+    List<dynamic> chats,
+    List<dynamic> messages,
+    List<dynamic> participants,
   ) {
     // MBTI별 채팅방 수
     for (final chatSnapshot in chats) {
@@ -98,7 +98,7 @@ class ChatStatsService extends GetxService {
       chatStats[chatId] = newStats;
       
       // Firestore 업데이트
-      await _firestoreService.chats.doc(chatId).update({
+      await _firestoreService.updateDocument('chats/$chatId', {
         'stats': newStats.toMap(),
       });
       
@@ -133,7 +133,7 @@ class ChatStatsService extends GetxService {
       participantStats[participantId] = newStats;
       
       // Firestore 업데이트
-      await _firestoreService.chatParticipants.doc(participantId).update({
+      await _firestoreService.updateDocument('chatParticipants/$participantId', {
         'stats': newStats.toMap(),
       });
       
@@ -166,9 +166,9 @@ class ChatStatsService extends GetxService {
         return chatStats[chatId];
       }
       
-      final chatSnapshot = await _firestoreService.chats.doc(chatId).get();
+      final chatSnapshot = await _firestoreService.getDocument('chats/$chatId');
       if (chatSnapshot.exists) {
-        final chat = ChatModel.fromMap(chatSnapshot.data);
+        final chat = ChatModel.fromMap(chatSnapshot.data() as Map<String, dynamic>);
         chatStats[chatId] = chat.stats;
         return chat.stats;
       }
@@ -187,9 +187,9 @@ class ChatStatsService extends GetxService {
         return participantStats[participantId];
       }
       
-      final participantSnapshot = await _firestoreService.chatParticipants.doc(participantId).get();
+      final participantSnapshot = await _firestoreService.getDocument('chatParticipants/$participantId');
       if (participantSnapshot.exists) {
-        final participant = ChatParticipantModel.fromMap(participantSnapshot.data);
+        final participant = ChatParticipantModel.fromMap(participantSnapshot.data() as Map<String, dynamic>);
         participantStats[participantId] = participant.stats;
         return participant.stats;
       }
@@ -204,13 +204,16 @@ class ChatStatsService extends GetxService {
   // MBTI별 인기 채팅방 가져오기
   Future<List<ChatModel>> getPopularChatsByMBTI(String mbti, {int limit = 10}) async {
     try {
-      final chatsSnapshot = await _firestoreService.chats
-          .where('targetMBTI', isEqualTo: mbti)
-          .orderBy('stats.messageCount', descending: true)
-          .limit(limit)
-          .get();
+      final chatsSnapshot = await _firestoreService.queryDocuments(
+        'chats',
+        field: 'targetMBTI',
+        isEqualTo: mbti,
+        orderByField: 'stats.messageCount',
+        descending: true,
+        limitCount: limit,
+      );
       
-      return chatsSnapshot.map((snapshot) => ChatModel.fromMap(snapshot.data)).toList();
+              return chatsSnapshot.docs.map((snapshot) => ChatModel.fromMap(snapshot.data() as Map<String, dynamic>)).toList();
     } catch (e) {
       print('MBTI별 인기 채팅방 가져오기 실패: $e');
       return [];
@@ -220,11 +223,11 @@ class ChatStatsService extends GetxService {
   // 활성 사용자 수 업데이트
   Future<void> updateActiveUsers() async {
     try {
-      final participantsSnapshot = await _firestoreService.chatParticipants.get();
+              final participantsSnapshot = await _firestoreService.getCollectionDocuments('chatParticipants');
       int activeCount = 0;
       
-      for (final participantSnapshot in participantsSnapshot) {
-        final participant = ChatParticipantModel.fromMap(participantSnapshot.data);
+      for (final participantSnapshot in participantsSnapshot.docs) {
+        final participant = ChatParticipantModel.fromMap(participantSnapshot.data() as Map<String, dynamic>);
         if (participant.isActive) {
           activeCount++;
         }

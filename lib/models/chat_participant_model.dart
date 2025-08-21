@@ -323,11 +323,11 @@ class ChatParticipantModel {
   }
 
   // Firestore 문서 스냅샷에서 생성
-  factory ChatParticipantModel.fromSnapshot(DemoDocumentSnapshot snapshot) {
+  factory ChatParticipantModel.fromSnapshot(dynamic snapshot) {
     if (!snapshot.exists) {
       throw Exception('참여자 문서가 존재하지 않습니다.');
     }
-    return ChatParticipantModel.fromMap(snapshot.data);
+    return ChatParticipantModel.fromMap(snapshot.data());
   }
 
   // 참여자 정보 업데이트

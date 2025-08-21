@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-// import 'package:firebase_core/firebase_core.dart';
-// import 'firebase_options.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'package:typetalk/routes/app_routes.dart';
 import 'package:typetalk/screens/auth/login_screen.dart';
 import 'package:typetalk/screens/auth/signup_screen.dart';
@@ -15,15 +15,15 @@ import 'package:typetalk/screens/result/result_screen.dart';
 import 'package:typetalk/screens/start/start_screen.dart';
 import 'package:typetalk/screens/fcm/fcm_demo_screen.dart';
 
-// 실제 Firebase 서비스들 (임시 비활성화)
-// import 'package:typetalk/services/real_firebase_service.dart';
-// import 'package:typetalk/services/real_user_repository.dart';
-// import 'package:typetalk/services/real_auth_service.dart';
+// 실제 Firebase 서비스들 (활성화)
+import 'package:typetalk/services/real_firebase_service.dart';
+import 'package:typetalk/services/real_user_repository.dart';
+import 'package:typetalk/services/real_auth_service.dart';
 
-// 데모 서비스들 (활성화)
-import 'package:typetalk/services/auth_service.dart';
-import 'package:typetalk/services/firestore_service.dart';
-import 'package:typetalk/services/user_repository.dart';
+// 데모 서비스들 (비활성화)
+// import 'package:typetalk/services/auth_service.dart';
+// import 'package:typetalk/services/firestore_service.dart';
+// import 'package:typetalk/services/user_repository.dart';
 import 'package:typetalk/services/recommendation_service.dart';
 import 'package:typetalk/services/chat_stats_service.dart';
 import 'package:typetalk/services/chat_search_service.dart';
@@ -36,21 +36,34 @@ import 'package:typetalk/middleware/auth_middleware.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Firebase 비활성화 - 데모 모드로 실행
-  print('데모 모드로 실행합니다.');
+  // Firebase 초기화 - 실제 모드로 실행
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    print('Firebase 초기화 완료 - 실제 모드로 실행합니다.');
+  } catch (e) {
+    print('Firebase 초기화 실패: $e');
+    // Firebase 초기화 실패 시 데모 모드로 폴백
+    print('데모 모드로 폴백합니다.');
+  }
   
-  // 데모 서비스들 등록 (Firebase 없이 로컬에서 동작)
-  Get.put(DemoFirestoreService());
-  Get.put(UserRepository());
-  Get.put(AuthService());
+  // 실제 Firebase 서비스들 등록
+  Get.put(RealFirebaseService());
+  Get.put(RealUserRepository());
+  Get.put(RealAuthService());
   Get.put(RecommendationService());
   Get.put(ChatStatsService());
   Get.put(ChatSearchService());
   Get.put(ChatNotificationService());
   Get.put(FCMService());
-  Get.put(AuthController());
+  
+  await Future.delayed(const Duration(milliseconds: 500)); // Firebase Auth 상태 로드 대기
   
   runApp(const MyApp());
+  
+  // 앱 실행 후 AuthController 등록 (GetMaterialApp 컨텍스트 확보 후)
+  Get.put(AuthController());
 }
 
 // MyApp 클래스
@@ -72,7 +85,7 @@ class MyApp extends StatelessWidget {
           fontFamily: 'Pretendard',
         ),
         debugShowCheckedModeBanner: false,
-        initialRoute: AppRoutes.start,
+        initialRoute: AppRoutes.login, // 로그인 화면부터 시작
         getPages: [
           GetPage(
             name: AppRoutes.login, 

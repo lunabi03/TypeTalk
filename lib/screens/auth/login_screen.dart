@@ -6,7 +6,6 @@ import 'package:typetalk/core/theme/app_text_styles.dart';
 import 'package:typetalk/core/widgets/app_button.dart';
 import 'package:typetalk/core/widgets/app_text_field.dart';
 import 'package:typetalk/routes/app_routes.dart';
-import 'package:typetalk/services/auth_service.dart';
 import 'package:typetalk/controllers/auth_controller.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -20,8 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _authService = AuthService.instance;
-  final _authController = AuthController.instance;
+  final _authController = Get.find<AuthController>();
   
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -41,18 +39,20 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
-    final result = await _authService.signInWithEmailAndPassword(
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
-    );
-
-    setState(() {
-      _isLoading = false;
-    });
-
-    if (result != null) {
-      // 로그인 성공
-      Get.offAllNamed(AppRoutes.start);
+    try {
+      await _authController.signInWithEmailAndPassword(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
+      // AuthController에서 자동으로 리다이렉트 처리
+    } catch (e) {
+      Get.snackbar('오류', '로그인 중 오류가 발생했습니다: ${e.toString()}');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -63,7 +63,12 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    await _authService.sendPasswordResetEmail(_emailController.text.trim());
+    try {
+      await _authController.sendPasswordResetEmail(_emailController.text.trim());
+      Get.snackbar('성공', '비밀번호 재설정 이메일이 전송되었습니다.');
+    } catch (e) {
+      Get.snackbar('오류', '비밀번호 재설정 이메일 전송에 실패했습니다.');
+    }
   }
 
   @override

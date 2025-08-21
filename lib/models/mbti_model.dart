@@ -490,7 +490,7 @@ class MBTITestHelper {
         .fold<double>(0, (sum, diff) => sum + diff) / answers.length;
     
     // 시간 일관성이 높을수록 정확도가 높다고 가정
-    final timeScore = (100 - (timeVariance / avgTime * 100)).clamp(0, 100);
+    final timeScore = (100 - (timeVariance / avgTime * 100)).clamp(0.0, 100.0);
     
     return timeScore;
   }

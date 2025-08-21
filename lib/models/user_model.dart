@@ -93,8 +93,10 @@ class UserModel {
   final DateTime updatedAt;
   final String? mbtiType;
   final int mbtiTestCount;
+  final DateTime? lastMBTITestDate;
   final String? profileImageUrl;
   final String? bio;
+  final int? age;
   final String? loginProvider;
   final UserPreferences preferences;
   final UserStats stats;
@@ -107,8 +109,10 @@ class UserModel {
     required this.updatedAt,
     this.mbtiType,
     this.mbtiTestCount = 0,
+    this.lastMBTITestDate,
     this.profileImageUrl,
     this.bio,
+    this.age,
     this.loginProvider,
     UserPreferences? preferences,
     UserStats? stats,
@@ -125,8 +129,10 @@ class UserModel {
       'updatedAt': updatedAt,
       'mbtiType': mbtiType,
       'mbtiTestCount': mbtiTestCount,
+      'lastMBTITestDate': lastMBTITestDate?.toIso8601String(),
       'profileImageUrl': profileImageUrl,
       'bio': bio,
+      'age': age,
       'loginProvider': loginProvider,
       'preferences': preferences.toMap(),
       'stats': stats.toMap(),
@@ -147,8 +153,12 @@ class UserModel {
           : DateTime.now(),
       mbtiType: map['mbtiType'],
       mbtiTestCount: map['mbtiTestCount'] ?? 0,
+      lastMBTITestDate: map['lastMBTITestDate'] != null 
+          ? DateTime.tryParse(map['lastMBTITestDate']) 
+          : null,
       profileImageUrl: map['profileImageUrl'],
       bio: map['bio'],
+      age: map['age'],
       loginProvider: map['loginProvider'],
       preferences: map['preferences'] != null 
           ? UserPreferences.fromMap(map['preferences']) 
@@ -176,6 +186,7 @@ class UserModel {
     DateTime? updatedAt,
     String? mbtiType,
     int? mbtiTestCount,
+    DateTime? lastMBTITestDate,
     String? profileImageUrl,
     String? bio,
     String? loginProvider,
@@ -190,6 +201,7 @@ class UserModel {
       updatedAt: updatedAt ?? DateTime.now(),
       mbtiType: mbtiType ?? this.mbtiType,
       mbtiTestCount: mbtiTestCount ?? this.mbtiTestCount,
+      lastMBTITestDate: lastMBTITestDate ?? this.lastMBTITestDate,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
       bio: bio ?? this.bio,
       loginProvider: loginProvider ?? this.loginProvider,

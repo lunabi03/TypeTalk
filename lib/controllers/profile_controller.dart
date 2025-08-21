@@ -1,7 +1,7 @@
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:typetalk/controllers/auth_controller.dart';
-import 'package:typetalk/services/user_repository.dart';
+import 'package:typetalk/services/real_user_repository.dart';
 import 'package:typetalk/models/user_model.dart';
 
 /// 사용자 프로필 관리를 위한 컨트롤러
@@ -10,7 +10,7 @@ class ProfileController extends GetxController {
   static ProfileController get instance => Get.find<ProfileController>();
 
   final AuthController _authController = Get.find<AuthController>();
-  final UserRepository _userRepository = Get.find<UserRepository>();
+  final RealUserRepository _userRepository = Get.find<RealUserRepository>();
 
   // 프로필 편집 상태
   RxBool isEditing = false.obs;
@@ -18,9 +18,9 @@ class ProfileController extends GetxController {
   RxBool isSaving = false.obs;
 
   // 프로필 편집 폼 컨트롤러
-  final nameController = TextEditingController();
-  final bioController = TextEditingController();
-  final emailController = TextEditingController();
+  late TextEditingController nameController;
+  late TextEditingController bioController;
+  late TextEditingController emailController;
 
   // 현재 사용자 모델
   Rx<UserModel?> currentUser = Rx<UserModel?>(null);
@@ -31,15 +31,61 @@ class ProfileController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    _initializeControllers();
     _loadCurrentUserProfile();
   }
 
   @override
   void onClose() {
-    nameController.dispose();
-    bioController.dispose();
-    emailController.dispose();
+    _disposeControllers();
     super.onClose();
+  }
+
+  /// 컨트롤러 초기화
+  void _initializeControllers() {
+    nameController = TextEditingController();
+    bioController = TextEditingController();
+    emailController = TextEditingController();
+  }
+
+  /// 컨트롤러 정리
+  void _disposeControllers() {
+    try {
+      nameController.dispose();
+      bioController.dispose();
+      emailController.dispose();
+    } catch (e) {
+      print('컨트롤러 정리 오류: $e');
+    }
+  }
+
+  /// 컨트롤러 안전하게 업데이트
+  void _updateFormControllers(UserModel user) {
+    try {
+      // 컨트롤러가 초기화되어 있는지 확인
+      if (nameController.text.isNotEmpty || nameController.text.isEmpty) {
+        nameController.text = user.name;
+      }
+      if (bioController.text.isNotEmpty || bioController.text.isEmpty) {
+        bioController.text = user.bio ?? '';
+      }
+      if (emailController.text.isNotEmpty || emailController.text.isEmpty) {
+        emailController.text = user.email;
+      }
+      profileImageUrl.value = user.profileImageUrl ?? '';
+    } catch (e) {
+      print('컨트롤러 업데이트 오류: $e');
+      // 컨트롤러가 dispose된 경우 다시 초기화
+      try {
+        _initializeControllers();
+        nameController.text = user.name;
+        bioController.text = user.bio ?? '';
+        emailController.text = user.email;
+        profileImageUrl.value = user.profileImageUrl ?? '';
+      } catch (e2) {
+        print('컨트롤러 재초기화 오류: $e2');
+      }
+    }
   }
 
   /// 현재 사용자 프로필 로드
@@ -61,14 +107,6 @@ class ProfileController extends GetxController {
     } finally {
       isLoading.value = false;
     }
-  }
-
-  /// 폼 컨트롤러 업데이트
-  void _updateFormControllers(UserModel user) {
-    nameController.text = user.name;
-    bioController.text = user.bio ?? '';
-    emailController.text = user.email;
-    profileImageUrl.value = user.profileImageUrl ?? '';
   }
 
   /// 사용자 프로필 생성 (Create)
@@ -152,57 +190,40 @@ class ProfileController extends GetxController {
   }
 
   /// 사용자 프로필 수정 (Update)
-  Future<bool> updateUserProfile({
-    String? name,
-    String? bio,
-    String? profileImageUrl,
-  }) async {
+  Future<bool> updateUserProfile() async {
     try {
       isSaving.value = true;
-
+      
       final uid = _authController.userId;
       if (uid == null) {
-        throw Exception('로그인된 사용자가 없습니다.');
+        Get.snackbar('오류', '사용자 정보를 찾을 수 없습니다.');
+        return false;
       }
 
+      final updateData = {
+        'name': nameController.text.trim(),
+        'bio': bioController.text.trim(),
+        'updatedAt': DateTime.now(),
+      };
+
+      await _userRepository.updateUserFields(uid, updateData);
+      
+      // 로컬 사용자 모델 업데이트
       final currentUserData = currentUser.value;
-      if (currentUserData == null) {
-        throw Exception('현재 사용자 정보를 찾을 수 없습니다.');
+      if (currentUserData != null) {
+        currentUser.value = currentUserData.copyWith(
+          name: updateData['name'] as String,
+          bio: updateData['bio'] as String,
+          updatedAt: updateData['updatedAt'] as DateTime,
+        );
       }
 
-      // 업데이트할 데이터 준비
-      final updatedUser = currentUserData.updateProfile(
-        name: name ?? nameController.text.trim(),
-        bio: bio ?? bioController.text.trim(),
-        profileImageUrl: profileImageUrl ?? this.profileImageUrl.value,
-      );
-
-      // Firestore 업데이트
-      await _userRepository.updateUser(updatedUser);
-
-      // 로컬 상태 업데이트
-      currentUser.value = updatedUser;
-      _updateFormControllers(updatedUser);
-
-      // AuthController도 업데이트
-      await _authController.refreshProfile();
-
-      Get.snackbar(
-        '성공',
-        '프로필이 성공적으로 업데이트되었습니다.',
-        backgroundColor: Colors.green.withOpacity(0.1),
-        colorText: Colors.green,
-      );
-
+      Get.snackbar('성공', '프로필이 업데이트되었습니다.');
       return true;
+      
     } catch (e) {
       print('프로필 업데이트 오류: $e');
-      Get.snackbar(
-        '오류',
-        '프로필 업데이트 중 오류가 발생했습니다: ${e.toString()}',
-        backgroundColor: Colors.red.withOpacity(0.1),
-        colorText: Colors.red,
-      );
+      Get.snackbar('오류', '프로필 업데이트에 실패했습니다: ${e.toString()}');
       return false;
     } finally {
       isSaving.value = false;
@@ -385,22 +406,28 @@ class ProfileController extends GetxController {
 
   /// 프로필 정보 유효성 검증
   bool validateProfileData() {
-    if (nameController.text.trim().isEmpty) {
-      Get.snackbar('오류', '이름을 입력해주세요.');
+    try {
+      if (nameController.text.trim().isEmpty) {
+        Get.snackbar('오류', '이름을 입력해주세요.');
+        return false;
+      }
+
+      if (nameController.text.trim().length < 2) {
+        Get.snackbar('오류', '이름은 2자 이상 입력해주세요.');
+        return false;
+      }
+
+      if (bioController.text.length > 200) {
+        Get.snackbar('오류', '소개는 200자 이내로 입력해주세요.');
+        return false;
+      }
+
+      return true;
+    } catch (e) {
+      print('프로필 데이터 검증 오류: $e');
+      Get.snackbar('오류', '프로필 데이터 검증 중 오류가 발생했습니다.');
       return false;
     }
-
-    if (nameController.text.trim().length < 2) {
-      Get.snackbar('오류', '이름은 2자 이상 입력해주세요.');
-      return false;
-    }
-
-    if (bioController.text.length > 200) {
-      Get.snackbar('오류', '소개는 200자 이내로 입력해주세요.');
-      return false;
-    }
-
-    return true;
   }
 
   /// 프로필 새로고침

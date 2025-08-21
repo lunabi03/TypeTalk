@@ -19,6 +19,8 @@ class RealtimeChatController extends GetxController {
   // 로딩 상태
   final RxBool isLoading = false.obs;
   final RxBool isSending = false.obs;
+  final RxBool isLoadingMessages = false.obs;
+  final RxBool isLoadingMore = false.obs;
   
   // 페이지네이션
   final RxBool hasMoreMessages = true.obs;
@@ -31,7 +33,7 @@ class RealtimeChatController extends GetxController {
   
   // 타이핑 디바운스 타이머
   Timer? _typingTimer;
-  final Duration _typingDebounce = Duration(milliseconds: 500);
+  final Duration _typingDebounce = const Duration(milliseconds: 500);
 
   @override
   void onInit() {
@@ -46,7 +48,7 @@ class RealtimeChatController extends GetxController {
   }
 
   // 채팅방 설정
-  Future<void> setChatRoom(ChatModel chatRoom) async {
+  Future<void> selectChat(ChatModel chatRoom) async {
     try {
       // 기존 스트림 정리
       _disposeStreams();
@@ -77,8 +79,8 @@ class RealtimeChatController extends GetxController {
     if (currentChatRoom.value == null) return;
     
     try {
-              _messageSubscription = _messageService
-            .startMessageStream(currentChatRoom.value!.chatId)
+      _messageSubscription = _messageService
+          .startMessageStream(currentChatRoom.value!.chatId)
           .listen((newMessages) {
         messages.assignAll(newMessages);
       });
@@ -92,8 +94,8 @@ class RealtimeChatController extends GetxController {
     if (currentChatRoom.value == null) return;
     
     try {
-              _typingSubscription = _messageService
-            .startTypingStream(currentChatRoom.value!.chatId)
+      _typingSubscription = _messageService
+          .startTypingStream(currentChatRoom.value!.chatId)
           .listen((newTypingUsers) {
         typingUsers.assignAll(newTypingUsers);
       });
@@ -102,40 +104,42 @@ class RealtimeChatController extends GetxController {
     }
   }
 
-  // 스트림 정리
-  void _disposeStreams() {
-    _messageSubscription?.cancel();
-    _typingSubscription?.cancel();
-    _messageSubscription = null;
-    _typingSubscription = null;
-  }
-
   // 초기 메시지 로드
   Future<void> loadInitialMessages() async {
     if (currentChatRoom.value == null) return;
     
     try {
-      isLoading.value = true;
+      isLoadingMessages.value = true;
       
-      // 첫 페이지 메시지 로드
-      await loadMoreMessages();
+      final newMessages = await _messageService.getChatMessages(
+        chatRoomId: currentChatRoom.value!.chatId,
+        limit: messagesPerPage,
+        lastMessageId: null,
+      );
+      
+      if (newMessages.isNotEmpty) {
+        messages.assignAll(newMessages);
+        currentPage.value = 1;
+      }
+      
+      hasMoreMessages.value = newMessages.length >= messagesPerPage;
       
     } catch (e) {
       Get.snackbar('오류', '메시지 로드에 실패했습니다: $e');
     } finally {
-      isLoading.value = false;
+      isLoadingMessages.value = false;
     }
   }
 
-  // 더 많은 메시지 로드 (페이지네이션)
+  // 더 많은 메시지 로드
   Future<void> loadMoreMessages() async {
-    if (currentChatRoom.value == null || !hasMoreMessages.value) return;
+    if (currentChatRoom.value == null || !hasMoreMessages.value || isLoadingMore.value) return;
     
     try {
-      isLoading.value = true;
+      isLoadingMore.value = true;
       
       final newMessages = await _messageService.getChatMessages(
-        chatRoomId: currentChatRoom.value!.id,
+        chatRoomId: currentChatRoom.value!.chatId,
         limit: messagesPerPage,
         lastMessageId: messages.isNotEmpty ? messages.last.messageId : null,
       );
@@ -150,7 +154,7 @@ class RealtimeChatController extends GetxController {
     } catch (e) {
       Get.snackbar('오류', '메시지 로드에 실패했습니다: $e');
     } finally {
-      isLoading.value = false;
+      isLoadingMore.value = false;
     }
   }
 
@@ -162,11 +166,11 @@ class RealtimeChatController extends GetxController {
       isSending.value = true;
       
       // 타이핑 상태 종료
-      await _messageService.stopTyping(currentChatRoom.value!.id);
+      await _messageService.stopTyping(currentChatRoom.value!.chatId);
       
       // 메시지 전송
       final message = await _messageService.sendMessage(
-        chatRoomId: currentChatRoom.value!.id,
+        chatRoomId: currentChatRoom.value!.chatId,
         content: content.trim(),
         replyTo: replyTo,
       );
@@ -195,11 +199,11 @@ class RealtimeChatController extends GetxController {
       isSending.value = true;
       
       // 타이핑 상태 종료
-      await _messageService.stopTyping(currentChatRoom.value!.id);
+      await _messageService.stopTyping(currentChatRoom.value!.chatId);
       
       // 미디어 메시지 전송
       final message = await _messageService.sendMessage(
-        chatRoomId: currentChatRoom.value!.id,
+        chatRoomId: currentChatRoom.value!.chatId,
         content: content.trim(),
         type: media.mimeType.startsWith('image/') ? 'image' : 'file',
         media: media,
@@ -253,7 +257,7 @@ class RealtimeChatController extends GetxController {
   }
 
   // 메시지 반응 토글
-  Future<void> toggleMessageReaction(String messageId, String emoji) async {
+  Future<void> toggleReaction(String messageId, String emoji) async {
     try {
       await _messageService.toggleMessageReaction(messageId, emoji);
       
@@ -269,7 +273,7 @@ class RealtimeChatController extends GetxController {
     if (currentChatRoom.value == null) return;
     
     try {
-      await _messageService.startTyping(currentChatRoom.value!.id);
+      await _messageService.startTyping(currentChatRoom.value!.chatId);
     } catch (e) {
       // 타이핑 시작 실패 처리
     }
@@ -282,7 +286,7 @@ class RealtimeChatController extends GetxController {
     _typingTimer?.cancel();
     _typingTimer = Timer(_typingDebounce, () async {
       try {
-        await _messageService.stopTyping(currentChatRoom.value!.id);
+        await _messageService.stopTyping(currentChatRoom.value!.chatId);
       } catch (e) {
         // 타이핑 종료 실패 처리
       }
@@ -295,7 +299,7 @@ class RealtimeChatController extends GetxController {
     
     try {
       await _messageService.markMessageAsRead(
-        currentChatRoom.value!.id,
+        currentChatRoom.value!.chatId,
         messageId,
       );
     } catch (e) {
@@ -311,7 +315,7 @@ class RealtimeChatController extends GetxController {
     
     try {
       return await _messageService.searchMessages(
-        chatRoomId: currentChatRoom.value!.id,
+        chatRoomId: currentChatRoom.value!.chatId,
         query: query.trim(),
       );
     } catch (e) {
@@ -325,7 +329,7 @@ class RealtimeChatController extends GetxController {
     if (currentChatRoom.value == null) return {};
     
     try {
-      return await _messageService.getMessageStats(currentChatRoom.value!.id);
+      return await _messageService.getMessageStats(currentChatRoom.value!.chatId);
     } catch (e) {
       // 메시지 통계 조회 실패 처리
     }
@@ -353,6 +357,7 @@ class RealtimeChatController extends GetxController {
   }
 
   // 새로고침
+  @override
   Future<void> refresh() async {
     if (currentChatRoom.value == null) return;
     
@@ -409,4 +414,25 @@ class RealtimeChatController extends GetxController {
       return '여러 명이 타이핑 중입니다...';
     }
   }
+
+  // 메시지 선택
+  void selectMessage(MessageModel message) {
+    // TODO: 메시지 선택 로직 구현
+  }
+
+  // 메시지 편집 시작
+  void startEditingMessage(MessageModel message) {
+    // TODO: 메시지 편집 시작 로직 구현
+  }
+
+  // 스트림 정리
+  void _disposeStreams() {
+    _messageSubscription?.cancel();
+    _typingSubscription?.cancel();
+    _messageSubscription = null;
+    _typingSubscription = null;
+  }
+
+  // 현재 채팅방 getter
+  ChatModel? get currentChat => currentChatRoom.value;
 } 

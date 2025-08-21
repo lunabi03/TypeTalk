@@ -28,6 +28,15 @@ class RealFirebaseService extends GetxService {
   // Firestore 인스턴스 반환
   FirebaseFirestore get firestore => _firestore;
 
+  // 주요 컬렉션들
+  CollectionReference get users => _firestore.collection('users');
+  CollectionReference get chats => _firestore.collection('chats');
+  CollectionReference get messages => _firestore.collection('messages');
+  CollectionReference get chatParticipants => _firestore.collection('chatParticipants');
+  CollectionReference get notifications => _firestore.collection('notifications');
+  CollectionReference get recommendations => _firestore.collection('recommendations');
+  CollectionReference get chatInvites => _firestore.collection('chatInvites');
+
   // 컬렉션 참조 가져오기
   CollectionReference collection(String path) {
     return _firestore.collection(path);
@@ -106,9 +115,16 @@ class RealFirebaseService extends GetxService {
     dynamic isEqualTo,
     dynamic isGreaterThan,
     dynamic isLessThan,
+    dynamic isLessThanOrEqualTo,
+    dynamic isGreaterThanOrEqualTo,
+    dynamic arrayContains,
+    List<dynamic>? arrayContainsAny,
+    List<dynamic>? whereIn,
+    List<dynamic>? whereNotIn,
     String? orderByField,
     bool descending = false,
     int? limitCount,
+    DocumentSnapshot? startAfterDocument,
   }) async {
     try {
       Query query = _firestore.collection(collectionPath);
@@ -124,11 +140,39 @@ class RealFirebaseService extends GetxService {
         if (isLessThan != null) {
           query = query.where(field, isLessThan: isLessThan);
         }
+        if (isLessThanOrEqualTo != null) {
+          query = query.where(field, isLessThanOrEqualTo: isLessThanOrEqualTo);
+        }
+        if (isGreaterThanOrEqualTo != null) {
+          query = query.where(field, isGreaterThanOrEqualTo: isGreaterThanOrEqualTo);
+        }
+        if (arrayContains != null) {
+          query = query.where(field, arrayContains: arrayContains);
+        }
+        if (arrayContainsAny != null) {
+          query = query.where(field, arrayContainsAny: arrayContainsAny);
+        }
+        if (whereIn != null) {
+          query = query.where(field, whereIn: whereIn);
+        }
+        if (whereNotIn != null) {
+          query = query.where(field, whereNotIn: whereNotIn);
+        }
       }
 
       // 정렬
       if (orderByField != null) {
         query = query.orderBy(orderByField, descending: descending);
+      }
+
+      // 제한
+      if (limitCount != null) {
+        query = query.limit(limitCount);
+      }
+
+      // 시작점
+      if (startAfterDocument != null) {
+        query = query.startAfterDocument(startAfterDocument);
       }
 
       // 제한
@@ -295,6 +339,11 @@ class RealFirebaseService extends GetxService {
       default:
         return Exception('인증 오류가 발생했습니다: ${e.message}');
     }
+  }
+
+  // 배치 작업 시작
+  WriteBatch batch() {
+    return _firestore.batch();
   }
 }
 

@@ -2,11 +2,11 @@ import 'package:get/get.dart';
 import 'package:typetalk/models/chat_notification_model.dart';
 import 'package:typetalk/models/chat_model.dart';
 import 'package:typetalk/models/message_model.dart';
-import 'package:typetalk/services/firestore_service.dart';
+import 'package:typetalk/services/real_firebase_service.dart';
 
 // 채팅 알림 서비스 클래스
 class ChatNotificationService extends GetxService {
-  final DemoFirestoreService _firestoreService = DemoFirestoreService();
+  final RealFirebaseService _firestoreService = Get.find<RealFirebaseService>();
   
   // 알림 데이터
   final RxList<ChatNotificationModel> notifications = <ChatNotificationModel>[].obs;
@@ -45,11 +45,11 @@ class ChatNotificationService extends GetxService {
   // 알림 로드
   Future<void> _loadNotifications() async {
     try {
-      final notificationsSnapshot = await _firestoreService.notifications.get();
+      final notificationsSnapshot = await _firestoreService.getCollectionDocuments('notifications');
       final loadedNotifications = <ChatNotificationModel>[];
       
-      for (final snapshot in notificationsSnapshot) {
-        final notification = ChatNotificationModel.fromMap(snapshot.data);
+      for (final snapshot in notificationsSnapshot.docs) {
+        final notification = ChatNotificationModel.fromMap(snapshot.data() as Map<String, dynamic>);
         loadedNotifications.add(notification);
       }
       
@@ -94,8 +94,7 @@ class ChatNotificationService extends GetxService {
       );
       
       // Firestore에 저장
-      await _firestoreService.notifications.doc(notification.notificationId)
-          .set(notification.toMap());
+      await _firestoreService.setDocument('notifications/${notification.notificationId}', notification.toMap());
       
       // 로컬 목록에 추가
       notifications.add(notification);
@@ -129,8 +128,7 @@ class ChatNotificationService extends GetxService {
       );
       
       // Firestore에 저장
-      await _firestoreService.notifications.doc(notification.notificationId)
-          .set(notification.toMap());
+      await _firestoreService.setDocument('notifications/${notification.notificationId}', notification.toMap());
       
       // 로컬 목록에 추가
       notifications.add(notification);
@@ -164,8 +162,7 @@ class ChatNotificationService extends GetxService {
       );
       
       // Firestore에 저장
-      await _firestoreService.notifications.doc(notification.notificationId)
-          .set(notification.toMap());
+      await _firestoreService.setDocument('notifications/${notification.notificationId}', notification.toMap());
       
       // 로컬 목록에 추가
       notifications.add(notification);
@@ -192,8 +189,7 @@ class ChatNotificationService extends GetxService {
       );
       
       // Firestore에 저장
-      await _firestoreService.notifications.doc(notification.notificationId)
-          .set(notification.toMap());
+      await _firestoreService.setDocument('notifications/${notification.notificationId}', notification.toMap());
       
       // 로컬 목록에 추가
       notifications.add(notification);
@@ -225,8 +221,7 @@ class ChatNotificationService extends GetxService {
       );
       
       // Firestore에 저장
-      await _firestoreService.notifications.doc(notification.notificationId)
-          .set(notification.toMap());
+      await _firestoreService.setDocument('notifications/${notification.notificationId}', notification.toMap());
       
       // 로컬 목록에 추가
       notifications.add(notification);
@@ -244,7 +239,7 @@ class ChatNotificationService extends GetxService {
       final updatedNotification = notification.markAsRead();
       
       // Firestore 업데이트
-      await _firestoreService.notifications.doc(notificationId).update({
+      await _firestoreService.updateDocument('notifications/$notificationId', {
         'status': updatedNotification.status.value,
         'readAt': updatedNotification.readAt?.toIso8601String(),
       });
@@ -279,7 +274,7 @@ class ChatNotificationService extends GetxService {
       final updatedNotification = notification.dismiss();
       
       // Firestore 업데이트
-      await _firestoreService.notifications.doc(notificationId).update({
+      await _firestoreService.updateDocument('notifications/$notificationId', {
         'status': updatedNotification.status.value,
         'dismissedAt': updatedNotification.dismissedAt?.toIso8601String(),
       });
@@ -300,7 +295,7 @@ class ChatNotificationService extends GetxService {
   Future<void> deleteNotification(String notificationId) async {
     try {
       // Firestore에서 삭제
-      await _firestoreService.notifications.doc(notificationId).delete();
+      await _firestoreService.deleteDocument('notifications/$notificationId');
       
       // 로컬 목록에서 제거
       notifications.removeWhere((n) => n.notificationId == notificationId);

@@ -41,46 +41,46 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'YOUR_API_KEY',
-    appId: 'YOUR_APP_ID',
-    messagingSenderId: 'YOUR_SENDER_ID',
-    projectId: 'typetalk-project',
-    authDomain: 'typetalk-project.firebaseapp.com',
-    storageBucket: 'typetalk-project.appspot.com',
-    measurementId: 'YOUR_MEASUREMENT_ID',
+    apiKey: 'AIzaSyC2qhmldX5gf4ztwWPqnnZwykX_h65WWv4',
+    appId: '1:805092955656:web:57e99fa547805cf9ef63bd',
+    messagingSenderId: '805092955656',
+    projectId: 'typetalk-3dc68',
+    authDomain: 'typetalk-3dc68.firebaseapp.com',
+    storageBucket: 'typetalk-3dc68.firebasestorage.app',
+    measurementId: 'G-3M0D1RF8KZ',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'YOUR_ANDROID_API_KEY',
-    appId: 'YOUR_ANDROID_APP_ID',
-    messagingSenderId: 'YOUR_SENDER_ID',
-    projectId: 'typetalk-project',
-    storageBucket: 'typetalk-project.appspot.com',
+    apiKey: 'AIzaSyDiUC82o5hHvysDbF3XAx9GQwkew6FqaIU',
+    appId: '1:805092955656:android:6a86c830a06d5b3def63bd',
+    messagingSenderId: '805092955656',
+    projectId: 'typetalk-3dc68',
+    storageBucket: 'typetalk-3dc68.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'YOUR_IOS_API_KEY',
-    appId: 'YOUR_IOS_APP_ID',
-    messagingSenderId: 'YOUR_SENDER_ID',
-    projectId: 'typetalk-project',
-    storageBucket: 'typetalk-project.appspot.com',
+    apiKey: 'AIzaSyA1Mis1DThMy1QCFu4A7UCzjHB7nm8HVZU',
+    appId: '1:805092955656:ios:da27e9062f914b98ef63bd',
+    messagingSenderId: '805092955656',
+    projectId: 'typetalk-3dc68',
+    storageBucket: 'typetalk-3dc68.firebasestorage.app',
     iosBundleId: 'net.levelupcode.typetalk',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'YOUR_MACOS_API_KEY',
-    appId: 'YOUR_MACOS_APP_ID',
-    messagingSenderId: 'YOUR_SENDER_ID',
-    projectId: 'typetalk-project',
-    storageBucket: 'typetalk-project.appspot.com',
+    apiKey: 'AIzaSyA1Mis1DThMy1QCFu4A7UCzjHB7nm8HVZU',
+    appId: '1:805092955656:ios:da27e9062f914b98ef63bd',
+    messagingSenderId: '805092955656',
+    projectId: 'typetalk-3dc68',
+    storageBucket: 'typetalk-3dc68.firebasestorage.app',
     iosBundleId: 'net.levelupcode.typetalk',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'YOUR_WINDOWS_API_KEY',
-    appId: 'YOUR_WINDOWS_APP_ID',
-    messagingSenderId: 'YOUR_SENDER_ID',
-    projectId: 'typetalk-project',
-    storageBucket: 'typetalk-project.appspot.com',
+    apiKey: 'AIzaSyC2qhmldX5gf4ztwWPqnnZwykX_h65WWv4',
+    appId: '1:805092955656:web:57e99fa547805cf9ef63bd',
+    messagingSenderId: '805092955656',
+    projectId: 'typetalk-3dc68',
+    storageBucket: 'typetalk-3dc68.firebasestorage.app',
   );
 }

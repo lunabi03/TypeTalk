@@ -3,6 +3,10 @@ import 'package:get/get.dart';
 import 'package:typetalk/services/real_firebase_service.dart';
 import 'package:typetalk/services/real_user_repository.dart';
 import 'package:typetalk/models/user_model.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:crypto/crypto.dart';
+import 'dart:convert';
 
 // 실제 Firebase 인증 서비스
 class RealAuthService extends GetxService {
@@ -111,8 +115,8 @@ class RealAuthService extends GetxService {
       return null;
     } catch (e) {
       print('실제 Firebase 로그인 실패: $e');
-      Get.snackbar('오류', '로그인 중 오류가 발생했습니다: ${e.toString()}');
-      return null;
+      // 로그인 실패 시 예외를 다시 throw하여 AuthController에서 처리하도록 함
+      throw e;
     }
   }
 
@@ -140,45 +144,204 @@ class RealAuthService extends GetxService {
     }
   }
 
-  // Google 로그인 (데모 모드 - 실제 구현 시 google_sign_in 패키지 필요)
+  // Google 로그인 (실제 구현)
   Future<UserCredential?> signInWithGoogle() async {
     try {
-      // 실제 Google 로그인 구현은 google_sign_in 패키지가 필요합니다.
-      // 여기서는 데모용으로 처리합니다.
-      Get.snackbar('알림', 'Google 로그인은 추가 설정이 필요합니다.');
-      
-      // 데모용 Google 사용자 생성
-      final demoEmail = 'demo.google.${DateTime.now().millisecondsSinceEpoch}@gmail.com';
-      return await signUpWithEmailAndPassword(
-        email: demoEmail,
-        password: 'demo123456',
-        name: 'Google 사용자',
+      // Google Sign In 인스턴스 생성 - profile 스코프 제거
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        scopes: ['email'], // profile 스코프 제거하여 People API 호출 방지
       );
+      
+      // Google 로그인 진행
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+      if (googleUser == null) {
+        // 사용자가 로그인을 취소한 경우
+        throw Exception('Google 로그인이 취소되었습니다.');
+      }
+      
+      print('Google 로그인 사용자 정보:');
+      print('  - Email: ${googleUser.email}');
+      print('  - Display Name: ${googleUser.displayName}');
+      print('  - Photo URL: ${googleUser.photoUrl}');
+      print('  - ID: ${googleUser.id}');
+      
+      // Google 인증 정보 가져오기
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      
+      print('Google 인증 정보:');
+      print('  - Access Token: ${googleAuth.accessToken != null ? "있음" : "없음"}');
+      print('  - ID Token: ${googleAuth.idToken != null ? "있음" : "없음"}');
+      print('  - Server Auth Code: ${googleAuth.serverAuthCode != null ? "있음" : "없음"}');
+      
+      if (googleAuth.accessToken == null || googleAuth.idToken == null) {
+        print('인증 정보가 부족합니다. Firebase Auth로 직접 로그인을 시도합니다.');
+        
+        // Firebase Auth로 직접 로그인 시도
+        try {
+          final userCredential = await _firebase.signInWithCredential(
+            GoogleAuthProvider.credential(
+              accessToken: googleAuth.accessToken,
+              idToken: googleAuth.idToken,
+            ),
+          );
+          
+          if (userCredential.user != null) {
+            print('Firebase Auth 로그인 성공: ${userCredential.user!.uid}');
+            return await _handleSuccessfulGoogleLogin(userCredential, googleUser);
+          }
+        } catch (firebaseError) {
+          print('Firebase Auth 로그인 실패: $firebaseError');
+          throw Exception('Firebase 인증에 실패했습니다: ${firebaseError.toString()}');
+        }
+        
+        throw Exception('Google 인증 정보를 가져올 수 없습니다.');
+      }
+      
+      // Firebase Auth 크레덴셜 생성
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      
+      // Firebase Auth로 로그인
+      final userCredential = await _firebase.signInWithCredential(credential);
+      
+      if (userCredential.user != null) {
+        return await _handleSuccessfulGoogleLogin(userCredential, googleUser);
+      }
+      
+      return null;
     } catch (e) {
       print('Google 로그인 실패: $e');
-      Get.snackbar('오류', 'Google 로그인 중 오류가 발생했습니다: ${e.toString()}');
-      return null;
+      
+      // 구체적인 오류 메시지 제공
+      if (e.toString().contains('network_error')) {
+        throw Exception('네트워크 연결을 확인해주세요.');
+      } else if (e.toString().contains('sign_in_canceled')) {
+        throw Exception('Google 로그인이 취소되었습니다.');
+      } else if (e.toString().contains('sign_in_failed')) {
+        throw Exception('Google 로그인에 실패했습니다. 다시 시도해주세요.');
+      } else if (e.toString().contains('play_services_not_available')) {
+        throw Exception('Google Play 서비스가 필요합니다.');
+      } else if (e.toString().contains('Google 인증 정보를 가져올 수 없습니다')) {
+        throw Exception('Google 인증 정보를 가져올 수 없습니다. 다시 시도해주세요.');
+      } else {
+        throw Exception('Google 로그인 중 오류가 발생했습니다: ${e.toString()}');
+      }
     }
   }
 
-  // Apple 로그인 (데모 모드 - 실제 구현 시 sign_in_with_apple 패키지 필요)
+  // Google 로그인 성공 처리
+  Future<UserCredential?> _handleSuccessfulGoogleLogin(UserCredential userCredential, GoogleSignInAccount googleUser) async {
+    // Firestore에 사용자 정보가 있는지 확인
+    final existingUser = await _userRepository.getUser(userCredential.user!.uid);
+    
+    if (existingUser == null) {
+      // 새로운 사용자인 경우 Firestore에 사용자 정보 저장
+      final userModel = UserModel(
+        uid: userCredential.user!.uid,
+        email: userCredential.user!.email ?? googleUser.email,
+        name: userCredential.user!.displayName ?? googleUser.displayName ?? 'Google 사용자',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        mbtiType: null,
+        mbtiTestCount: 0,
+        loginProvider: 'google',
+        profileImageUrl: null, // 기본 이미지 없음
+      );
+      
+      await _userRepository.createUser(userModel);
+      print('Google 로그인으로 새 사용자 생성: ${userCredential.user!.uid}');
+    } else {
+      // 기존 사용자인 경우 마지막 로그인 시간 업데이트
+      await _updateLastLogin(userCredential.user!.uid);
+      print('Google 로그인으로 기존 사용자 로그인: ${userCredential.user!.uid}');
+    }
+    
+    Get.snackbar('성공', 'Google 로그인이 완료되었습니다!');
+    return userCredential;
+  }
+
+  // Apple 로그인 (실제 구현)
   Future<UserCredential?> signInWithApple() async {
     try {
-      // 실제 Apple 로그인 구현은 sign_in_with_apple 패키지가 필요합니다.
-      // 여기서는 데모용으로 처리합니다.
-      Get.snackbar('알림', 'Apple 로그인은 추가 설정이 필요합니다.');
+      // Apple 로그인 가능 여부 확인
+      final isAvailable = await SignInWithApple.isAvailable();
+      if (!isAvailable) {
+        throw Exception('Apple 로그인이 지원되지 않는 기기입니다.');
+      }
       
-      // 데모용 Apple 사용자 생성
-      final demoEmail = 'demo.apple.${DateTime.now().millisecondsSinceEpoch}@icloud.com';
-      return await signUpWithEmailAndPassword(
-        email: demoEmail,
-        password: 'demo123456',
-        name: 'Apple 사용자',
+      // Apple 로그인 진행
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
       );
+      
+      if (credential.identityToken == null) {
+        throw Exception('Apple 로그인 인증 정보를 가져올 수 없습니다.');
+      }
+      
+      // Firebase Auth 크레덴셜 생성
+      final oauthCredential = OAuthProvider('apple.com').credential(
+        idToken: credential.identityToken,
+        accessToken: credential.authorizationCode,
+      );
+      
+      // Firebase Auth로 로그인
+      final userCredential = await _firebase.signInWithCredential(oauthCredential);
+      
+      if (userCredential.user != null) {
+        // Firestore에 사용자 정보가 있는지 확인
+        final existingUser = await _userRepository.getUser(userCredential.user!.uid);
+        
+        if (existingUser == null) {
+          // 새로운 사용자인 경우 Firestore에 사용자 정보 저장
+          String userName = 'Apple 사용자';
+          if (credential.givenName != null && credential.familyName != null) {
+            userName = '${credential.givenName} ${credential.familyName}';
+          }
+          
+          final userModel = UserModel(
+            uid: userCredential.user!.uid,
+            email: userCredential.user!.email ?? '',
+            name: userName,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+            mbtiType: null,
+            mbtiTestCount: 0,
+            loginProvider: 'apple',
+          );
+          
+          await _userRepository.createUser(userModel);
+          print('Apple 로그인으로 새 사용자 생성: ${userCredential.user!.uid}');
+        } else {
+          // 기존 사용자인 경우 마지막 로그인 시간 업데이트
+          await _updateLastLogin(userCredential.user!.uid);
+          print('Apple 로그인으로 기존 사용자 로그인: ${userCredential.user!.uid}');
+        }
+        
+        Get.snackbar('성공', 'Apple 로그인이 완료되었습니다!');
+        return userCredential;
+      }
+      
+      return null;
     } catch (e) {
       print('Apple 로그인 실패: $e');
-      Get.snackbar('오류', 'Apple 로그인 중 오류가 발생했습니다: ${e.toString()}');
-      return null;
+      
+      // 구체적인 오류 메시지 제공
+      if (e.toString().contains('not_interactive')) {
+        throw Exception('Apple 로그인을 다시 시도해주세요.');
+      } else if (e.toString().contains('canceled')) {
+        throw Exception('Apple 로그인이 취소되었습니다.');
+      } else if (e.toString().contains('failed')) {
+        throw Exception('Apple 로그인에 실패했습니다. 다시 시도해주세요.');
+      } else if (e.toString().contains('not_available')) {
+        throw Exception('Apple 로그인이 지원되지 않는 기기입니다.');
+      } else {
+        throw Exception('Apple 로그인 중 오류가 발생했습니다: ${e.toString()}');
+      }
     }
   }
 

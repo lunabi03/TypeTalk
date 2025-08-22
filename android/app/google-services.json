@@ -12,7 +12,20 @@
           "package_name": "net.levelupcode.typetalk"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "805092955656-9kh1erd0ol043m8lv9ift2mcq4q798gd.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "net.levelupcode.typetalk",
+            "certificate_hash": "feeebd248dd4d5e3adcb9ccec389e743c9f3373c"
+          }
+        },
+        {
+          "client_id": "805092955656-m9m5kck3tqfm5rgj30rl7r6f7d30dl9j.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDiUC82o5hHvysDbF3XAx9GQwkew6FqaIU"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "805092955656-m9m5kck3tqfm5rgj30rl7r6f7d30dl9j.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "805092955656-a592tb2bg41cv462569lek9jqhlouilb.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "net.levelupcode.typetalk"
+              }
+            }
+          ]
         }
       }
     }

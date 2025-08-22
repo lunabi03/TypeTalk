@@ -235,15 +235,40 @@ class AuthController extends GetxController {
       // Firebase Auth 로그인
       await _authService.signInWithEmailAndPassword(email: email, password: password);
       
+      // 로그인 성공 시에만 메인 화면으로 이동
       _redirectToMain();
       Get.snackbar('성공', '로그인 되었습니다.');
       
     } catch (e) {
       print('로그인 실패: $e');
-      Get.snackbar('오류', '로그인에 실패했습니다: ${e.toString()}');
+      // Firebase Auth 예외에 따른 적절한 오류 메시지 표시
+      String errorMessage = _getLoginErrorMessage(e);
+      Get.snackbar('로그인 실패', errorMessage);
+      // 로그인 실패 시에는 메인 화면으로 이동하지 않음
     } finally {
       isSigningIn.value = false;
     }
+  }
+
+  // 로그인 오류 메시지 처리
+  String _getLoginErrorMessage(dynamic error) {
+    if (error is Exception) {
+      String errorString = error.toString();
+      if (errorString.contains('존재하지 않는 사용자입니다')) {
+        return '등록되지 않은 이메일입니다. 회원가입을 먼저 진행해주세요.';
+      } else if (errorString.contains('잘못된 비밀번호입니다')) {
+        return '비밀번호가 올바르지 않습니다. 다시 확인해주세요.';
+      } else if (errorString.contains('유효하지 않은 이메일 형식입니다')) {
+        return '올바른 이메일 형식을 입력해주세요.';
+      } else if (errorString.contains('비활성화된 사용자입니다')) {
+        return '비활성화된 계정입니다. 관리자에게 문의해주세요.';
+      } else if (errorString.contains('너무 많은 요청이 발생했습니다')) {
+        return '너무 많은 로그인 시도가 있었습니다. 잠시 후 다시 시도해주세요.';
+      } else if (errorString.contains('인증 오류가 발생했습니다')) {
+        return '로그인 중 오류가 발생했습니다. 다시 시도해주세요.';
+      }
+    }
+    return '로그인 중 오류가 발생했습니다. 다시 시도해주세요.';
   }
 
   // 회원가입 (실제 Firebase)
@@ -277,12 +302,16 @@ class AuthController extends GetxController {
       // Firebase Auth Google 로그인
       await _authService.signInWithGoogle();
       
+      // 로그인 성공 시에만 메인 화면으로 이동
       _redirectToMain();
       Get.snackbar('성공', 'Google 로그인이 완료되었습니다.');
       
     } catch (e) {
       print('Google 로그인 실패: $e');
-      Get.snackbar('오류', 'Google 로그인에 실패했습니다.');
+      // Google 로그인 오류에 따른 적절한 오류 메시지 표시
+      String errorMessage = _getGoogleLoginErrorMessage(e);
+      Get.snackbar('로그인 실패', errorMessage);
+      // 로그인 실패 시에는 메인 화면으로 이동하지 않음
     } finally {
       isSigningIn.value = false;
     }
@@ -296,15 +325,57 @@ class AuthController extends GetxController {
       // Firebase Auth Apple 로그인
       await _authService.signInWithApple();
       
+      // 로그인 성공 시에만 메인 화면으로 이동
       _redirectToMain();
       Get.snackbar('성공', 'Apple 로그인이 완료되었습니다.');
       
     } catch (e) {
       print('Apple 로그인 실패: $e');
-      Get.snackbar('오류', 'Apple 로그인에 실패했습니다.');
+      // Apple 로그인 오류에 따른 적절한 오류 메시지 표시
+      String errorMessage = _getAppleLoginErrorMessage(e);
+      Get.snackbar('로그인 실패', errorMessage);
+      // 로그인 실패 시에는 메인 화면으로 이동하지 않음
     } finally {
       isSigningIn.value = false;
     }
+  }
+
+  // Google 로그인 오류 메시지 처리
+  String _getGoogleLoginErrorMessage(dynamic error) {
+    if (error is Exception) {
+      String errorString = error.toString();
+      if (errorString.contains('Google 로그인이 취소되었습니다')) {
+        return 'Google 로그인이 취소되었습니다.';
+      } else if (errorString.contains('네트워크 연결을 확인해주세요')) {
+        return '네트워크 연결을 확인해주세요.';
+      } else if (errorString.contains('Google 로그인에 실패했습니다')) {
+        return 'Google 로그인에 실패했습니다. 다시 시도해주세요.';
+      } else if (errorString.contains('Google Play 서비스가 필요합니다')) {
+        return 'Google Play 서비스가 필요합니다.';
+      } else if (errorString.contains('Google 인증 정보를 가져올 수 없습니다')) {
+        return 'Google 인증 정보를 가져올 수 없습니다. 다시 시도해주세요.';
+      }
+    }
+    return 'Google 로그인 중 오류가 발생했습니다. 다시 시도해주세요.';
+  }
+
+  // Apple 로그인 오류 메시지 처리
+  String _getAppleLoginErrorMessage(dynamic error) {
+    if (error is Exception) {
+      String errorString = error.toString();
+      if (errorString.contains('Apple 로그인이 취소되었습니다')) {
+        return 'Apple 로그인이 취소되었습니다.';
+      } else if (errorString.contains('Apple 로그인을 다시 시도해주세요')) {
+        return 'Apple 로그인을 다시 시도해주세요.';
+      } else if (errorString.contains('Apple 로그인에 실패했습니다')) {
+        return 'Apple 로그인에 실패했습니다. 다시 시도해주세요.';
+      } else if (errorString.contains('Apple 로그인이 지원되지 않는 기기입니다')) {
+        return 'Apple 로그인이 지원되지 않는 기기입니다.';
+      } else if (errorString.contains('Apple 로그인 인증 정보를 가져올 수 없습니다')) {
+        return 'Apple 로그인 인증 정보를 가져올 수 없습니다. 다시 시도해주세요.';
+      }
+    }
+    return 'Apple 로그인 중 오류가 발생했습니다. 다시 시도해주세요.';
   }
 
   // 비밀번호 재설정 이메일 전송 (실제 Firebase)

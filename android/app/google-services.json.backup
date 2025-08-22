@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "805092955656",
+    "project_id": "typetalk-3dc68",
+    "storage_bucket": "typetalk-3dc68.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:805092955656:android:6a86c830a06d5b3def63bd",
+        "android_client_info": {
+          "package_name": "net.levelupcode.typetalk"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDiUC82o5hHvysDbF3XAx9GQwkew6FqaIU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -44,9 +44,11 @@ class _LoginScreenState extends State<LoginScreen> {
         _emailController.text.trim(),
         _passwordController.text,
       );
-      // AuthController에서 자동으로 리다이렉트 처리
+      // 로그인 성공 시 AuthController에서 자동으로 리다이렉트 처리
     } catch (e) {
-      Get.snackbar('오류', '로그인 중 오류가 발생했습니다: ${e.toString()}');
+      // 로그인 실패 시 오류 메시지는 AuthController에서 처리되므로
+      // 여기서는 추가 처리가 필요하지 않음
+      print('로그인 화면에서 오류 처리: $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -276,7 +278,7 @@ class _LoginScreenState extends State<LoginScreen> {
           backgroundColor: Colors.white,
           borderColor: AppColors.textSecondary.withOpacity(0.3),
           textColor: AppColors.textPrimary,
-          icon: Icons.g_mobiledata, // Google 아이콘 대신 임시 아이콘
+          icon: Icons.g_mobiledata, // Google 아이콘 (실제로는 Google 로고 이미지를 사용하는 것이 좋음)
           text: 'Google로 로그인',
         ),
         

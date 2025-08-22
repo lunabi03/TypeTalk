@@ -336,8 +336,30 @@ class RealFirebaseService extends GetxService {
         return Exception('너무 많은 요청이 발생했습니다. 잠시 후 다시 시도해주세요.');
       case 'operation-not-allowed':
         return Exception('허용되지 않은 작업입니다.');
+      case 'account-exists-with-different-credential':
+        return Exception('다른 방법으로 가입된 계정입니다.');
+      case 'invalid-credential':
+        return Exception('유효하지 않은 인증 정보입니다.');
+      case 'operation-not-allowed':
+        return Exception('허용되지 않은 작업입니다.');
+      case 'user-token-expired':
+        return Exception('사용자 토큰이 만료되었습니다.');
+      case 'user-token-revoked':
+        return Exception('사용자 토큰이 취소되었습니다.');
       default:
         return Exception('인증 오류가 발생했습니다: ${e.message}');
+    }
+  }
+
+  // OAuth 크레덴셜을 사용한 로그인
+  Future<UserCredential> signInWithCredential(AuthCredential credential) async {
+    try {
+      final userCredential = await _auth.signInWithCredential(credential);
+      print('OAuth 크레덴셜 로그인 성공: ${userCredential.user?.uid}');
+      return userCredential;
+    } on FirebaseAuthException catch (e) {
+      print('OAuth 크레덴셜 로그인 실패: ${e.code} - ${e.message}');
+      throw _handleFirebaseAuthException(e);
     }
   }
 

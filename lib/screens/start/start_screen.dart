@@ -3,9 +3,228 @@ import 'package:get/get.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:typetalk/core/theme/app_colors.dart';
 import 'package:typetalk/routes/app_routes.dart';
+import 'package:typetalk/services/notification_service.dart';
 
 class StartScreen extends StatelessWidget {
   const StartScreen({super.key});
+
+  /// 알림 패널 표시
+  void _showNotificationPanel(NotificationService notificationService) {
+    Get.bottomSheet(
+      Container(
+        height: Get.height * 0.8,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+        ),
+        child: Column(
+          children: [
+            // 헤더
+            Container(
+              padding: EdgeInsets.all(16.w),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    '알림',
+                    style: TextStyle(
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  // 모든 알림 읽음 처리
+                  if (notificationService.unreadCount.value > 0)
+                    TextButton(
+                      onPressed: () {
+                        notificationService.markAllAsRead();
+                        Get.back();
+                      },
+                      child: Text(
+                        '모두 읽음',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 14.sp,
+                        ),
+                      ),
+                    ),
+                  IconButton(
+                    onPressed: () => Get.back(),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+            ),
+            // 알림 목록
+            Expanded(
+              child: Obx(() {
+                if (notificationService.allNotifications.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.notifications_none_outlined,
+                          size: 48.sp,
+                          color: Colors.grey,
+                        ),
+                        SizedBox(height: 16.h),
+                        Text(
+                          '새로운 알림이 없습니다',
+                          style: TextStyle(
+                            fontSize: 16.sp,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  padding: EdgeInsets.all(16.w),
+                  itemCount: notificationService.allNotifications.length,
+                  itemBuilder: (context, index) {
+                    final notification = notificationService.allNotifications[index];
+                    return _buildNotificationItem(notification, notificationService);
+                  },
+                );
+              }),
+            ),
+          ],
+        ),
+      ),
+      isScrollControlled: true,
+    );
+  }
+
+  /// 알림 아이템 위젯
+  Widget _buildNotificationItem(NotificationItem notification, NotificationService notificationService) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 12.h),
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: notification.isRead ? Colors.grey.withOpacity(0.05) : Colors.white,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(
+          color: notification.isRead ? Colors.grey.withOpacity(0.2) : Color(int.parse(notification.color.replaceAll('#', '0xFF'))),
+          width: 1,
+        ),
+        boxShadow: notification.isRead ? null : [
+          BoxShadow(
+            color: Color(int.parse(notification.color.replaceAll('#', '0xFF'))).withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                notification.icon,
+                style: TextStyle(fontSize: 20.sp),
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      notification.title,
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w600,
+                        color: notification.isRead ? Colors.grey : Colors.black,
+                      ),
+                    ),
+                    Text(
+                      notification.relativeTime,
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // 읽음 처리 버튼
+              if (!notification.isRead)
+                IconButton(
+                  onPressed: () => notificationService.markAsRead(notification.id),
+                  icon: const Icon(Icons.check_circle_outline),
+                  color: Colors.grey,
+                  iconSize: 20.sp,
+                ),
+            ],
+          ),
+          SizedBox(height: 12.h),
+          Text(
+            notification.message,
+            style: TextStyle(
+              fontSize: 14.sp,
+              color: notification.isRead ? Colors.grey[600] : Colors.black87,
+            ),
+          ),
+          // 알림 타입별 액션 버튼
+          if (notification.type == NotificationType.chatInvite && !notification.isRead) ...[
+            SizedBox(height: 16.h),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => _handleChatInvite(notification, notificationService),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: AppColors.primary),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8.r),
+                      ),
+                    ),
+                    child: Text(
+                      '초대 확인하기',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 14.sp,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// 채팅 초대 처리
+  void _handleChatInvite(NotificationItem notification, NotificationService notificationService) {
+    // 알림을 읽음 처리
+    notificationService.markAsRead(notification.id);
+    
+    // 채팅 화면으로 이동
+    Get.back(); // 알림 패널 닫기
+    Get.toNamed(AppRoutes.chat);
+    
+    Get.snackbar(
+      '초대 확인', 
+      '채팅 화면에서 초대를 확인할 수 있습니다.',
+      backgroundColor: AppColors.primary.withOpacity(0.1),
+      colorText: AppColors.primary,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +261,45 @@ class StartScreen extends StatelessWidget {
                       ),
                     ),
                     const Spacer(),
+                    // 알림 아이콘
+                    Obx(() {
+                      final notificationService = Get.find<NotificationService>();
+                      return Stack(
+                        children: [
+                          IconButton(
+                            onPressed: () => _showNotificationPanel(notificationService),
+                            icon: const Icon(Icons.notifications_outlined),
+                            color: Colors.black87,
+                          ),
+                          // 읽지 않은 알림 개수 표시
+                          if (notificationService.unreadCount.value > 0)
+                            Positioned(
+                              right: 8,
+                              top: 8,
+                              child: Container(
+                                padding: EdgeInsets.all(4.w),
+                                decoration: BoxDecoration(
+                                  color: Colors.red,
+                                  borderRadius: BorderRadius.circular(10.r),
+                                ),
+                                constraints: BoxConstraints(
+                                  minWidth: 20.w,
+                                  minHeight: 20.h,
+                                ),
+                                child: Text(
+                                  '${notificationService.unreadCount.value}',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12.sp,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    }),
                     IconButton(
                       onPressed: () => Get.snackbar('설정', '설정 화면은 준비 중입니다.'),
                       icon: const Icon(Icons.settings_outlined),

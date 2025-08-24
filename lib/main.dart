@@ -30,6 +30,7 @@ import 'package:typetalk/services/chat_stats_service.dart';
 import 'package:typetalk/services/chat_search_service.dart';
 import 'package:typetalk/services/chat_notification_service.dart';
 import 'package:typetalk/services/chat_invite_service.dart';
+import 'package:typetalk/services/notification_service.dart';
 import 'package:typetalk/services/fcm_service.dart';
 import 'package:typetalk/controllers/auth_controller.dart';
 import 'package:typetalk/middleware/auth_middleware.dart';
@@ -76,6 +77,7 @@ void main() async {
   Get.put(ChatSearchService());
   Get.put(ChatNotificationService());
   Get.put(ChatInviteService()); // AuthController 이후에 등록
+  Get.put(NotificationService()); // 통합 알림 서비스 등록
   Get.put(FCMService());
   
   await Future.delayed(const Duration(milliseconds: 500)); // Firebase Auth 상태 로드 대기

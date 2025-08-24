@@ -26,6 +26,12 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _isCheckingName = false;
+  bool _isNameAvailable = false;
+  bool _hasCheckedName = false;
+  bool _isCheckingEmail = false;
+  bool _isEmailAvailable = false;
+  bool _hasCheckedEmail = false;
 
   @override
   void dispose() {
@@ -36,9 +42,110 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
+  // 이름 중복 확인 처리
+  Future<void> _checkNameAvailability() async {
+    final name = _nameController.text.trim();
+    
+    if (name.isEmpty || name.length < 2) {
+      Get.snackbar('알림', '이름을 2자 이상 입력해주세요.');
+      return;
+    }
+
+    setState(() {
+      _isCheckingName = true;
+    });
+
+    try {
+      final isAvailable = await _authController.checkNameAvailability(name);
+      
+      setState(() {
+        _isNameAvailable = isAvailable;
+        _hasCheckedName = true;
+      });
+      
+      // 이름이 사용 불가능한 경우 입력창 포커스
+      if (!isAvailable) {
+        FocusScope.of(context).requestFocus(FocusNode());
+      }
+      
+    } catch (e) {
+      print('이름 중복 확인 오류: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCheckingName = false;
+        });
+      }
+    }
+  }
+
+  // 이메일 중복 확인 처리
+  Future<void> _checkEmailAvailability() async {
+    final email = _emailController.text.trim();
+    
+    if (email.isEmpty) {
+      Get.snackbar('알림', '이메일을 입력해주세요.');
+      return;
+    }
+
+    if (!GetUtils.isEmail(email)) {
+      Get.snackbar('알림', '올바른 이메일 형식을 입력해주세요.');
+      return;
+    }
+
+    setState(() {
+      _isCheckingEmail = true;
+    });
+
+    try {
+      final isAvailable = await _authController.checkEmailAvailability(email);
+      
+      setState(() {
+        _isEmailAvailable = isAvailable;
+        _hasCheckedEmail = true;
+      });
+      
+      // 이메일이 사용 불가능한 경우 입력창 포커스
+      if (!isAvailable) {
+        FocusScope.of(context).requestFocus(FocusNode());
+      }
+      
+    } catch (e) {
+      print('이메일 중복 확인 오류: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCheckingEmail = false;
+        });
+      }
+    }
+  }
+
   // 회원가입 처리
   Future<void> _handleSignup() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // 이름 중복 확인이 완료되지 않았거나 사용 불가능한 경우
+    if (!_hasCheckedName || !_isNameAvailable) {
+      Get.snackbar(
+        '알림', 
+        '사용 가능한 이름인지 먼저 확인해주세요.',
+        backgroundColor: const Color(0xFFFF9800).withOpacity(0.1),
+        colorText: const Color(0xFFFF9800),
+      );
+      return;
+    }
+
+    // 이메일 중복 확인이 완료되지 않았거나 사용 불가능한 경우
+    if (!_hasCheckedEmail || !_isEmailAvailable) {
+      Get.snackbar(
+        '알림', 
+        '사용 가능한 이메일인지 먼저 확인해주세요.',
+        backgroundColor: const Color(0xFFFF9800).withOpacity(0.1),
+        colorText: const Color(0xFFFF9800),
+      );
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -53,7 +160,22 @@ class _SignupScreenState extends State<SignupScreen> {
       // AuthController에서 자동으로 리다이렉트 처리
       Get.snackbar('환영합니다!', '회원가입이 완료되었습니다.');
     } catch (e) {
-      Get.snackbar('오류', '회원가입 중 오류가 발생했습니다: ${e.toString()}');
+      // 이메일 중복 오류인 경우 중복 확인 상태 초기화
+      if (e.toString().contains('이미 사용 중인 이메일입니다')) {
+        setState(() {
+          _hasCheckedEmail = false;
+          _isEmailAvailable = false;
+        });
+        Get.snackbar(
+          '이메일 중복', 
+          '이미 사용 중인 이메일입니다. 다른 이메일을 사용하거나 중복 확인을 다시 해주세요.',
+          backgroundColor: const Color(0xFFFF9800).withOpacity(0.1),
+          colorText: const Color(0xFFFF9800),
+          duration: const Duration(seconds: 5),
+        );
+      } else {
+        Get.snackbar('오류', '회원가입 중 오류가 발생했습니다: ${e.toString()}');
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -128,19 +250,109 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                 ),
                 SizedBox(height: 8.h),
-                AppTextField(
-                  controller: _nameController,
-                  hint: '이름을 입력하세요',
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return '이름을 입력해주세요';
-                    }
-                    if (value.trim().length < 2) {
-                      return '이름은 2자 이상이어야 합니다';
-                    }
-                    return null;
-                  },
+                
+                // 이름 입력 필드와 중복 확인 버튼
+                Row(
+                  children: [
+                    Expanded(
+                      child: AppTextField(
+                        controller: _nameController,
+                        hint: '이름을 입력하세요',
+                        onChanged: (value) {
+                          // 이름이 변경되면 중복 확인 상태 초기화
+                          setState(() {
+                            _hasCheckedName = false;
+                            _isNameAvailable = false;
+                          });
+                        },
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return '이름을 입력해주세요';
+                          }
+                          if (value.trim().length < 2) {
+                            return '이름은 2자 이상이어야 합니다';
+                          }
+                          if (_hasCheckedName && !_isNameAvailable) {
+                            return '이미 사용 중인 이름입니다';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                    SizedBox(width: 12.w),
+                    SizedBox(
+                      height: 56.h,
+                      child: Tooltip(
+                        message: _nameController.text.trim().length < 2 
+                            ? '이름을 2자 이상 입력해주세요'
+                            : '이름 중복을 확인해주세요',
+                        child: ElevatedButton(
+                          onPressed: _isCheckingName 
+                              ? null 
+                              : _checkNameAvailability,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _isCheckingName 
+                                ? AppColors.textSecondary.withOpacity(0.3)
+                                : (_nameController.text.trim().length >= 2 
+                                    ? AppColors.primary 
+                                    : AppColors.textSecondary.withOpacity(0.5)),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12.r),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: _isCheckingName
+                              ? SizedBox(
+                                  width: 20.w,
+                                  height: 20.w,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              : Text(
+                                  '중복확인',
+                                  style: TextStyle(
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
+                
+                // 이름 중복 확인 결과 표시
+                if (_hasCheckedName) ...[
+                  SizedBox(height: 8.h),
+                  Row(
+                    children: [
+                      Icon(
+                        _isNameAvailable ? Icons.check_circle : Icons.cancel,
+                        size: 16.sp,
+                        color: _isNameAvailable 
+                            ? const Color(0xFF4CAF50) 
+                            : const Color(0xFFFF9800),
+                      ),
+                      SizedBox(width: 8.w),
+                      Text(
+                        _isNameAvailable 
+                            ? '"${_nameController.text.trim()}"은(는) 사용 가능한 이름입니다.'
+                            : '"${_nameController.text.trim()}"은(는) 이미 사용 중인 이름입니다.',
+                        style: TextStyle(
+                          fontSize: 12.sp,
+                          color: _isNameAvailable 
+                              ? const Color(0xFF4CAF50) 
+                              : const Color(0xFFFF9800),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                
                 SizedBox(height: 20.h),
                 
                 // 이메일 입력
@@ -153,20 +365,110 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                 ),
                 SizedBox(height: 8.h),
-                AppTextField(
-                  controller: _emailController,
-                  hint: '이메일을 입력하세요',
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return '이메일을 입력해주세요';
-                    }
-                    if (!GetUtils.isEmail(value)) {
-                      return '올바른 이메일 형식을 입력해주세요';
-                    }
-                    return null;
-                  },
+                
+                // 이메일 입력 필드와 중복 확인 버튼
+                Row(
+                  children: [
+                    Expanded(
+                      child: AppTextField(
+                        controller: _emailController,
+                        hint: '이메일을 입력하세요',
+                        keyboardType: TextInputType.emailAddress,
+                        onChanged: (value) {
+                          // 이메일이 변경되면 중복 확인 상태 초기화
+                          setState(() {
+                            _hasCheckedEmail = false;
+                            _isEmailAvailable = false;
+                          });
+                        },
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return '이메일을 입력해주세요';
+                          }
+                          if (!GetUtils.isEmail(value)) {
+                            return '올바른 이메일 형식을 입력해주세요';
+                          }
+                          if (_hasCheckedEmail && !_isEmailAvailable) {
+                            return '이미 사용 중인 이메일입니다';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                    SizedBox(width: 12.w),
+                    SizedBox(
+                      height: 56.h,
+                      child: Tooltip(
+                        message: _emailController.text.trim().isEmpty || !GetUtils.isEmail(_emailController.text.trim())
+                            ? '올바른 이메일을 입력해주세요'
+                            : '이메일 중복을 확인해주세요',
+                        child: ElevatedButton(
+                          onPressed: _isCheckingEmail 
+                              ? null 
+                              : _checkEmailAvailability,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _isCheckingEmail 
+                                ? AppColors.textSecondary.withOpacity(0.3)
+                                : (_emailController.text.trim().isNotEmpty && GetUtils.isEmail(_emailController.text.trim())
+                                    ? AppColors.primary 
+                                    : AppColors.textSecondary.withOpacity(0.5)),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12.r),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: _isCheckingEmail
+                              ? SizedBox(
+                                  width: 20.w,
+                                  height: 20.w,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              : Text(
+                                  '중복확인',
+                                  style: TextStyle(
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
+                
+                // 이메일 중복 확인 결과 표시
+                if (_hasCheckedEmail) ...[
+                  SizedBox(height: 8.h),
+                  Row(
+                    children: [
+                      Icon(
+                        _isEmailAvailable ? Icons.check_circle : Icons.cancel,
+                        size: 16.sp,
+                        color: _isEmailAvailable 
+                            ? const Color(0xFF4CAF50) 
+                            : const Color(0xFFFF9800),
+                      ),
+                      SizedBox(width: 8.w),
+                      Text(
+                        _isEmailAvailable 
+                            ? '"${_emailController.text.trim()}"은(는) 사용 가능한 이메일입니다.'
+                            : '"${_emailController.text.trim()}"은(는) 이미 사용 중인 이메일입니다.',
+                        style: TextStyle(
+                          fontSize: 12.sp,
+                          color: _isEmailAvailable 
+                              ? const Color(0xFF4CAF50) 
+                              : const Color(0xFFFF9800),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                
                 SizedBox(height: 20.h),
                 
                 // 비밀번호 입력
@@ -246,9 +548,15 @@ class _SignupScreenState extends State<SignupScreen> {
                 
                 // 회원가입 버튼
                 AppButton(
-                  text: '회원가입',
-                  onPressed: _isLoading ? null : _handleSignup,
-                  isDisabled: _isLoading,
+                  text: _isLoading 
+                      ? '가입 중...' 
+                      : (_hasCheckedName && _isNameAvailable && _hasCheckedEmail && _isEmailAvailable 
+                          ? '회원가입' 
+                          : '이름 및 이메일 중복 확인 필요'),
+                  onPressed: (_isLoading || !_hasCheckedName || !_isNameAvailable || !_hasCheckedEmail || !_isEmailAvailable) 
+                      ? null 
+                      : _handleSignup,
+                  isDisabled: _isLoading || !_hasCheckedName || !_isNameAvailable || !_hasCheckedEmail || !_isEmailAvailable,
                 ),
                 
                 SizedBox(height: 24.h),

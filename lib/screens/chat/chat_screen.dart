@@ -7,6 +7,8 @@ import 'package:typetalk/core/theme/app_text_styles.dart';
 import 'package:typetalk/models/message_model.dart';
 import 'package:typetalk/models/user_model.dart';
 import 'package:typetalk/services/real_user_repository.dart';
+import 'package:typetalk/services/chat_invite_service.dart';
+import 'package:typetalk/models/chat_invite_model.dart';
 import 'package:typetalk/routes/app_routes.dart';
 
 class ChatScreen extends StatelessWidget {
@@ -15,6 +17,7 @@ class ChatScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final chatController = Get.put(ChatController());
+    final inviteService = Get.isRegistered<ChatInviteService>() ? Get.find<ChatInviteService>() : null;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF0F8FF), // 연한 파란색 배경
@@ -22,7 +25,15 @@ class ChatScreen extends StatelessWidget {
       body: Obx(() {
         // 채팅방이 선택되지 않은 경우: 채팅 목록 또는 빈 상태 표시
         if (chatController.currentChat.value == null) {
-          return _buildChatListOrEmpty(chatController);
+          return Column(
+            children: [
+              // 초대 알림 표시 (서비스가 사용 가능할 때만)
+              if (inviteService != null && inviteService.pendingInviteCount > 0) 
+                _buildInviteNotification(inviteService),
+              // 채팅 목록 또는 빈 상태
+              Expanded(child: _buildChatListOrEmpty(chatController)),
+            ],
+          );
         }
         // 채팅방이 선택된 경우: 메시지 UI
         return Column(
@@ -33,6 +44,374 @@ class ChatScreen extends StatelessWidget {
         );
       }),
     );
+  }
+
+  /// 초대 알림 위젯
+  Widget _buildInviteNotification(ChatInviteService inviteService) {
+    return Container(
+      margin: EdgeInsets.all(16.w),
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFF9800).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(
+          color: const Color(0xFFFF9800).withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.mail_outline,
+                color: const Color(0xFFFF9800),
+                size: 20.sp,
+              ),
+              SizedBox(width: 8.w),
+              Text(
+                '새로운 채팅 초대',
+                style: TextStyle(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFFFF9800),
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '${inviteService.pendingInviteCount}개',
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFFFF9800),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            '채팅 초대를 확인하고 응답해주세요.',
+            style: TextStyle(
+              fontSize: 14.sp,
+              color: const Color(0xFFFF9800),
+            ),
+          ),
+          SizedBox(height: 12.h),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => _showInviteList(inviteService),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF9800),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                elevation: 0,
+              ),
+              child: Text(
+                '초대 확인하기',
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 초대 목록 표시
+  void _showInviteList(ChatInviteService inviteService) {
+    Get.bottomSheet(
+      Container(
+        height: Get.height * 0.7,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+        ),
+        child: Column(
+          children: [
+            // 헤더
+            Container(
+              padding: EdgeInsets.all(16.w),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    '채팅 초대',
+                    style: TextStyle(
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Get.back(),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+            ),
+            // 초대 목록
+            Expanded(
+              child: Obx(() {
+                if (inviteService.receivedInvites.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.inbox_outlined,
+                          size: 48.sp,
+                          color: Colors.grey,
+                        ),
+                        SizedBox(height: 16.h),
+                        Text(
+                          '받은 초대가 없습니다',
+                          style: TextStyle(
+                            fontSize: 16.sp,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  padding: EdgeInsets.all(16.w),
+                  itemCount: inviteService.receivedInvites.length,
+                  itemBuilder: (context, index) {
+                    final invite = inviteService.receivedInvites[index];
+                    return _buildInviteItem(invite, inviteService);
+                  },
+                );
+              }),
+            ),
+          ],
+        ),
+      ),
+      isScrollControlled: true,
+    );
+  }
+
+  /// 초대 아이템 위젯
+  Widget _buildInviteItem(ChatInviteModel invite, ChatInviteService inviteService) {
+    return FutureBuilder(
+      future: _getUserInfo(invite.invitedBy),
+      builder: (context, snapshot) {
+        final user = snapshot.data;
+        if (user == null) {
+          return const SizedBox.shrink();
+        }
+
+        return Container(
+          margin: EdgeInsets.only(bottom: 12.h),
+          padding: EdgeInsets.all(16.w),
+          decoration: BoxDecoration(
+            color: Colors.grey.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(
+              color: Colors.grey.withOpacity(0.2),
+              width: 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 20.r,
+                    backgroundColor: Colors.grey.withOpacity(0.3),
+                    child: Text(
+                      user.name.isNotEmpty ? user.name[0] : '?',
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 12.w),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          user.name.isNotEmpty ? user.name : '사용자',
+                          style: TextStyle(
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          '${user.mbtiType ?? 'MBTI 미설정'} • ${_formatTime(invite.createdAt)}',
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (invite.hasMessage) ...[
+                SizedBox(height: 12.h),
+                Container(
+                  padding: EdgeInsets.all(12.w),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8.r),
+                    border: Border.all(
+                      color: Colors.grey.withOpacity(0.2),
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    invite.metadata.message!,
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                ),
+              ],
+              SizedBox(height: 16.h),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => _declineInvite(invite.inviteId, inviteService),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: Colors.grey.withOpacity(0.5)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8.r),
+                        ),
+                      ),
+                      child: Text(
+                        '거절',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 12.w),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => _acceptInvite(invite, inviteService),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8.r),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Text('수락'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// 사용자 정보 가져오기
+  Future<UserModel?> _getUserInfo(String userId) async {
+    try {
+      final userRepository = Get.find<RealUserRepository>();
+      return await userRepository.getUser(userId);
+    } catch (e) {
+      print('사용자 정보 조회 실패: $e');
+      return null;
+    }
+  }
+
+  /// 시간 포맷팅
+  String _formatTime(DateTime time) {
+    final now = DateTime.now();
+    final difference = now.difference(time);
+
+    if (difference.inMinutes < 1) {
+      return '방금 전';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes}분 전';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}시간 전';
+    } else {
+      return '${time.month}/${time.day}';
+    }
+  }
+
+  /// 초대 수락
+  Future<void> _acceptInvite(ChatInviteModel invite, ChatInviteService inviteService) async {
+    try {
+      final success = await inviteService.acceptInvite(invite.inviteId);
+      if (success) {
+        Get.back(); // 바텀시트 닫기
+        Get.snackbar(
+          '초대 수락', 
+          '채팅방이 열렸습니다!',
+          backgroundColor: const Color(0xFF4CAF50).withOpacity(0.1),
+          colorText: const Color(0xFF4CAF50),
+        );
+        
+                 // 채팅방 열기
+         final chatController = Get.find<ChatController>();
+         final chat = await chatController.getChatById(invite.chatId);
+         if (chat != null) {
+           await chatController.openChat(chat);
+         }
+      }
+    } catch (e) {
+      Get.snackbar(
+        '오류', 
+        '초대 수락에 실패했습니다: ${e.toString()}',
+        backgroundColor: const Color(0xFFFF0000).withOpacity(0.1),
+        colorText: const Color(0xFFFF0000),
+      );
+    }
+  }
+
+  /// 초대 거절
+  Future<void> _declineInvite(String inviteId, ChatInviteService inviteService) async {
+    try {
+      final success = await inviteService.declineInvite(inviteId);
+      if (success) {
+        Get.snackbar(
+          '초대 거절', 
+          '초대를 거절했습니다.',
+          backgroundColor: Colors.grey.withOpacity(0.1),
+          colorText: Colors.grey[700],
+        );
+      }
+    } catch (e) {
+      Get.snackbar(
+        '오류', 
+        '초대 거절에 실패했습니다: ${e.toString()}',
+        backgroundColor: const Color(0xFFFF0000).withOpacity(0.1),
+        colorText: const Color(0xFFFF0000),
+      );
+    }
   }
 
   /// 채팅 목록 또는 빈 상태

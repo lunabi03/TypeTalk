@@ -17,9 +17,25 @@ class RealFirebaseService extends GetxService {
   }
 
   void _initializeFirebase() {
-    _auth = FirebaseAuth.instance;
-    _firestore = FirebaseFirestore.instance;
-    print('실제 Firebase 서비스 초기화 완료');
+    try {
+      _auth = FirebaseAuth.instance;
+      _firestore = FirebaseFirestore.instance;
+      
+      // Firebase 서비스 상태 확인
+      print('Firebase Auth 인스턴스 생성 완료');
+      print('Firestore 인스턴스 생성 완료');
+      
+      // Firestore 설정 (오프라인 지원, 캐시 설정)
+      _firestore.settings = const Settings(
+        persistenceEnabled: true,
+        cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+      );
+      
+      print('실제 Firebase 서비스 초기화 완료');
+    } catch (e) {
+      print('Firebase 서비스 초기화 실패: $e');
+      throw Exception('Firebase 서비스를 초기화할 수 없습니다: ${e.toString()}');
+    }
   }
 
   // Firebase Auth 인스턴스 반환
@@ -317,37 +333,59 @@ class RealFirebaseService extends GetxService {
   // 인증 상태 스트림
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
-  // Firebase Auth 예외 처리
+  // Firebase Auth 예외 처리 (한국어 메시지로 개선)
   Exception _handleFirebaseAuthException(FirebaseAuthException e) {
+    print('Firebase Auth 예외 발생: ${e.code} - ${e.message}');
+    
     switch (e.code) {
       case 'weak-password':
-        return Exception('비밀번호가 너무 약합니다.');
+        return Exception('비밀번호가 너무 약합니다. 최소 6자 이상으로 설정해주세요.');
       case 'email-already-in-use':
-        return Exception('이미 사용 중인 이메일입니다.');
+        return Exception('이미 사용 중인 이메일입니다. 다른 이메일을 사용하거나 로그인해주세요.');
       case 'user-not-found':
-        return Exception('존재하지 않는 사용자입니다.');
+        return Exception('등록되지 않은 이메일입니다. 회원가입을 먼저 진행해주세요.');
       case 'wrong-password':
-        return Exception('잘못된 비밀번호입니다.');
+        return Exception('비밀번호가 올바르지 않습니다. 다시 확인해주세요.');
       case 'invalid-email':
-        return Exception('유효하지 않은 이메일 형식입니다.');
+        return Exception('올바른 이메일 형식을 입력해주세요. (예: user@example.com)');
       case 'user-disabled':
-        return Exception('비활성화된 사용자입니다.');
+        return Exception('비활성화된 계정입니다. 관리자에게 문의해주세요.');
       case 'too-many-requests':
-        return Exception('너무 많은 요청이 발생했습니다. 잠시 후 다시 시도해주세요.');
+        return Exception('너무 많은 로그인 시도가 있었습니다. 잠시 후 다시 시도해주세요.');
       case 'operation-not-allowed':
-        return Exception('허용되지 않은 작업입니다.');
+        return Exception('이메일/비밀번호 로그인이 비활성화되어 있습니다. Firebase 콘솔에서 설정을 확인해주세요.');
       case 'account-exists-with-different-credential':
-        return Exception('다른 방법으로 가입된 계정입니다.');
+        return Exception('다른 방법으로 가입된 계정입니다. Google 또는 Apple 로그인을 시도해보세요.');
       case 'invalid-credential':
-        return Exception('유효하지 않은 인증 정보입니다.');
-      case 'operation-not-allowed':
-        return Exception('허용되지 않은 작업입니다.');
+        return Exception('유효하지 않은 인증 정보입니다. 이메일과 비밀번호를 다시 확인해주세요.');
       case 'user-token-expired':
-        return Exception('사용자 토큰이 만료되었습니다.');
+        return Exception('로그인 세션이 만료되었습니다. 다시 로그인해주세요.');
       case 'user-token-revoked':
-        return Exception('사용자 토큰이 취소되었습니다.');
+        return Exception('로그인 세션이 취소되었습니다. 다시 로그인해주세요.');
+      case 'network-request-failed':
+        return Exception('네트워크 연결을 확인해주세요. 인터넷 연결 상태를 점검해보세요.');
+      case 'invalid-verification-code':
+        return Exception('인증 코드가 올바르지 않습니다. 다시 시도해주세요.');
+      case 'invalid-verification-id':
+        return Exception('인증 ID가 올바르지 않습니다. 다시 시도해주세요.');
+      case 'quota-exceeded':
+        return Exception('Firebase 할당량이 초과되었습니다. 잠시 후 다시 시도해주세요.');
+      case 'app-not-authorized':
+        return Exception('앱이 Firebase에 인증되지 않았습니다. 개발자에게 문의해주세요.');
+      case 'keychain-error':
+        return Exception('키체인 오류가 발생했습니다. 기기를 재시작해보세요.');
+      case 'internal-error':
+        return Exception('Firebase 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+      case 'invalid-app-credential':
+        return Exception('앱 인증 정보가 올바르지 않습니다. 앱을 재설치해보세요.');
+      case 'invalid-user-token':
+        return Exception('사용자 토큰이 올바르지 않습니다. 다시 로그인해주세요.');
+      case 'requires-recent-login':
+        return Exception('보안을 위해 다시 로그인이 필요합니다.');
+      case 'credential-already-in-use':
+        return Exception('이미 다른 계정에서 사용 중인 인증 정보입니다.');
       default:
-        return Exception('인증 오류가 발생했습니다: ${e.message}');
+        return Exception('인증 오류가 발생했습니다: ${e.message ?? '알 수 없는 오류'}');
     }
   }
 

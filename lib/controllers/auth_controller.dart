@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 import 'package:typetalk/routes/app_routes.dart';
 
 // 실제 Firebase 서비스들 (활성화)
@@ -183,6 +184,88 @@ class AuthController extends GetxController {
   String? get userName => userProfile['name'] ?? currentUserName.value;
   String? get currentUserMBTI => userProfile['mbti'];
 
+  // 이름 중복 확인 (실제 Firebase)
+  Future<bool> checkNameAvailability(String name) async {
+    try {
+      isLoading.value = true;
+      
+      final isAvailable = await _userRepository.isNameAvailable(name);
+      
+      if (isAvailable) {
+        Get.snackbar(
+          '사용 가능', 
+          '"$name"은(는) 사용 가능한 이름입니다.',
+          backgroundColor: const Color(0xFF4CAF50).withOpacity(0.1),
+          colorText: const Color(0xFF4CAF50),
+          duration: const Duration(seconds: 3),
+        );
+      } else {
+        Get.snackbar(
+          '사용 불가', 
+          '"$name"은(는) 이미 사용 중인 이름입니다.',
+          backgroundColor: const Color(0xFFFF9800).withOpacity(0.1),
+          colorText: const Color(0xFFFF9800),
+          duration: const Duration(seconds: 3),
+        );
+      }
+      
+      return isAvailable;
+    } catch (e) {
+      print('이름 중복 확인 실패: $e');
+      Get.snackbar(
+        '오류', 
+        '이름 중복 확인 중 오류가 발생했습니다.',
+        backgroundColor: const Color(0xFFFF0000).withOpacity(0.1),
+        colorText: const Color(0xFFFF0000),
+        duration: const Duration(seconds: 3),
+      );
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  // 이메일 중복 확인 (실제 Firebase)
+  Future<bool> checkEmailAvailability(String email) async {
+    try {
+      isLoading.value = true;
+      
+      final isAvailable = await _userRepository.isEmailAvailable(email);
+      
+      if (isAvailable) {
+        Get.snackbar(
+          '사용 가능', 
+          '"$email"은(는) 사용 가능한 이메일입니다.',
+          backgroundColor: const Color(0xFF4CAF50).withOpacity(0.1),
+          colorText: const Color(0xFF4CAF50),
+          duration: const Duration(seconds: 3),
+        );
+      } else {
+        Get.snackbar(
+          '사용 불가', 
+          '"$email"은(는) 이미 사용 중인 이메일입니다.',
+          backgroundColor: const Color(0xFFFF9800).withOpacity(0.1),
+          colorText: const Color(0xFFFF9800),
+          duration: const Duration(seconds: 3),
+        );
+      }
+      
+      return isAvailable;
+    } catch (e) {
+      print('이메일 중복 확인 실패: $e');
+      Get.snackbar(
+        '오류', 
+        '이메일 중복 확인 중 오류가 발생했습니다.',
+        backgroundColor: const Color(0xFFFF0000).withOpacity(0.1),
+        colorText: const Color(0xFFFF0000),
+        duration: const Duration(seconds: 3),
+      );
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   // 사용자 MBTI 업데이트 (실제 Firebase)
   Future<void> updateUserMBTI(String mbtiType) async {
     if (currentUserId.value.isEmpty) {
@@ -250,25 +333,44 @@ class AuthController extends GetxController {
     }
   }
 
-  // 로그인 오류 메시지 처리
+  // 로그인 오류 메시지 처리 (개선된 버전)
   String _getLoginErrorMessage(dynamic error) {
     if (error is Exception) {
       String errorString = error.toString();
-      if (errorString.contains('존재하지 않는 사용자입니다')) {
+      
+      // Firebase Auth 예외 코드별 메시지
+      if (errorString.contains('등록되지 않은 이메일입니다')) {
         return '등록되지 않은 이메일입니다. 회원가입을 먼저 진행해주세요.';
-      } else if (errorString.contains('잘못된 비밀번호입니다')) {
+      } else if (errorString.contains('비밀번호가 올바르지 않습니다')) {
         return '비밀번호가 올바르지 않습니다. 다시 확인해주세요.';
-      } else if (errorString.contains('유효하지 않은 이메일 형식입니다')) {
-        return '올바른 이메일 형식을 입력해주세요.';
-      } else if (errorString.contains('비활성화된 사용자입니다')) {
+      } else if (errorString.contains('올바른 이메일 형식을 입력해주세요')) {
+        return '올바른 이메일 형식을 입력해주세요. (예: user@example.com)';
+      } else if (errorString.contains('비활성화된 계정입니다')) {
         return '비활성화된 계정입니다. 관리자에게 문의해주세요.';
-      } else if (errorString.contains('너무 많은 요청이 발생했습니다')) {
+      } else if (errorString.contains('너무 많은 로그인 시도가 있었습니다')) {
         return '너무 많은 로그인 시도가 있었습니다. 잠시 후 다시 시도해주세요.';
-      } else if (errorString.contains('인증 오류가 발생했습니다')) {
-        return '로그인 중 오류가 발생했습니다. 다시 시도해주세요.';
+      } else if (errorString.contains('이메일/비밀번호 로그인이 비활성화되어 있습니다')) {
+        return '이메일/비밀번호 로그인이 비활성화되어 있습니다. Firebase 콘솔에서 설정을 확인해주세요.';
+      } else if (errorString.contains('네트워크 연결을 확인해주세요')) {
+        return '네트워크 연결을 확인해주세요. 인터넷 연결 상태를 점검해보세요.';
+      } else if (errorString.contains('Firebase 내부 오류가 발생했습니다')) {
+        return 'Firebase 서비스에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요.';
+      } else if (errorString.contains('Firebase 할당량이 초과되었습니다')) {
+        return 'Firebase 서비스 사용량이 초과되었습니다. 잠시 후 다시 시도해주세요.';
+      } else if (errorString.contains('앱이 Firebase에 인증되지 않았습니다')) {
+        return '앱 인증에 문제가 발생했습니다. 개발자에게 문의해주세요.';
+      } else if (errorString.contains('로그인 세션이 만료되었습니다')) {
+        return '로그인 세션이 만료되었습니다. 다시 로그인해주세요.';
+      } else if (errorString.contains('보안을 위해 다시 로그인이 필요합니다')) {
+        return '보안을 위해 다시 로그인이 필요합니다. 비밀번호를 다시 입력해주세요.';
       }
+      
+      // 일반적인 오류 메시지
+      return '로그인 중 오류가 발생했습니다: ${errorString.replaceAll('Exception: ', '')}';
     }
-    return '로그인 중 오류가 발생했습니다. 다시 시도해주세요.';
+    
+    // 예외가 아닌 경우
+    return '로그인 중 예상치 못한 오류가 발생했습니다. 다시 시도해주세요.';
   }
 
   // 회원가입 (실제 Firebase)
@@ -284,14 +386,55 @@ class AuthController extends GetxController {
       );
       
       _redirectToMain();
-      Get.snackbar('성공', '회원가입이 완료되었습니다.');
+      Get.snackbar('성공', '회원가입이 완료되었습니다!');
       
     } catch (e) {
       print('회원가입 실패: $e');
-      Get.snackbar('오류', '회원가입에 실패했습니다: ${e.toString()}');
+      
+      // 회원가입 오류 메시지 처리
+      String errorMessage = _getSignupErrorMessage(e);
+      Get.snackbar(
+        '회원가입 실패', 
+        errorMessage,
+        backgroundColor: const Color(0xFFFF0000).withOpacity(0.1),
+        colorText: const Color(0xFFFF0000),
+        duration: const Duration(seconds: 5),
+      );
     } finally {
       isSigningUp.value = false;
     }
+  }
+
+  // 회원가입 오류 메시지 처리
+  String _getSignupErrorMessage(dynamic error) {
+    if (error is Exception) {
+      String errorString = error.toString();
+      
+      // Firebase Auth 예외 코드별 메시지
+      if (errorString.contains('비밀번호가 너무 약합니다')) {
+        return '비밀번호가 너무 약합니다. 최소 6자 이상으로 설정해주세요.';
+      } else if (errorString.contains('이미 사용 중인 이메일입니다')) {
+        return '이미 사용 중인 이메일입니다. 다른 이메일을 사용하거나 로그인해주세요.';
+      } else if (errorString.contains('올바른 이메일 형식을 입력해주세요')) {
+        return '올바른 이메일 형식을 입력해주세요. (예: user@example.com)';
+      } else if (errorString.contains('이메일/비밀번호 로그인이 비활성화되어 있습니다')) {
+        return '이메일/비밀번호 로그인이 비활성화되어 있습니다. Firebase 콘솔에서 설정을 확인해주세요.';
+      } else if (errorString.contains('네트워크 연결을 확인해주세요')) {
+        return '네트워크 연결을 확인해주세요. 인터넷 연결 상태를 점검해보세요.';
+      } else if (errorString.contains('Firebase 내부 오류가 발생했습니다')) {
+        return 'Firebase 서비스에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요.';
+      } else if (errorString.contains('Firebase 할당량이 초과되었습니다')) {
+        return 'Firebase 서비스 사용량이 초과되었습니다. 잠시 후 다시 시도해주세요.';
+      } else if (errorString.contains('앱이 Firebase에 인증되지 않았습니다')) {
+        return '앱 인증에 문제가 발생했습니다. 개발자에게 문의해주세요.';
+      }
+      
+      // 일반적인 오류 메시지
+      return '회원가입 중 오류가 발생했습니다: ${errorString.replaceAll('Exception: ', '')}';
+    }
+    
+    // 예외가 아닌 경우
+    return '회원가입 중 예상치 못한 오류가 발생했습니다. 다시 시도해주세요.';
   }
 
   // Google 로그인 (실제 Firebase)

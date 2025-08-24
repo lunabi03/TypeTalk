@@ -175,6 +175,50 @@ class RealUserRepository extends GetxService {
     }
   }
 
+  // 이름으로 사용자 조회 (중복 확인용)
+  Future<UserModel?> getUserByName(String name) async {
+    try {
+      final querySnapshot = await _firebase.queryDocuments(
+        _collectionName,
+        field: 'name',
+        isEqualTo: name.trim(),
+        limitCount: 1,
+      );
+
+      if (querySnapshot.docs.isNotEmpty) {
+        return _convertFirestoreToUserModel(querySnapshot.docs.first);
+      }
+      return null;
+    } catch (e) {
+      print('실제 Firebase 이름으로 사용자 조회 실패: $e');
+      throw Exception('이름으로 사용자 조회 중 오류가 발생했습니다: ${e.toString()}');
+    }
+  }
+
+  // 이름 중복 확인
+  Future<bool> isNameAvailable(String name) async {
+    try {
+      final user = await getUserByName(name);
+      return user == null; // 사용자가 없으면 사용 가능
+    } catch (e) {
+      print('이름 중복 확인 실패: $e');
+      // 오류 발생 시 중복으로 간주하여 안전하게 처리
+      return false;
+    }
+  }
+
+  // 이메일 중복 확인
+  Future<bool> isEmailAvailable(String email) async {
+    try {
+      final user = await getUserByEmail(email);
+      return user == null; // 사용자가 없으면 사용 가능
+    } catch (e) {
+      print('이메일 중복 확인 실패: $e');
+      // 오류 발생 시 중복으로 간주하여 안전하게 처리
+      return false;
+    }
+  }
+
   // 사용자 프로필 업데이트
   Future<void> updateUserProfile(String uid, {
     String? name,

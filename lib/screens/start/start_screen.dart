@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:typetalk/core/theme/app_colors.dart';
 import 'package:typetalk/routes/app_routes.dart';
 import 'package:typetalk/services/notification_service.dart';
+import 'package:typetalk/services/location_service.dart';
 
 class StartScreen extends StatelessWidget {
   const StartScreen({super.key});
@@ -209,6 +210,445 @@ class StartScreen extends StatelessWidget {
     );
   }
 
+  /// 설정 패널 표시
+  void _showSettingsPanel() {
+    final locationService = Get.put(LocationService());
+    
+    Get.bottomSheet(
+      Container(
+        height: Get.height * 0.6,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+        ),
+        child: Column(
+          children: [
+            // 헤더
+            Container(
+              padding: EdgeInsets.all(16.w),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    '설정',
+                    style: TextStyle(
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Get.back(),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+            ),
+            // 설정 옵션들
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.all(16.w),
+                children: [
+                  // 위치 권한 설정
+                  Container(
+                    padding: EdgeInsets.all(16.w),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(12.r),
+                      border: Border.all(
+                        color: Colors.grey[200]!,
+                        width: 1,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.location_on,
+                              color: AppColors.primary,
+                              size: 24.sp,
+                            ),
+                            SizedBox(width: 12.w),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '위치 권한',
+                                    style: TextStyle(
+                                      fontSize: 16.sp,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                  Text(
+                                    '가까운 사용자를 찾기 위해 필요합니다',
+                                    style: TextStyle(
+                                      fontSize: 14.sp,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 16.h),
+                        // 위치 권한 상태 표시
+                        Container(
+                          padding: EdgeInsets.all(12.w),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(8.r),
+                            border: Border.all(
+                              color: Colors.grey[300]!,
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                color: Colors.grey[600],
+                                size: 20.sp,
+                              ),
+                              SizedBox(width: 8.w),
+                              Expanded(
+                                child: Text(
+                                  '위치 권한을 허용하면 가까운 사용자를 찾을 수 있습니다',
+                                  style: TextStyle(
+                                    fontSize: 13.sp,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(height: 16.h),
+                        // 권한 요청 버튼들
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () => _showLocationPermissionDialog(locationService),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: Colors.white,
+                                  padding: EdgeInsets.symmetric(vertical: 12.h),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8.r),
+                                  ),
+                                  elevation: 0,
+                                ),
+                                child: Text(
+                                  '위치 권한 설정',
+                                  style: TextStyle(
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 12.w),
+                            OutlinedButton(
+                              onPressed: () => locationService.openLocationSettings(),
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(color: AppColors.primary),
+                                padding: EdgeInsets.symmetric(vertical: 12.h),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8.r),
+                                ),
+                              ),
+                              child: Text(
+                                '시스템 설정',
+                                style: TextStyle(
+                                  fontSize: 14.sp,
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 16.h),
+                  // 기타 설정 옵션들
+                  Container(
+                    padding: EdgeInsets.all(16.w),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(12.r),
+                      border: Border.all(
+                        color: Colors.grey[200]!,
+                        width: 1,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.notifications_outlined,
+                              color: Colors.grey[600],
+                              size: 24.sp,
+                            ),
+                            SizedBox(width: 12.w),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '알림 설정',
+                                    style: TextStyle(
+                                      fontSize: 16.sp,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                  Text(
+                                    '채팅 초대 및 메시지 알림',
+                                    style: TextStyle(
+                                      fontSize: 14.sp,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 16.h),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton(
+                            onPressed: () {
+                              Get.back();
+                              Get.toNamed(AppRoutes.fcmDemo);
+                            },
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(color: Colors.grey[400]!),
+                              padding: EdgeInsets.symmetric(vertical: 12.h),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8.r),
+                              ),
+                            ),
+                            child: Text(
+                              '알림 설정 확인',
+                              style: TextStyle(
+                                fontSize: 14.sp,
+                                color: Colors.grey[600],
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 위치 권한 설정 다이얼로그 표시
+  void _showLocationPermissionDialog(LocationService locationService) {
+    Get.dialog(
+      AlertDialog(
+        title: Row(
+          children: [
+            Icon(
+              Icons.location_on,
+              color: AppColors.primary,
+              size: 24.sp,
+            ),
+            SizedBox(width: 8.w),
+            Text(
+              '위치 권한 설정',
+              style: TextStyle(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'TypeMate에서 위치 정보를 사용하는 이유:',
+              style: TextStyle(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+            SizedBox(height: 12.h),
+            _buildPermissionReason(
+              Icons.people,
+              '가까운 사용자 찾기',
+              '주변에 있는 새로운 친구를 발견할 수 있습니다',
+            ),
+            SizedBox(height: 8.h),
+            _buildPermissionReason(
+              Icons.place,
+              '지역 기반 추천',
+              '같은 지역의 사용자와 더 쉽게 연결됩니다',
+            ),
+            SizedBox(height: 8.h),
+            _buildPermissionReason(
+              Icons.security,
+              '프라이버시 보호',
+              '정확한 위치는 저장되지 않으며, 대략적인 거리만 계산됩니다',
+            ),
+            SizedBox(height: 16.h),
+            Container(
+              padding: EdgeInsets.all(12.w),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(8.r),
+                border: Border.all(
+                  color: Colors.blue[200]!,
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    color: Colors.blue[700],
+                    size: 20.sp,
+                  ),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: Text(
+                      '위치 권한은 언제든지 설정에서 변경할 수 있습니다',
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        color: Colors.blue[700],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text(
+              '나중에',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 14.sp,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Get.back();
+              _requestLocationPermission(locationService);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+            ),
+            child: Text(
+              '권한 허용',
+              style: TextStyle(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 권한 이유 설명 위젯
+  Widget _buildPermissionReason(IconData icon, String title, String description) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          icon,
+          color: AppColors.primary,
+          size: 20.sp,
+        ),
+        SizedBox(width: 8.w),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 13.sp,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+              Text(
+                description,
+                style: TextStyle(
+                  fontSize: 12.sp,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 위치 권한 요청
+  Future<void> _requestLocationPermission(LocationService locationService) async {
+    try {
+      final position = await locationService.getCurrentLocation();
+      if (position != null) {
+        Get.snackbar(
+          '위치 권한 허용',
+          '위치 기반 추천을 사용할 수 있습니다.',
+          backgroundColor: AppColors.primary.withOpacity(0.1),
+          colorText: AppColors.primary,
+        );
+      }
+    } catch (e) {
+      Get.snackbar(
+        '오류',
+        '위치 권한 요청 중 오류가 발생했습니다: $e',
+        backgroundColor: Colors.red.withOpacity(0.1),
+        colorText: Colors.red,
+      );
+    }
+  }
+
   /// 채팅 초대 처리
   void _handleChatInvite(NotificationItem notification, NotificationService notificationService) {
     // 알림을 읽음 처리
@@ -301,7 +741,7 @@ class StartScreen extends StatelessWidget {
                       );
                     }),
                     IconButton(
-                      onPressed: () => Get.snackbar('설정', '설정 화면은 준비 중입니다.'),
+                      onPressed: () => _showSettingsPanel(),
                       icon: const Icon(Icons.settings_outlined),
                       color: Colors.black87,
                     ),

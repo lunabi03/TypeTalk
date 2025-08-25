@@ -65,5 +65,11 @@
 		<string>https</string>
 		<string>http</string>
 	</array>
+	
+	<!-- 위치 권한 설명 -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>가까운 사용자를 찾기 위해 위치 정보가 필요합니다.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>가까운 사용자를 찾기 위해 위치 정보가 필요합니다.</string>
 </dict>
 </plist>

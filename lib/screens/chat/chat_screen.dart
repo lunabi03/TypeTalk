@@ -10,6 +10,7 @@ import 'package:typetalk/services/real_user_repository.dart';
 import 'package:typetalk/services/chat_invite_service.dart';
 import 'package:typetalk/models/chat_invite_model.dart';
 import 'package:typetalk/routes/app_routes.dart';
+import 'package:typetalk/services/location_service.dart';
 
 class ChatScreen extends StatelessWidget {
   const ChatScreen({super.key});
@@ -433,6 +434,31 @@ class ChatScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
               ),
+              SizedBox(height: 16.h),
+              // 빈 상태에서도 대화 상대 찾기 버튼 제공
+              SizedBox(
+                width: 220.w,
+                child: ElevatedButton.icon(
+                  onPressed: () => _showFindChatPartnerDialog(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(vertical: 12.h),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.r),
+                    ),
+                    elevation: 0,
+                  ),
+                  icon: Icon(Icons.person_add, size: 18.sp),
+                  label: Text(
+                    '대화 상대 찾기',
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         );
@@ -504,6 +530,33 @@ class ChatScreen extends StatelessWidget {
                   );
                 }),
               ],
+            ),
+          ),
+          // 대화 상대 찾기 버튼
+          Padding(
+            padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 16.h),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _showFindChatPartnerDialog(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(vertical: 16.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  elevation: 2,
+                ),
+                icon: Icon(Icons.person_add, size: 20.sp),
+                label: Text(
+                  '대화 상대 찾기',
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
             ),
           ),
           Expanded(
@@ -1366,6 +1419,611 @@ class ChatScreen extends StatelessWidget {
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: Text('삭제'),
+          ),
+        ],
+      ),
+    );
+  }
+
+    /// 대화 상대 찾기 다이얼로그 표시
+  void _showFindChatPartnerDialog() {
+    final locationService = Get.put(LocationService());
+    
+    Get.bottomSheet(
+      Container(
+        height: Get.height * 0.8,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+        ),
+        child: Column(
+          children: [
+            // 헤더
+            Container(
+              padding: EdgeInsets.all(16.w),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    '대화 상대 찾기',
+                    style: TextStyle(
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Get.back(),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+            ),
+            // 위치 기반 추천 헤더
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Container(
+                padding: EdgeInsets.all(12.w),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12.r),
+                  border: Border.all(
+                    color: AppColors.primary.withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.location_on,
+                      color: AppColors.primary,
+                      size: 20.sp,
+                    ),
+                    SizedBox(width: 8.w),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '위치 기반 추천',
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                          Text(
+                            '가까운 거리에 있는 사용자를 우선적으로 추천합니다',
+                            style: TextStyle(
+                              fontSize: 12.sp,
+                              color: AppColors.primary.withOpacity(0.8),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Obx(() => locationService.isLoading
+                        ? SizedBox(
+                            width: 20.w,
+                            height: 20.w,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                            ),
+                          )
+                        : IconButton(
+                            onPressed: () => _refreshLocationBasedRecommendations(locationService),
+                            icon: Icon(Icons.refresh, color: AppColors.primary),
+                            tooltip: '위치 새로고침',
+                          )),
+                  ],
+                ),
+              ),
+            ),
+            SizedBox(height: 12.h),
+            // 검색 바
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 16.w),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+                child: TextField(
+                  decoration: InputDecoration(
+                    hintText: '이름, MBTI, 관심사로 검색',
+                    border: InputBorder.none,
+                    icon: Icon(Icons.search, color: Colors.grey[600]),
+                  ),
+                  onChanged: (value) {
+                    // TODO: 사용자 검색 로직 구현
+                  },
+                ),
+              ),
+            ),
+            // 필터 옵션
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+              child: Row(
+                children: [
+                  Text(
+                    'MBTI 필터:',
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                  SizedBox(width: 12.w),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _buildFindPartnerMBTIFilterChip('ENFP'),
+                          _buildFindPartnerMBTIFilterChip('INTJ'),
+                          _buildFindPartnerMBTIFilterChip('ISFP'),
+                          _buildFindPartnerMBTIFilterChip('ENTP'),
+                          _buildFindPartnerMBTIFilterChip('INFJ'),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // 사용자 목록 (위치 기반 추천)
+            Expanded(
+              child: Obx(() {
+                if (locationService.isLoading) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                        ),
+                        SizedBox(height: 16.h),
+                        Text(
+                          '가까운 사용자를 찾고 있습니다...',
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                
+                if (locationService.error.isNotEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.location_off,
+                          size: 48.sp,
+                          color: Colors.grey,
+                        ),
+                        SizedBox(height: 16.h),
+                        Text(
+                          locationService.error,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        SizedBox(height: 16.h),
+                        ElevatedButton(
+                          onPressed: () => locationService.openLocationSettings(),
+                          child: Text('위치 설정 열기'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                
+                // 위치 기반 사용자 목록 (예시 데이터)
+                return ListView.builder(
+                  padding: EdgeInsets.symmetric(horizontal: 16.w),
+                  itemCount: 10,
+                  itemBuilder: (context, index) {
+                    // 위치 정보가 포함된 사용자 모델 생성
+                    final user = UserModel(
+                      uid: 'user-$index',
+                      email: 'user${index + 1}@example.com',
+                      name: '사용자${index + 1}',
+                      createdAt: DateTime.now(),
+                      updatedAt: DateTime.now(),
+                      mbtiType: ['ENFP', 'INTJ', 'ISFP', 'ENTP', 'INFJ'][index % 5],
+                      profileImageUrl: null,
+                      // 위치 정보 추가 (서울 지역 기준)
+                      latitude: 37.5665 + (index * 0.01), // 위도
+                      longitude: 126.9780 + (index * 0.01), // 경도
+                      locationName: '서울시 ${['강남구', '서초구', '마포구', '종로구', '중구'][index % 5]}',
+                      stats: UserStats(
+                        friendCount: (index + 1) * 5,
+                        chatCount: (index + 1) * 3,
+                        lastLoginAt: DateTime.now(),
+                      ),
+                    );
+                    
+                    return _buildLocationBasedUserListItem(
+                      user,
+                      Get.find<ChatController>(),
+                      locationService,
+                    );
+                  },
+                );
+              }),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 위치 기반 추천 새로고침
+  Future<void> _refreshLocationBasedRecommendations(LocationService locationService) async {
+    try {
+      // 현재 위치 가져오기
+      final position = await locationService.getCurrentLocation();
+      if (position != null) {
+        Get.snackbar(
+          '위치 업데이트',
+          '현재 위치가 업데이트되었습니다.',
+          backgroundColor: AppColors.primary.withOpacity(0.1),
+          colorText: AppColors.primary,
+        );
+      }
+    } catch (e) {
+      Get.snackbar(
+        '오류',
+        '위치를 가져오는 중 오류가 발생했습니다: $e',
+        backgroundColor: Colors.red.withOpacity(0.1),
+        colorText: Colors.red,
+      );
+    }
+  }
+
+  /// 대화 상대 찾기용 MBTI 필터 칩 위젯
+  Widget _buildFindPartnerMBTIFilterChip(String mbti) {
+    return Container(
+      margin: EdgeInsets.only(right: 8.w),
+      child: FilterChip(
+        label: Text(
+          mbti,
+          style: TextStyle(
+            fontSize: 12.sp,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        selected: false, // TODO: 선택 상태 관리
+        onSelected: (selected) {
+          // TODO: MBTI 필터 로직 구현
+        },
+        backgroundColor: Colors.grey[200],
+        selectedColor: AppColors.primary.withOpacity(0.2),
+        checkmarkColor: AppColors.primary,
+      ),
+    );
+  }
+
+  /// 위치 기반 사용자 목록 항목 위젯
+  Widget _buildLocationBasedUserListItem(
+    UserModel user,
+    ChatController controller,
+    LocationService locationService,
+  ) {
+    // 현재 위치가 있을 때 거리 계산
+    String distanceText = '위치 정보 없음';
+    if (locationService.currentPosition != null && user.latitude != null && user.longitude != null) {
+      final distance = locationService.calculateDistance(
+        locationService.currentPosition!.latitude,
+        locationService.currentPosition!.longitude,
+        user.latitude!,
+        user.longitude!,
+      );
+      distanceText = locationService.formatDistance(distance);
+    }
+    
+    return Container(
+      margin: EdgeInsets.only(bottom: 12.h),
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // 프로필 이미지 또는 아바타
+          Container(
+            width: 50.w,
+            height: 50.w,
+            decoration: BoxDecoration(
+              color: _getMBTIColor(user.mbtiType).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(25.r),
+            ),
+            child: Center(
+              child: user.profileImageUrl != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(25.r),
+                      child: Image.network(
+                        user.profileImageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Text(
+                            user.name.characters.first,
+                            style: TextStyle(
+                              color: _getMBTIColor(user.mbtiType),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 20.sp,
+                            ),
+                          );
+                        },
+                      ),
+                    )
+                  : Text(
+                      user.name.characters.first,
+                      style: TextStyle(
+                        color: _getMBTIColor(user.mbtiType),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20.sp,
+                      ),
+                    ),
+            ),
+          ),
+          SizedBox(width: 16.w),
+          // 사용자 정보
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      user.name,
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    SizedBox(width: 8.w),
+                    if (user.mbtiType != null)
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                        decoration: BoxDecoration(
+                          color: _getMBTIColor(user.mbtiType).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12.r),
+                        ),
+                        child: Text(
+                          user.mbtiType!,
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w500,
+                            color: _getMBTIColor(user.mbtiType),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                SizedBox(height: 4.h),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.location_on,
+                      size: 14.sp,
+                      color: Colors.grey[600],
+                    ),
+                    SizedBox(width: 4.w),
+                    Text(
+                      user.locationName ?? '위치 정보 없음',
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    SizedBox(width: 8.w),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8.r),
+                      ),
+                      child: Text(
+                        distanceText,
+                        style: TextStyle(
+                          fontSize: 11.sp,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 4.h),
+                Text(
+                  '친구 ${user.stats.friendCount}명 • 채팅 ${user.stats.chatCount}개',
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // 채팅 시작 버튼
+          ElevatedButton(
+            onPressed: () {
+              Get.back(); // 다이얼로그 닫기
+              controller.startPrivateChatWith(user);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+              elevation: 0,
+            ),
+            child: Text(
+              '채팅',
+              style: TextStyle(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 사용자 목록 항목 위젯
+  Widget _buildUserListItem(UserModel user, ChatController controller) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 12.h),
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // 프로필 이미지 또는 아바타
+          Container(
+            width: 50.w,
+            height: 50.w,
+            decoration: BoxDecoration(
+              color: _getMBTIColor(user.mbtiType).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(25.r),
+            ),
+            child: Center(
+              child: user.profileImageUrl != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(25.r),
+                      child: Image.network(
+                        user.profileImageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Text(
+                            user.name.characters.first,
+                            style: TextStyle(
+                              color: _getMBTIColor(user.mbtiType),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 20.sp,
+                            ),
+                          );
+                        },
+                      ),
+                    )
+                  : Text(
+                      user.name.characters.first,
+                      style: TextStyle(
+                        color: _getMBTIColor(user.mbtiType),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20.sp,
+                      ),
+                    ),
+            ),
+          ),
+          SizedBox(width: 16.w),
+          // 사용자 정보
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      user.name,
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    SizedBox(width: 8.w),
+                    if (user.mbtiType != null)
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                        decoration: BoxDecoration(
+                          color: _getMBTIColor(user.mbtiType).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12.r),
+                        ),
+                        child: Text(
+                          user.mbtiType!,
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w500,
+                            color: _getMBTIColor(user.mbtiType),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                SizedBox(height: 4.h),
+                Text(
+                  '친구 ${user.stats.friendCount}명 • 채팅 ${user.stats.chatCount}개',
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // 채팅 시작 버튼
+          ElevatedButton(
+            onPressed: () {
+              Get.back(); // 다이얼로그 닫기
+              controller.startPrivateChatWith(user);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+              elevation: 0,
+            ),
+            child: Text(
+              '채팅',
+              style: TextStyle(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
         ],
       ),

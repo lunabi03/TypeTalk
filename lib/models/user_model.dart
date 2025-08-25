@@ -98,6 +98,9 @@ class UserModel {
   final String? bio;
   final int? age;
   final String? loginProvider;
+  final double? latitude;
+  final double? longitude;
+  final String? locationName;
   final UserPreferences preferences;
   final UserStats stats;
 
@@ -114,6 +117,9 @@ class UserModel {
     this.bio,
     this.age,
     this.loginProvider,
+    this.latitude,
+    this.longitude,
+    this.locationName,
     UserPreferences? preferences,
     UserStats? stats,
   }) : preferences = preferences ?? UserPreferences(),
@@ -134,6 +140,9 @@ class UserModel {
       'bio': bio,
       'age': age,
       'loginProvider': loginProvider,
+      'latitude': latitude,
+      'longitude': longitude,
+      'locationName': locationName,
       'preferences': preferences.toMap(),
       'stats': stats.toMap(),
     };
@@ -160,6 +169,9 @@ class UserModel {
       bio: map['bio'],
       age: map['age'],
       loginProvider: map['loginProvider'],
+      latitude: map['latitude']?.toDouble(),
+      longitude: map['longitude']?.toDouble(),
+      locationName: map['locationName'],
       preferences: map['preferences'] != null 
           ? UserPreferences.fromMap(map['preferences']) 
           : UserPreferences(),
@@ -190,6 +202,9 @@ class UserModel {
     String? profileImageUrl,
     String? bio,
     String? loginProvider,
+    double? latitude,
+    double? longitude,
+    String? locationName,
     UserPreferences? preferences,
     UserStats? stats,
   }) {
@@ -205,6 +220,9 @@ class UserModel {
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
       bio: bio ?? this.bio,
       loginProvider: loginProvider ?? this.loginProvider,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      locationName: locationName ?? this.locationName,
       preferences: preferences ?? this.preferences,
       stats: stats ?? this.stats,
     );

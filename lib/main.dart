@@ -15,6 +15,7 @@ import 'package:typetalk/screens/question/question_screen.dart';
 import 'package:typetalk/screens/result/result_screen.dart';
 import 'package:typetalk/screens/start/start_screen.dart';
 import 'package:typetalk/screens/fcm/fcm_demo_screen.dart';
+import 'package:typetalk/screens/chat/find_chat_partner_screen.dart';
 
 // 실제 Firebase 서비스들 (활성화)
 import 'package:typetalk/services/real_firebase_service.dart';
@@ -152,6 +153,11 @@ class MyApp extends StatelessWidget {
           GetPage(
             name: AppRoutes.chat, 
             page: () => const ChatScreen(),
+            middlewares: [SessionMiddleware(), AuthMiddleware()],
+          ),
+          GetPage(
+            name: AppRoutes.findChatPartner, 
+            page: () => const FindChatPartnerScreen(),
             middlewares: [SessionMiddleware(), AuthMiddleware()],
           ),
           GetPage(

@@ -5,6 +5,7 @@ import 'package:typetalk/core/theme/app_colors.dart';
 import 'package:typetalk/routes/app_routes.dart';
 import 'package:typetalk/services/notification_service.dart';
 import 'package:typetalk/services/location_service.dart';
+import 'package:typetalk/controllers/profile_controller.dart';
 
 class StartScreen extends StatelessWidget {
   const StartScreen({super.key});
@@ -213,6 +214,8 @@ class StartScreen extends StatelessWidget {
   /// 설정 패널 표시
   void _showSettingsPanel() {
     final locationService = Get.put(LocationService());
+    // ProfileController 초기화 (회원 탈퇴 기능을 위해)
+    Get.put(ProfileController());
     
     Get.bottomSheet(
       Container(
@@ -461,6 +464,110 @@ class StartScreen extends StatelessWidget {
                       ],
                     ),
                   ),
+                  SizedBox(height: 16.h),
+                  // 회원 탈퇴 섹션
+                  Container(
+                    padding: EdgeInsets.all(16.w),
+                    decoration: BoxDecoration(
+                      color: Colors.red[50],
+                      borderRadius: BorderRadius.circular(12.r),
+                      border: Border.all(
+                        color: Colors.red[200]!,
+                        width: 1,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.delete_forever_outlined,
+                              color: Colors.red[600],
+                              size: 24.sp,
+                            ),
+                            SizedBox(width: 12.w),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '회원 탈퇴',
+                                    style: TextStyle(
+                                      fontSize: 16.sp,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.red[700],
+                                    ),
+                                  ),
+                                  Text(
+                                    '계정과 모든 데이터를 영구적으로 삭제합니다',
+                                    style: TextStyle(
+                                      fontSize: 14.sp,
+                                      color: Colors.red[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 16.h),
+                        Container(
+                          padding: EdgeInsets.all(12.w),
+                          decoration: BoxDecoration(
+                            color: Colors.red[100],
+                            borderRadius: BorderRadius.circular(8.r),
+                            border: Border.all(
+                              color: Colors.red[300]!,
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.warning_amber_outlined,
+                                color: Colors.red[700],
+                                size: 20.sp,
+                              ),
+                              SizedBox(width: 8.w),
+                              Expanded(
+                                child: Text(
+                                  '회원 탈퇴 시 모든 프로필 정보, 채팅 기록, MBTI 결과가 영구적으로 삭제되며 복구할 수 없습니다.',
+                                  style: TextStyle(
+                                    fontSize: 13.sp,
+                                    color: Colors.red[700],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(height: 16.h),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () => _showDeleteAccountDialog(),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red[600],
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(vertical: 12.h),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8.r),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: Text(
+                              '회원 탈퇴',
+                              style: TextStyle(
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -625,6 +732,251 @@ class StartScreen extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  /// 회원 탈퇴 확인 다이얼로그 표시
+  void _showDeleteAccountDialog() {
+    Get.dialog(
+      AlertDialog(
+        title: Row(
+          children: [
+            Icon(
+              Icons.delete_forever_outlined,
+              color: Colors.red[600],
+              size: 24.sp,
+            ),
+            SizedBox(width: 8.w),
+            Text(
+              '회원 탈퇴',
+              style: TextStyle(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.w600,
+                color: Colors.red[700],
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '정말로 회원 탈퇴를 진행하시겠습니까?',
+              style: TextStyle(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+            SizedBox(height: 16.h),
+            Container(
+              padding: EdgeInsets.all(12.w),
+              decoration: BoxDecoration(
+                color: Colors.red[50],
+                borderRadius: BorderRadius.circular(8.r),
+                border: Border.all(
+                  color: Colors.red[200]!,
+                  width: 1,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '삭제되는 데이터:',
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.red[700],
+                    ),
+                  ),
+                  SizedBox(height: 8.h),
+                  _buildDeleteItem('프로필 정보'),
+                  _buildDeleteItem('MBTI 테스트 결과'),
+                  _buildDeleteItem('채팅 기록'),
+                  _buildDeleteItem('친구 목록'),
+                  _buildDeleteItem('알림 설정'),
+                ],
+              ),
+            ),
+            SizedBox(height: 16.h),
+            Text(
+              '⚠️ 이 작업은 되돌릴 수 없으며, 모든 데이터가 영구적으로 삭제됩니다.',
+              style: TextStyle(
+                fontSize: 13.sp,
+                color: Colors.red[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text(
+              '취소',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 14.sp,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Get.back();
+              _confirmDeleteAccount();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red[600],
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+            ),
+            child: Text(
+              '회원 탈퇴',
+              style: TextStyle(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 삭제될 항목 위젯
+  Widget _buildDeleteItem(String text) {
+    return Padding(
+      padding: EdgeInsets.only(left: 8.w, top: 4.h),
+      child: Row(
+        children: [
+          Icon(
+            Icons.remove_circle_outline,
+            color: Colors.red[600],
+            size: 16.sp,
+          ),
+          SizedBox(width: 8.w),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 13.sp,
+              color: Colors.red[700],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 회원 탈퇴 최종 확인 및 실행
+  void _confirmDeleteAccount() {
+    Get.dialog(
+      AlertDialog(
+        title: Row(
+          children: [
+            Icon(
+              Icons.warning_amber_rounded,
+              color: Colors.orange[600],
+              size: 24.sp,
+            ),
+            SizedBox(width: 8.w),
+            Text(
+              '최종 확인',
+              style: TextStyle(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.w600,
+                color: Colors.orange[700],
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '회원 탈퇴를 진행하시겠습니까?',
+              style: TextStyle(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+            SizedBox(height: 16.h),
+            Text(
+              '이 작업은 되돌릴 수 없습니다.',
+              style: TextStyle(
+                fontSize: 14.sp,
+                color: Colors.red[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text(
+              '취소',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 14.sp,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Get.back();
+              _executeDeleteAccount();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red[600],
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+            ),
+            child: Text(
+              '탈퇴 진행',
+              style: TextStyle(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 회원 탈퇴 실행
+  void _executeDeleteAccount() async {
+    try {
+      // ProfileController를 통해 회원 탈퇴 실행
+      final profileController = Get.find<ProfileController>();
+      final success = await profileController.deleteUserProfile(confirmDelete: true);
+      
+      if (success) {
+        Get.snackbar(
+          '회원 탈퇴 완료',
+          '계정이 성공적으로 삭제되었습니다.',
+          backgroundColor: Colors.orange.withOpacity(0.1),
+          colorText: Colors.orange,
+          duration: const Duration(seconds: 3),
+        );
+        // 로그인 화면으로 이동
+        Get.offAllNamed(AppRoutes.login);
+      }
+    } catch (e) {
+      Get.snackbar(
+        '오류',
+        '회원 탈퇴 중 오류가 발생했습니다: ${e.toString()}',
+        backgroundColor: Colors.red.withOpacity(0.1),
+        colorText: Colors.red,
+        duration: const Duration(seconds: 3),
+      );
+    }
   }
 
   /// 위치 권한 요청

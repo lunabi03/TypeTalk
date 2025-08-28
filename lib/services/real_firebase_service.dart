@@ -92,6 +92,11 @@ class RealFirebaseService extends GetxService {
   // 문서 업데이트
   Future<void> updateDocument(String path, Map<String, dynamic> data) async {
     try {
+      // createdAt은 불변 - 실수로 넘어온 경우 제거
+      if (data.containsKey('createdAt')) {
+        data = Map<String, dynamic>.from(data);
+        data.remove('createdAt');
+      }
       // 자동으로 타임스탬프 추가
       data['updatedAt'] = FieldValue.serverTimestamp();
       

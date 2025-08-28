@@ -8,6 +8,7 @@ class AppRoutes {
   static const String profileEdit = '/profile/edit';
   static const String recommendation = '/recommendation';
   static const String chat = '/chat';
+  static const String findChatPartner = '/find-chat-partner';
   static const String home = '/home';
   static const String fcmDemo = '/fcm-demo';
 }

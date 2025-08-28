@@ -143,7 +143,11 @@ class ProfileScreen extends StatelessWidget {
                           // Join Date
                           Obx(() {
                             final createdAt = authController.userProfile['createdAt'];
-                            String joinDate = '2024.03.21'; // 기본값
+                            String joinDate = '로딩 중...';
+                            
+                            // 디버그 정보 출력
+                            print('프로필 화면 createdAt: $createdAt (타입: ${createdAt?.runtimeType})');
+                            
                             if (createdAt != null) {
                               try {
                                 DateTime date;
@@ -156,13 +160,15 @@ class ProfileScreen extends StatelessWidget {
                                   date = (createdAt as dynamic).toDate();
                                 }
                                 joinDate = '${date.year}.${date.month.toString().padLeft(2, '0')}.${date.day.toString().padLeft(2, '0')}';
+                                print('변환된 날짜: $joinDate');
                               } catch (e) {
                                 print('날짜 변환 오류: $e');
-                                // 오류 발생 시 현재 날짜 사용
-                                final now = DateTime.now();
-                                joinDate = '${now.year}.${now.month.toString().padLeft(2, '0')}.${now.day.toString().padLeft(2, '0')}';
+                                joinDate = '날짜 오류';
                               }
+                            } else {
+                              joinDate = '정보 없음';
                             }
+                            
                             return Text(
                               '가입일: $joinDate',
                               style: TextStyle(

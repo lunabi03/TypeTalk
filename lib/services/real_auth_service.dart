@@ -237,21 +237,9 @@ class RealAuthService extends GetxService {
     final existingUser = await _userRepository.getUser(userCredential.user!.uid);
     
     if (existingUser == null) {
-      // 새로운 사용자인 경우 Firestore에 사용자 정보 저장
-      final userModel = UserModel(
-        uid: userCredential.user!.uid,
-        email: userCredential.user!.email ?? googleUser.email,
-        name: userCredential.user!.displayName ?? googleUser.displayName ?? 'Google 사용자',
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-        mbtiType: null,
-        mbtiTestCount: 0,
-        loginProvider: 'google',
-        profileImageUrl: null, // 기본 이미지 없음
-      );
-      
-      await _userRepository.createUser(userModel);
-      print('Google 로그인으로 새 사용자 생성: ${userCredential.user!.uid}');
+      // 기존 프로필이 없는 소셜 로그인: 회원가입 절차로 유도 (자동 생성 방지)
+      print('Google 로그인: 기존 프로필 없음 → 회원가입 절차 진행 필요');
+      // AuthController가 로그인 상태 변화를 감지해 회원가입 화면으로 이동하도록 처리됨
     } else {
       // 기존 사용자인 경우 마지막 로그인 시간 업데이트
       await _updateLastLogin(userCredential.user!.uid);
@@ -398,6 +386,9 @@ class RealAuthService extends GetxService {
 
   // 현재 사용자 이름
   String? get currentUserName => user.value?.displayName;
+
+  // 현재 Firebase Auth 사용자 객체
+  User? get currentUser => user.value;
 
   // 사용자 삭제 (회원 탈퇴)
   Future<void> deleteUser() async {

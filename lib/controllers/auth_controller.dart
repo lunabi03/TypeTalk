@@ -69,11 +69,22 @@ class AuthController extends GetxController {
     currentUserEmail.value = firebaseUser.email ?? '';
     currentUserName.value = firebaseUser.displayName ?? '';
     
-    // Firestore에서 사용자 프로필 로드
-    loadUserProfile();
-    
-    // 로그인 성공 시 start 화면으로 이동
-    Get.offNamed(AppRoutes.start);
+    // Firestore에서 사용자 프로필 로드 후 분기
+    loadUserProfile().then((_) async {
+      // userModel이 없거나 프로필 문서가 없으면 회원가입 화면으로 유도
+      if (userModel.value == null) {
+        final exists = await _userRepository.userExists(firebaseUser.uid);
+        if (!exists) {
+          Get.snackbar('회원가입 필요', '계정 정보가 없어 회원가입을 진행합니다.');
+          // 즉시 회원가입 화면으로 이동
+          await Future.delayed(Duration(milliseconds: 500)); // 스낵바 표시 후
+          Get.offAllNamed(AppRoutes.signup); // 모든 화면 스택 제거하고 이동
+          return;
+        }
+      }
+      // 기존 사용자이면 메인으로 이동
+      Get.offNamed(AppRoutes.start);
+    });
     
     print('실제 Firebase 사용자 로그인: ${firebaseUser.uid}');
   }
@@ -139,6 +150,7 @@ class AuthController extends GetxController {
           'createdAt': userData.createdAt,
         };
         print('사용자 프로필 로드 완료: ${userData.name}, MBTI: ${userData.mbtiType}, 테스트 횟수: ${userData.mbtiTestCount ?? 0}');
+        print('가입일 정보: ${userData.createdAt} (타입: ${userData.createdAt.runtimeType})');
       } else {
         print('사용자 프로필을 찾을 수 없습니다.');
       }
@@ -587,5 +599,26 @@ class AuthController extends GetxController {
       Get.snackbar('알림', reason);
     }
     await signOut();
+  }
+
+  /// Firebase Auth 계정 삭제 (회원 탈퇴 시 사용)
+  Future<void> deleteFirebaseAuthAccount() async {
+    try {
+      if (currentUserId.value.isEmpty) {
+        throw Exception('로그인된 사용자가 없습니다.');
+      }
+
+      // Firebase Auth에서 현재 사용자 계정 삭제
+      final currentUser = _authService.currentUser;
+      if (currentUser != null) {
+        await currentUser.delete();
+        print('Firebase Auth 계정 삭제 완료: ${currentUserId.value}');
+      } else {
+        throw Exception('Firebase Auth 사용자를 찾을 수 없습니다.');
+      }
+    } catch (e) {
+      print('Firebase Auth 계정 삭제 실패: $e');
+      throw Exception('Firebase Auth 계정 삭제에 실패했습니다: ${e.toString()}');
+    }
   }
 }

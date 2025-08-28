@@ -249,6 +249,18 @@ class ProfileController extends GetxController {
       // Firestore에서 사용자 삭제
       await _userRepository.deleteUser(uid);
 
+      // Firebase Auth 계정도 함께 삭제 (재가입 시 회원가입 절차 진행을 위해)
+      try {
+        await _authController.deleteFirebaseAuthAccount();
+        print('Firebase Auth 계정 삭제 완료: $uid');
+      } catch (e) {
+        print('Firebase Auth 계정 삭제 실패: $e');
+        // Auth 계정 삭제 실패 시에도 Firestore 데이터는 삭제되었으므로 계속 진행
+      }
+
+      // 로그아웃 처리 (Auth 계정 삭제 후)
+      await _authController.logout();
+
       // 로컬 상태 초기화
       currentUser.value = null;
       nameController.clear();
@@ -256,8 +268,7 @@ class ProfileController extends GetxController {
       emailController.clear();
       profileImageUrl.value = '';
 
-      // 로그아웃 처리
-      await _authController.logout();
+      // 로그아웃은 이미 위에서 처리됨
 
       Get.snackbar(
         '완료',

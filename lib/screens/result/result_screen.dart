@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:typetalk/core/theme/app_colors.dart';
 import 'package:typetalk/controllers/auth_controller.dart';
+import 'package:share_plus/share_plus.dart';
 
 class ResultScreen extends StatelessWidget {
   const ResultScreen({super.key});
@@ -62,7 +63,7 @@ class ResultScreen extends StatelessWidget {
               ),
             ),
 
-            // 스크롤 가능한 내용 부분 (MBTI 설명만)
+            // 스크롤 가능한 내용 부분 (MBTI 설명 + 궁합 정보)
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -76,6 +77,73 @@ class ResultScreen extends StatelessWidget {
                         fontSize: 14.sp,
                         height: 1.6,
                         color: Colors.black87,
+                      ),
+                    ),
+                    
+                    SizedBox(height: 32.h),
+                    
+                    // 궁합 정보 섹션
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(20.w),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8F9FA),
+                        borderRadius: BorderRadius.circular(16.r),
+                        border: Border.all(
+                          color: const Color(0xFFE9ECEF),
+                          width: 1,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // 궁합 제목
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.favorite,
+                                color: const Color(0xFFE91E63),
+                                size: 24.sp,
+                              ),
+                              SizedBox(width: 8.w),
+                              Text(
+                                'MBTI 궁합',
+                                style: TextStyle(
+                                  fontSize: 18.sp,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ],
+                          ),
+                          
+                          SizedBox(height: 20.h),
+                          
+                          // 최고 궁합
+                          _buildCompatibilitySection(
+                            '최고 궁합',
+                            _getBestCompatibility(Get.arguments?['type'] as String?),
+                            const Color(0xFF4CAF50),
+                          ),
+                          
+                          SizedBox(height: 16.h),
+                          
+                          // 좋은 궁합
+                          _buildCompatibilitySection(
+                            '좋은 궁합',
+                            _getGoodCompatibility(Get.arguments?['type'] as String?),
+                            const Color(0xFF2196F3),
+                          ),
+                          
+                          SizedBox(height: 16.h),
+                          
+                          // 보통 궁합
+                          _buildCompatibilitySection(
+                            '보통 궁합',
+                            _getNormalCompatibility(Get.arguments?['type'] as String?),
+                            const Color(0xFFFF9800),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -92,7 +160,7 @@ class ResultScreen extends StatelessWidget {
                     height: 56,
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () => Get.snackbar('공유', '결과 공유하기를 눌렀습니다.'),
+                      onPressed: () => _shareMBTIResult(),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFE1E3E6),
                         foregroundColor: Colors.black87,
@@ -141,6 +209,49 @@ class ResultScreen extends StatelessWidget {
     );
   }
 
+  // MBTI 결과를 다른 앱으로 공유
+  void _shareMBTIResult() {
+    final mbtiType = Get.arguments?['type'] as String?;
+    if (mbtiType == null || mbtiType.isEmpty) {
+      Get.snackbar('오류', 'MBTI 결과를 찾을 수 없습니다.');
+      return;
+    }
+
+    try {
+      // MBTI 결과 정보 가져오기
+      final info = _typeInfo[mbtiType] ?? _typeInfo['DEFAULT']!;
+      final compatibility = _getBestCompatibility(mbtiType);
+      
+      // 공유할 텍스트 구성
+      final shareText = '''
+🎯 나의 MBTI 유형: $mbtiType
+
+📝 성향 설명:
+${info['desc']}
+
+💪 강점:
+${info['strength']}
+
+⚠️ 주의점:
+${info['watchout']}
+
+💕 최고 궁합:
+${compatibility['types']} - ${compatibility['reason']}
+
+#MBTI #TypeMate #${mbtiType}
+      '''.trim();
+
+      // 공유 실행
+      Share.share(
+        shareText,
+        subject: '나의 MBTI 결과: $mbtiType',
+      );
+      
+    } catch (e) {
+      Get.snackbar('오류', '결과 공유 중 오류가 발생했습니다: ${e.toString()}');
+    }
+  }
+
   // MBTI 결과를 Firebase에 저장하고 프로필로 이동
   void _saveMBTIResult() async {
     final mbtiType = Get.arguments?['type'] as String?;
@@ -170,6 +281,66 @@ class ResultScreen extends StatelessWidget {
     } catch (e) {
       Get.snackbar('오류', 'MBTI 결과 저장에 실패했습니다: ${e.toString()}');
     }
+  }
+  
+  /// 궁합 섹션 위젯
+  Widget _buildCompatibilitySection(String title, Map<String, String> compatibility, Color color) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(
+          color: color.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 8.w,
+                height: 8.h,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              SizedBox(width: 8.w),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 12.h),
+          Text(
+            compatibility['types'] ?? '',
+            style: TextStyle(
+              fontSize: 15.sp,
+              fontWeight: FontWeight.w700,
+              color: Colors.black87,
+            ),
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            compatibility['reason'] ?? '',
+            style: TextStyle(
+              fontSize: 13.sp,
+              height: 1.4,
+              color: Colors.black54,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -228,6 +399,19 @@ String _titleFor(String? type, String? providedTitle) {
 String _descriptionFor(String? type) {
   final info = _typeInfo[type ?? ''] ?? _typeInfo['DEFAULT']!;
   return '${info['desc']}\n\n강점: ${info['strength']}\n주의점: ${info['watchout']}';
+}
+
+// 궁합 정보 반환 함수들
+Map<String, String> _getBestCompatibility(String? type) {
+  return _compatibilityInfo[type ?? '']?['best'] ?? _compatibilityInfo['DEFAULT']!['best']!;
+}
+
+Map<String, String> _getGoodCompatibility(String? type) {
+  return _compatibilityInfo[type ?? '']?['good'] ?? _compatibilityInfo['DEFAULT']!['good']!;
+}
+
+Map<String, String> _getNormalCompatibility(String? type) {
+  return _compatibilityInfo[type ?? '']?['normal'] ?? _compatibilityInfo['DEFAULT']!['normal']!;
 }
 
 // 16가지 유형별 부가 설명
@@ -316,5 +500,247 @@ const Map<String, Map<String, String>> _typeInfo = {
     'desc': '당신의 성향을 바탕으로 도출된 결과입니다.\n강점을 살리고 약점을 보완할 수 있는 방향을 함께 찾아봅시다.\n\nMBTI는 성격의 한 측면을 보여주는 도구일 뿐입니다. 각 유형의 특징을 이해하고 자신의 강점을 활용하면서도 개선할 수 있는 부분에 대해 노력하는 것이 중요합니다.',
     'strength': '성장 가능성, 학습 의지, 자기 이해, 적응력, 발전 의지',
     'watchout': '과도한 일반화 지양, 고정관념 경계, 지속적 성장 추구'
+  },
+};
+
+// 16가지 유형별 궁합 정보
+const Map<String, Map<String, Map<String, String>>> _compatibilityInfo = {
+  'ISTJ': {
+    'best': {
+      'types': 'ESFP, ENFP',
+      'reason': 'ISTJ의 안정성과 체계성을 ESFP/ENFP의 활기찬 에너지와 열정이 보완해주며, 서로의 차이점을 통해 균형잡힌 관계를 형성합니다.'
+    },
+    'good': {
+      'types': 'ISFJ, ESTJ, ENTJ',
+      'reason': '비슷한 가치관과 실용적인 성향으로 안정적이고 신뢰할 수 있는 관계를 만들 수 있습니다.'
+    },
+    'normal': {
+      'types': 'ISTP, ISFP, ESTP, ESFJ',
+      'reason': '일부 공통점이 있지만 서로 다른 접근 방식으로 인해 적응이 필요한 관계입니다.'
+    }
+  },
+  'ISFJ': {
+    'best': {
+      'types': 'ESFP, ESTP',
+      'reason': 'ISFJ의 따뜻함과 배려심이 ESFP/ESTP의 활발함과 실용성을 지원하며, 서로의 강점을 균형있게 활용할 수 있습니다.'
+    },
+    'good': {
+      'types': 'ISTJ, ESFJ, ISFP',
+      'reason': '공감능력과 실용성을 공유하여 따뜻하고 안정적인 관계를 형성할 수 있습니다.'
+    },
+    'normal': {
+      'types': 'INFJ, ISFP, ESTJ, ENFJ',
+      'reason': '비슷한 가치관을 가지고 있지만 의사소통 방식의 차이로 인해 이해가 필요한 관계입니다.'
+    }
+  },
+  'INFJ': {
+    'best': {
+      'types': 'ENFP, ENTP',
+      'reason': 'INFJ의 깊은 통찰력과 이상주의가 ENFP/ENTP의 창의성과 혁신 정신과 결합되어 영감을 주는 관계를 만듭니다.'
+    },
+    'good': {
+      'types': 'INFP, ENFJ, INTJ',
+      'reason': '비전과 가치관을 공유하며 깊이 있는 대화와 성장을 이끌어낼 수 있습니다.'
+    },
+    'normal': {
+      'types': 'ISFJ, ISFP, INTP, ENTJ',
+      'reason': '일부 공통 관심사가 있지만 사고 방식의 차이로 인해 상호 이해가 필요한 관계입니다.'
+    }
+  },
+  'INTJ': {
+    'best': {
+      'types': 'ENFP, ENTP',
+      'reason': 'INTJ의 전략적 사고와 독립성이 ENFP/ENTP의 창의성과 적응력과 결합되어 혁신적인 아이디어를 만들어냅니다.'
+    },
+    'good': {
+      'types': 'INFJ, INTP, ENTJ',
+      'reason': '논리적 사고와 장기적 비전을 공유하여 효율적이고 목표 지향적인 관계를 형성할 수 있습니다.'
+    },
+    'normal': {
+      'types': 'ISTJ, ISTP, INTJ, ESTJ',
+      'reason': '비슷한 사고 방식을 가지고 있지만 감정적 소통의 부족으로 인해 관계 발전에 제한이 있을 수 있습니다.'
+    }
+  },
+  'ISTP': {
+    'best': {
+      'types': 'ESFJ, ENFJ',
+      'reason': 'ISTP의 실용적 문제해결 능력이 ESFJ/ENFJ의 사교성과 배려심과 결합되어 균형잡힌 관계를 형성합니다.'
+    },
+    'good': {
+      'types': 'ESTP, ISFP, ISTJ',
+      'reason': '실용성과 적응력을 공유하여 효율적이고 유연한 관계를 만들 수 있습니다.'
+    },
+    'normal': {
+      'types': 'INTP, ESTP, ISFP, ENTJ',
+      'reason': '일부 공통 관심사가 있지만 장기적 계획과 감정적 소통의 차이로 인해 발전이 제한될 수 있습니다.'
+    }
+  },
+  'ISFP': {
+    'best': {
+      'types': 'ENFJ, ENTJ',
+      'reason': 'ISFP의 예술적 감각과 공감능력이 ENFJ/ENTJ의 리더십과 비전과 결합되어 창의적이고 영감을 주는 관계를 만듭니다.'
+    },
+    'good': {
+      'types': 'ISFJ, ESFP, ISFP',
+      'reason': '공감능력과 미적 감각을 공유하여 따뜻하고 조화로운 관계를 형성할 수 있습니다.'
+    },
+    'normal': {
+      'types': 'ISTP, INFP, ESFJ, ESTP',
+      'reason': '비슷한 가치관을 가지고 있지만 의사결정과 계획성의 차이로 인해 상호 보완이 필요한 관계입니다.'
+    }
+  },
+  'INFP': {
+    'best': {
+      'types': 'ENFJ, ENTJ',
+      'reason': 'INFP의 이상주의와 창의성이 ENFJ/ENTJ의 리더십과 실행력과 결합되어 의미 있는 변화를 만들어내는 관계입니다.'
+    },
+    'good': {
+      'types': 'INFJ, ENFP, INFP',
+      'reason': '가치관과 창의성을 공유하며 깊이 있는 대화와 성장을 이끌어낼 수 있습니다.'
+    },
+    'normal': {
+      'types': 'ISFP, INTP, ENFP, ESFJ',
+      'reason': '일부 공통 관심사가 있지만 현실적 실행력과 계획성의 차이로 인해 균형이 필요한 관계입니다.'
+    }
+  },
+  'INTP': {
+    'best': {
+      'types': 'ENFJ, ESFJ',
+      'reason': 'INTP의 논리적 분석 능력이 ENFJ/ESFJ의 공감능력과 조직력을 지원하여 혁신적인 해결책을 만들어냅니다.'
+    },
+    'good': {
+      'types': 'INTJ, INFP, INTP',
+      'reason': '논리적 사고와 창의성을 공유하여 깊이 있는 지적 교류와 성장을 이끌어낼 수 있습니다.'
+    },
+    'normal': {
+      'types': 'ISTP, ISTJ, ENTP, ENTJ',
+      'reason': '비슷한 사고 방식을 가지고 있지만 감정적 소통과 실용적 실행력의 부족으로 인해 관계 발전에 제한이 있을 수 있습니다.'
+    }
+  },
+  'ESTP': {
+    'best': {
+      'types': 'ISFJ, INFJ',
+      'reason': 'ESTP의 실용적 실행력이 ISFJ/INFJ의 배려심과 통찰력을 지원하여 균형잡힌 관계를 형성합니다.'
+    },
+    'good': {
+      'types': 'ISTP, ESFP, ESTP',
+      'reason': '실용성과 적응력을 공유하여 활발하고 효율적인 관계를 만들 수 있습니다.'
+    },
+    'normal': {
+      'types': 'ESTJ, ESFP, ISTP, ENTP',
+      'reason': '일부 공통 관심사가 있지만 장기적 계획과 감정적 소통의 차이로 인해 발전이 제한될 수 있습니다.'
+    }
+  },
+  'ESFP': {
+    'best': {
+      'types': 'ISTJ, INTJ',
+      'reason': 'ESFP의 활기찬 에너지와 사교성이 ISTJ/INTJ의 체계성과 계획성을 보완하여 균형잡힌 관계를 형성합니다.'
+    },
+    'good': {
+      'types': 'ISFJ, ESTP, ESFP',
+      'reason': '사교성과 실용성을 공유하여 즐겁고 활발한 관계를 만들 수 있습니다.'
+    },
+    'normal': {
+      'types': 'ENFP, ESFJ, ISFP, ESTP',
+      'reason': '비슷한 성향을 가지고 있지만 장기적 목표와 계획성의 차이로 인해 상호 보완이 필요한 관계입니다.'
+    }
+  },
+  'ENFP': {
+    'best': {
+      'types': 'ISTJ, INTJ',
+      'reason': 'ENFP의 창의성과 열정이 ISTJ/INTJ의 체계성과 전략적 사고를 보완하여 혁신적인 아이디어를 만들어냅니다.'
+    },
+    'good': {
+      'types': 'INFP, ENFJ, ENFP',
+      'reason': '창의성과 열정을 공유하며 영감을 주고받는 활발한 관계를 형성할 수 있습니다.'
+    },
+    'normal': {
+      'types': 'ESFP, ENTP, INFJ, ESFJ',
+      'reason': '일부 공통 관심사가 있지만 실행력과 계획성의 차이로 인해 균형이 필요한 관계입니다.'
+    }
+  },
+  'ENTP': {
+    'best': {
+      'types': 'ISFJ, INFJ',
+      'reason': 'ENTP의 혁신적 사고와 도전 정신이 ISFJ/INFJ의 안정성과 배려심과 결합되어 창의적인 변화를 만들어냅니다.'
+    },
+    'good': {
+      'types': 'INTJ, ENFP, ENTP',
+      'reason': '창의성과 혁신 정신을 공유하여 도전적이고 흥미로운 관계를 형성할 수 있습니다.'
+    },
+    'normal': {
+      'types': 'ESTP, ISTP, ENFP, ENTJ',
+      'reason': '비슷한 성향을 가지고 있지만 감정적 소통과 안정성의 차이로 인해 상호 이해가 필요한 관계입니다.'
+    }
+  },
+  'ESTJ': {
+    'best': {
+      'types': 'ISFP, INFP',
+      'reason': 'ESTJ의 체계적 조직력이 ISFP/INFP의 창의성과 공감능력을 지원하여 효율적이고 따뜻한 관계를 형성합니다.'
+    },
+    'good': {
+      'types': 'ISTJ, ESFJ, ESTJ',
+      'reason': '체계성과 실용성을 공유하여 안정적이고 효율적인 관계를 만들 수 있습니다.'
+    },
+    'normal': {
+      'types': 'ENTJ, ISTP, ESTP, ESFJ',
+      'reason': '비슷한 가치관을 가지고 있지만 유연성과 감정적 소통의 차이로 인해 발전이 제한될 수 있습니다.'
+    }
+  },
+  'ESFJ': {
+    'best': {
+      'types': 'INTP, ISTP',
+      'reason': 'ESFJ의 사교성과 배려심이 INTP/ISTP의 논리적 사고와 실용성을 지원하여 균형잡힌 관계를 형성합니다.'
+    },
+    'good': {
+      'types': 'ISFJ, ESTJ, ESFJ',
+      'reason': '사교성과 배려심을 공유하여 따뜻하고 조화로운 관계를 만들 수 있습니다.'
+    },
+    'normal': {
+      'types': 'ENFJ, ISFP, ESFP, ESTP',
+      'reason': '비슷한 성향을 가지고 있지만 리더십과 독립성의 차이로 인해 상호 보완이 필요한 관계입니다.'
+    }
+  },
+  'ENFJ': {
+    'best': {
+      'types': 'ISFP, INFP',
+      'reason': 'ENFJ의 리더십과 영감이 ISFP/INFP의 창의성과 공감능력과 결합되어 의미 있는 변화를 만들어내는 관계입니다.'
+    },
+    'good': {
+      'types': 'INFJ, ENFP, ENFJ',
+      'reason': '리더십과 공감능력을 공유하며 영감을 주고받는 활발한 관계를 형성할 수 있습니다.'
+    },
+    'normal': {
+      'types': 'ESFJ, ISFJ, ENFP, ENTJ',
+      'reason': '일부 공통 관심사가 있지만 독립성과 실용성의 차이로 인해 균형이 필요한 관계입니다.'
+    }
+  },
+  'ENTJ': {
+    'best': {
+      'types': 'ISFP, INFP',
+      'reason': 'ENTJ의 전략적 리더십이 ISFP/INFP의 창의성과 공감능력을 지원하여 혁신적이고 의미 있는 관계를 형성합니다.'
+    },
+    'good': {
+      'types': 'INTJ, ENFJ, ENTJ',
+      'reason': '전략적 사고와 리더십을 공유하여 효율적이고 목표 지향적인 관계를 만들 수 있습니다.'
+    },
+    'normal': {
+      'types': 'ESTJ, ISTJ, ENTP, ENFJ',
+      'reason': '비슷한 성향을 가지고 있지만 감정적 소통과 유연성의 차이로 인해 상호 이해가 필요한 관계입니다.'
+    }
+  },
+  'DEFAULT': {
+    'best': {
+      'types': '모든 유형',
+      'reason': 'MBTI는 성격의 한 측면일 뿐이며, 개인의 성장과 노력에 따라 모든 유형과 좋은 관계를 형성할 수 있습니다.'
+    },
+    'good': {
+      'types': '대부분의 유형',
+      'reason': '상호 이해와 존중을 바탕으로 대부분의 MBTI 유형과 조화로운 관계를 만들 수 있습니다.'
+    },
+    'normal': {
+      'types': '일부 유형',
+      'reason': '개인의 성향과 상황에 따라 관계의 질이 달라질 수 있으며, 지속적인 소통과 이해가 중요합니다.'
+    }
   },
 };

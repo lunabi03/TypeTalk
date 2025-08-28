@@ -138,6 +138,15 @@ class AuthController extends GetxController {
       final userData = await _userRepository.getUser(currentUserId.value);
       if (userData != null) {
         userModel.value = userData;
+        
+        // MBTI 정보 디버그 로그 추가
+        print('=== MBTI 디버그 정보 ===');
+        print('userData.mbtiType: ${userData.mbtiType}');
+        print('userData.mbtiType 타입: ${userData.mbtiType.runtimeType}');
+        print('userData.mbtiTestCount: ${userData.mbtiTestCount}');
+        print('userData.toMap(): ${userData.toMap()}');
+        print('=======================');
+        
         userProfile.value = {
           'name': userData.name,
           'email': userData.email,
@@ -149,6 +158,18 @@ class AuthController extends GetxController {
           'lastMBTITestDate': userData.lastMBTITestDate,
           'createdAt': userData.createdAt,
         };
+        
+        // userProfile에 저장된 MBTI 정보 확인
+        print('userProfile에 저장된 MBTI: ${userProfile['mbti']}');
+        print('currentUserMBTI getter 결과: ${currentUserMBTI}');
+        
+        // MBTI 정보가 제대로 로드되었는지 확인하고 강제로 업데이트
+        if (userData.mbtiType != null && userData.mbtiType!.isNotEmpty) {
+          print('MBTI 정보 강제 업데이트: ${userData.mbtiType}');
+          // userProfile을 강제로 업데이트하여 반응성 보장
+          userProfile.refresh();
+        }
+        
         print('사용자 프로필 로드 완료: ${userData.name}, MBTI: ${userData.mbtiType}, 테스트 횟수: ${userData.mbtiTestCount ?? 0}');
         print('가입일 정보: ${userData.createdAt} (타입: ${userData.createdAt.runtimeType})');
       } else {

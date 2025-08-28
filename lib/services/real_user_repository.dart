@@ -424,6 +424,15 @@ class RealUserRepository extends GetxService {
   UserModel _convertFirestoreToUserModel(DocumentSnapshot snapshot) {
     final data = snapshot.data() as Map<String, dynamic>;
     
+    // MBTI 정보 디버그 로그 추가
+    print('=== Firestore 변환 디버그 ===');
+    print('원본 Firestore 데이터: $data');
+    print('mbtiType 필드: ${data['mbtiType']}');
+    print('mbtiType 필드 타입: ${data['mbtiType']?.runtimeType}');
+    print('mbtiTestCount 필드: ${data['mbtiTestCount']}');
+    print('mbtiTestCount 필드 타입: ${data['mbtiTestCount']?.runtimeType}');
+    print('============================');
+    
     // Timestamp를 DateTime으로 변환
     if (data['createdAt'] is Timestamp) {
       data['createdAt'] = (data['createdAt'] as Timestamp).toDate();
@@ -443,7 +452,12 @@ class RealUserRepository extends GetxService {
       }
     }
     
-    return UserModel.fromMap(data);
+    final userModel = UserModel.fromMap(data);
+    print('변환된 UserModel.mbtiType: ${userModel.mbtiType}');
+    print('변환된 UserModel.mbtiTestCount: ${userModel.mbtiTestCount}');
+    print('============================');
+    
+    return userModel;
   }
 }
 

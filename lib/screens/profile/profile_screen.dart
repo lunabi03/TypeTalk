@@ -6,13 +6,31 @@ import 'package:typetalk/controllers/auth_controller.dart';
 import 'package:typetalk/controllers/profile_controller.dart';
 import 'package:typetalk/core/theme/app_colors.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
   @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  late final AuthController authController;
+  late final ProfileController profileController;
+
+  @override
+  void initState() {
+    super.initState();
+    authController = Get.find<AuthController>();
+    profileController = Get.put(ProfileController());
+    
+    // 화면 초기화 시 MBTI 정보 강제 새로고침
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      authController.refreshProfile();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final authController = Get.find<AuthController>();
-    final profileController = Get.put(ProfileController());
     
     return Scaffold(
       backgroundColor: const Color(0xFFF0F8FF), // Light blue background
@@ -223,9 +241,26 @@ class ProfileScreen extends StatelessWidget {
                     
                     // MBTI Result Banner
                     Obx(() {
+                      // MBTI 정보를 여러 소스에서 확인
                       final userMBTI = authController.currentUserMBTI;
-                      final bannerText = _getMBTIBannerText(userMBTI);
-                      final bannerColor = _getMBTIBannerColor(userMBTI);
+                      final userProfileMBTI = authController.userProfile['mbti'];
+                      final userModelMBTI = authController.userModel.value?.mbtiType;
+                      
+                      // 가장 신뢰할 수 있는 MBTI 정보 선택
+                      final effectiveMBTI = userMBTI ?? userProfileMBTI ?? userModelMBTI;
+                      
+                      final bannerText = _getMBTIBannerText(effectiveMBTI);
+                      final bannerColor = _getMBTIBannerColor(effectiveMBTI);
+                      
+                      // MBTI 정보 디버그 로그 추가
+                      print('=== ProfileScreen MBTI 디버그 ===');
+                      print('userMBTI: $userMBTI');
+                      print('userProfileMBTI: $userProfileMBTI');
+                      print('userModelMBTI: $userModelMBTI');
+                      print('effectiveMBTI: $effectiveMBTI');
+                      print('bannerText: $bannerText');
+                      print('userProfile 전체: ${authController.userProfile}');
+                      print('===============================');
                       
                       return Container(
                         width: double.infinity,
@@ -262,7 +297,7 @@ class ProfileScreen extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(12.r),
                                 ),
                                 child: Icon(
-                                  _getMBTIIcon(userMBTI),
+                                  _getMBTIIcon(effectiveMBTI),
                                   color: Colors.white,
                                   size: 22.sp,
                                 ),
@@ -314,6 +349,14 @@ class ProfileScreen extends StatelessWidget {
                       final stats = profileController.profileStats;
                       final mbtiTestCount = authController.userProfile['mbtiTestCount'] ?? 0;
                       
+                      // MBTI 정보를 여러 소스에서 확인
+                      final userMBTI = authController.currentUserMBTI;
+                      final userProfileMBTI = authController.userProfile['mbti'];
+                      final userModelMBTI = authController.userModel.value?.mbtiType;
+                      
+                      // 가장 신뢰할 수 있는 MBTI 정보 선택
+                      final effectiveMBTI = userMBTI ?? userProfileMBTI ?? userModelMBTI;
+                      
                       return Column(
                         children: [
                           // MBTI Test Completion Card
@@ -356,10 +399,11 @@ class ProfileScreen extends StatelessWidget {
                                       ),
                                       SizedBox(height: 3.h),
                                       Text(
-                                        '현재 유형: ${authController.currentUserMBTI ?? "미완료"}',
+                                        '현재 유형: ${effectiveMBTI ?? "미완료"}',
                                         style: TextStyle(
                                           fontSize: 11.sp,
-                                          color: const Color(0xFF6C757D),
+                                          color: effectiveMBTI != null ? const Color(0xFF007AFF) : const Color(0xFF6C757D),
+                                          fontWeight: effectiveMBTI != null ? FontWeight.w600 : FontWeight.w400,
                                         ),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,

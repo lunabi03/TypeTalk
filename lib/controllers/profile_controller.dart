@@ -200,21 +200,28 @@ class ProfileController extends GetxController {
         return false;
       }
 
-      final updateData = {
+      // 서버 타임스탬프는 Firestore 서비스에서 주입되므로
+      // 클라이언트에서는 DateTime 값을 보내지 않는다.
+      final DateTime now = DateTime.now();
+      final Map<String, dynamic> updateDataForFirestore = {
         'name': nameController.text.trim(),
         'bio': bioController.text.trim(),
-        'updatedAt': DateTime.now(),
       };
 
-      await _userRepository.updateUserFields(uid, updateData);
+      try {
+        await _userRepository.updateUserFields(uid, updateDataForFirestore);
+      } catch (e) {
+        print('Firestore 업데이트 오류: $e');
+        throw e;
+      }
       
       // 로컬 사용자 모델 업데이트
       final currentUserData = currentUser.value;
       if (currentUserData != null) {
         currentUser.value = currentUserData.copyWith(
-          name: updateData['name'] as String,
-          bio: updateData['bio'] as String,
-          updatedAt: updateData['updatedAt'] as DateTime,
+          name: updateDataForFirestore['name'] as String,
+          bio: updateDataForFirestore['bio'] as String,
+          updatedAt: now,
         );
       }
 
@@ -526,6 +533,125 @@ class ProfileController extends GetxController {
       return '프로필을 더 완성해보세요! 📝';
     } else {
       return '프로필 정보를 입력해주세요! ✏️';
+    }
+  }
+
+  /// 프로필 이미지 업데이트
+  Future<bool> updateProfileImage(String imagePath) async {
+    try {
+      print('프로필 이미지 업데이트 시작: $imagePath');
+      
+      // 현재 사용자 정보 가져오기
+      final user = currentUser.value;
+      if (user == null) {
+        print('사용자 정보를 찾을 수 없음 - 프로필 새로고침 시도');
+        
+        // 프로필 새로고침 시도
+        try {
+          final uid = _authController.userId;
+          if (uid != null) {
+            await _loadCurrentUserProfile();
+            final refreshedUser = currentUser.value;
+            if (refreshedUser != null) {
+              print('프로필 새로고침 성공');
+              return await updateProfileImage(imagePath); // 재귀 호출
+            }
+          }
+        } catch (refreshError) {
+          print('프로필 새로고침 실패: $refreshError');
+        }
+        
+        Get.snackbar('오류', '사용자 정보를 찾을 수 없습니다. 다시 시도해주세요.');
+        return false;
+      }
+
+      print('사용자 UID: ${user.uid}');
+      print('현재 프로필 이미지: ${user.profileImageUrl}');
+
+      // 프로필 이미지 URL 업데이트
+      profileImageUrl.value = imagePath;
+      print('로컬 상태 업데이트 완료');
+      
+      // Firestore에 업데이트
+      try {
+        await _userRepository.updateUserFields(
+          user.uid,
+          {'profileImageUrl': imagePath},
+        );
+        print('Firestore 업데이트 완료');
+      } catch (firestoreError) {
+        print('Firestore 업데이트 실패: $firestoreError');
+        // Firestore 실패 시 로컬 상태 복원
+        profileImageUrl.value = user.profileImageUrl ?? '';
+        throw firestoreError;
+      }
+
+      // 현재 사용자 모델 업데이트
+      currentUser.value = user.copyWith(profileImageUrl: imagePath);
+      print('사용자 모델 업데이트 완료');
+      // 상위 인증 컨트롤러 상태도 갱신하여 다른 화면에 즉시 반영
+      try {
+        await _authController.refreshProfile();
+      } catch (_) {}
+      
+      Get.snackbar('성공', '프로필 이미지가 업데이트되었습니다.');
+      return true;
+    } catch (e) {
+      print('프로필 이미지 업데이트 오류: $e');
+      print('오류 타입: ${e.runtimeType}');
+      print('오류 스택: ${StackTrace.current}');
+      
+      // 오류 발생 시 로컬 상태 복원
+      try {
+        final user = currentUser.value;
+        if (user != null) {
+          profileImageUrl.value = user.profileImageUrl ?? '';
+        }
+      } catch (restoreError) {
+        print('상태 복원 실패: $restoreError');
+      }
+      
+      Get.snackbar('오류', '프로필 이미지 업데이트 중 오류가 발생했습니다: ${e.toString()}');
+      return false;
+    }
+  }
+
+  /// 프로필 이미지 삭제
+  Future<bool> deleteProfileImage() async {
+    try {
+      // 현재 사용자 정보 가져오기
+      final user = currentUser.value;
+      if (user == null) {
+        Get.snackbar('오류', '사용자 정보를 찾을 수 없습니다.');
+        return false;
+      }
+
+      // 프로필 이미지 URL 초기화 (로컬 상태)
+      profileImageUrl.value = '';
+      
+      // Firestore에 업데이트
+      await _userRepository.updateUserFields(
+        user.uid,
+        {'profileImageUrl': ''},
+      );
+
+      // 현재 사용자 모델 업데이트
+      currentUser.value = user.copyWith(profileImageUrl: '');
+      // AuthController 캐시도 비워서 다른 화면에 즉시 반영
+      try {
+        _authController.userProfile['profileImageUrl'] = '';
+        _authController.userProfile.refresh();
+        await _authController.refreshProfile();
+      } catch (_) {}
+      Get.snackbar('성공', '프로필 이미지가 삭제되었습니다.');
+      try {
+        await _authController.refreshProfile();
+      } catch (_) {}
+      return true;
+    } catch (e) {
+      print('프로필 이미지 삭제 오류: $e');
+      Get.snackbar('오류', '프로필 이미지 삭제 중 오류가 발생했습니다.');
+      return false;
     }
   }
 }

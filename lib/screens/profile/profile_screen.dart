@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'package:flutter/foundation.dart';
+import 'dart:io' show File; // guarded with kIsWeb
 import 'package:typetalk/routes/app_routes.dart';
 import 'package:typetalk/controllers/auth_controller.dart';
 import 'package:typetalk/controllers/profile_controller.dart';
@@ -124,12 +126,63 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(14.r),
-                              child: Image.asset(
-                                'assets/images/_icon_profile.png',
-                                width: 60.w,
-                                height: 60.w,
-                                fit: BoxFit.contain,
-                              ),
+                              child: Obx(() {
+                                final mapUrl = authController.userProfile['profileImageUrl'] as String?;
+                                final modelUrl = authController.userModel.value?.profileImageUrl;
+                                final controllerUrl = profileController.profileImageUrl.value;
+                                final imageUrl = (mapUrl?.isNotEmpty == true)
+                                    ? mapUrl!
+                                    : (modelUrl?.isNotEmpty == true)
+                                        ? modelUrl!
+                                        : (controllerUrl.isNotEmpty ? controllerUrl : '');
+
+                                if (imageUrl.isEmpty) {
+                                  return Image.asset(
+                                    'assets/images/_icon_profile.png',
+                                    width: 60.w,
+                                    height: 60.w,
+                                    fit: BoxFit.contain,
+                                  );
+                                }
+
+                                final isNetworkLike = imageUrl.startsWith('http://') ||
+                                    imageUrl.startsWith('https://') ||
+                                    imageUrl.startsWith('blob:') ||
+                                    imageUrl.startsWith('data:');
+
+                                if (isNetworkLike || kIsWeb) {
+                                  return Image.network(
+                                    imageUrl,
+                                    width: 60.w,
+                                    height: 60.w,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stack) {
+                                      return Image.asset(
+                                        'assets/images/_icon_profile.png',
+                                        width: 60.w,
+                                        height: 60.w,
+                                        fit: BoxFit.contain,
+                                      );
+                                    },
+                                  );
+                                }
+
+                                try {
+                                  return Image.file(
+                                    File(imageUrl),
+                                    width: 60.w,
+                                    height: 60.w,
+                                    fit: BoxFit.cover,
+                                  );
+                                } catch (_) {
+                                  return Image.asset(
+                                    'assets/images/_icon_profile.png',
+                                    width: 60.w,
+                                    height: 60.w,
+                                    fit: BoxFit.contain,
+                                  );
+                                }
+                              }),
                             ),
                           ),
                           SizedBox(height: 16.h),

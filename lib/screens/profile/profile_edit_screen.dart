@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:flutter/foundation.dart';
+import 'dart:io' show File; // Guarded usage with kIsWeb checks
 import 'package:typetalk/controllers/profile_controller.dart';
 import 'package:typetalk/core/theme/app_colors.dart';
 import 'package:typetalk/core/theme/app_text_styles.dart';
@@ -122,15 +125,7 @@ class ProfileEditScreen extends StatelessWidget {
               return ClipRRect(
                 borderRadius: BorderRadius.circular(18.r),
                 child: imageUrl.isNotEmpty
-                    ? Image.network(
-                        imageUrl,
-                        width: 120.w,
-                        height: 120.w,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return _defaultProfileIcon();
-                        },
-                      )
+                    ? _buildProfileImage(imageUrl)
                     : _defaultProfileIcon(),
               );
             }),
@@ -143,10 +138,47 @@ class ProfileEditScreen extends StatelessWidget {
             text: '프로필 사진 변경',
             onPressed: () => _showImagePicker(controller),
             backgroundColor: AppColors.surface,
+            textColor: Colors.black, // 글씨 색상을 검은색으로 변경
           ),
         ],
       ),
     );
+  }
+
+  /// 프로필 이미지 표시
+  Widget _buildProfileImage(String imagePath) {
+    // 웹에서는 dart:io File을 사용할 수 없으므로 네트워크/데이터 URL로만 처리
+    final isNetworkLike = imagePath.startsWith('http://') ||
+        imagePath.startsWith('https://') ||
+        imagePath.startsWith('blob:') ||
+        imagePath.startsWith('data:');
+
+    if (isNetworkLike || kIsWeb) {
+      return Image.network(
+        imagePath,
+        width: 120.w,
+        height: 120.w,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return _defaultProfileIcon();
+        },
+      );
+    }
+
+    // 모바일/데스크톱(native)에서만 파일 경로 처리
+    try {
+      return Image.file(
+        File(imagePath),
+        width: 120.w,
+        height: 120.w,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return _defaultProfileIcon();
+        },
+      );
+    } catch (e) {
+      return _defaultProfileIcon();
+    }
   }
 
   /// 기본 프로필 아이콘
@@ -447,13 +479,23 @@ class ProfileEditScreen extends StatelessWidget {
     }
 
     final success = await controller.updateUserProfile();
-    if (success) {
+    if (success == true) {
       Get.back();
     }
   }
 
   /// 이미지 선택기 표시
   void _showImagePicker(ProfileController controller) {
+    // 사용자 정보 확인
+    if (controller.currentUser.value == null) {
+      Get.snackbar(
+        '오류',
+        '사용자 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
     Get.bottomSheet(
       Container(
         padding: EdgeInsets.all(24.w),
@@ -495,9 +537,9 @@ class ProfileEditScreen extends StatelessWidget {
               ListTile(
                 leading: Icon(Icons.delete, color: Colors.red),
                 title: Text('사진 삭제'),
-                onTap: () {
+                onTap: () async {
                   Get.back();
-                  controller.profileImageUrl.value = '';
+                  await controller.deleteProfileImage();
                 },
               ),
             
@@ -516,15 +558,96 @@ class ProfileEditScreen extends StatelessWidget {
   }
 
   /// 카메라에서 이미지 선택
-  void _pickImageFromCamera(ProfileController controller) {
-    // TODO: 실제 이미지 선택 구현
-    Get.snackbar('준비중', '카메라 기능은 곧 추가될 예정입니다.');
+  Future<void> _pickImageFromCamera(ProfileController controller) async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 80,
+      );
+      
+      if (image != null) {
+        await _processSelectedImage(controller, image);
+      }
+    } catch (e) {
+      Get.snackbar(
+        '오류',
+        '카메라에서 이미지를 선택하는 중 오류가 발생했습니다.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
   }
 
   /// 갤러리에서 이미지 선택
-  void _pickImageFromGallery(ProfileController controller) {
-    // TODO: 실제 이미지 선택 구현
-    Get.snackbar('준비중', '갤러리 기능은 곧 추가될 예정입니다.');
+  Future<void> _pickImageFromGallery(ProfileController controller) async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 80,
+      );
+      
+      if (image != null) {
+        await _processSelectedImage(controller, image);
+      }
+    } catch (e) {
+      Get.snackbar(
+        '오류',
+        '갤러리에서 이미지를 선택하는 중 오류가 발생했습니다.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  /// 선택된 이미지 처리
+  Future<void> _processSelectedImage(ProfileController controller, XFile image) async {
+    try {
+      print('이미지 처리 시작: ${image.path}');
+      // 파일 크기 확인 (플랫폼 독립적 API)
+      final int fileSize = await image.length();
+      final int maxSize = 5 * 1024 * 1024; // 5MB
+      print('이미지 파일 크기: ${fileSize} bytes (최대: ${maxSize} bytes)');
+      
+      if (fileSize > maxSize) {
+        Get.snackbar(
+          '파일 크기 초과',
+          '이미지 파일 크기는 5MB 이하여야 합니다.',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        return;
+      }
+
+      print('ProfileController.updateProfileImage 호출 시작');
+      
+      // ProfileController를 통해 이미지 업데이트
+      final success = await controller.updateProfileImage(image.path);
+      print('ProfileController.updateProfileImage 결과: $success');
+      
+      if (!success) {
+        print('이미지 업데이트 실패');
+        Get.snackbar(
+          '오류',
+          '프로필 이미지 업데이트에 실패했습니다.',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      } else {
+        print('이미지 업데이트 성공');
+      }
+    } catch (e) {
+      print('이미지 처리 중 오류 발생: $e');
+      print('오류 타입: ${e.runtimeType}');
+      print('오류 스택: ${StackTrace.current}');
+      
+      Get.snackbar(
+        '오류',
+        '이미지 처리 중 오류가 발생했습니다: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
   }
 
   /// 삭제 확인

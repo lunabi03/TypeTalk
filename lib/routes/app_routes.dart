@@ -11,4 +11,8 @@ class AppRoutes {
   static const String findChatPartner = '/find-chat-partner';
   static const String home = '/home';
   static const String fcmDemo = '/fcm-demo';
+  
+  // MBTI 아바타 관련 라우트
+  static const String mbtiAvatarSelection = '/mbti-avatar-selection';
+  static const String aiChat = '/ai-chat';
 }

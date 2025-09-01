@@ -1059,7 +1059,12 @@ class StartScreen extends StatelessWidget {
                       return Stack(
                         children: [
                           IconButton(
-                            onPressed: () => _showNotificationPanel(notificationService),
+                            onPressed: () async {
+                              // 알림 패널 열기 전 최신 데이터 새로고침
+                              // (채팅 초대/채팅 알림이 최신 상태로 표시되도록 보장)
+                              await notificationService.refreshNotifications();
+                              _showNotificationPanel(notificationService);
+                            },
                             icon: const Icon(Icons.notifications_outlined),
                             color: Colors.black87,
                           ),

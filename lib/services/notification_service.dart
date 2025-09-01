@@ -1,6 +1,8 @@
 import 'package:get/get.dart';
 import 'package:typetalk/services/chat_invite_service.dart';
 import 'package:typetalk/controllers/auth_controller.dart';
+import 'package:typetalk/services/chat_notification_service.dart';
+import 'package:typetalk/models/chat_notification_model.dart' as ChatNotif;
 
 // 통합 알림 관리 서비스
 class NotificationService extends GetxController {
@@ -9,6 +11,8 @@ class NotificationService extends GetxController {
   ChatInviteService? get _inviteService => Get.isRegistered<ChatInviteService>() ? Get.find<ChatInviteService>() : null;
 
   AuthController? get _authController => Get.isRegistered<AuthController>() ? Get.find<AuthController>() : null;
+
+  ChatNotificationService? get _chatNotificationService => Get.isRegistered<ChatNotificationService>() ? Get.find<ChatNotificationService>() : null;
 
   // 모든 알림 목록
   RxList<NotificationItem> allNotifications = <NotificationItem>[].obs;
@@ -19,11 +23,21 @@ class NotificationService extends GetxController {
   // 로딩 상태
   RxBool isLoading = false.obs;
 
+  // 내부 바인딩 상태
+  bool _streamsBound = false;
+
   @override
   void onInit() {
     super.onInit();
     // 알림 목록 로드
     loadAllNotifications();
+    // 로그인 상태 변화에 반응하여 알림 로드/스트림 바인딩
+    _setupAuthBinding();
+    // 앱 시작 시 이미 로그인되어 있으면 즉시 바인딩 및 로드
+    final auth = _authController;
+    if (auth != null && auth.isLoggedIn) {
+      _bindStreamsOnce();
+    }
   }
 
   /// 모든 알림 로드
@@ -76,6 +90,7 @@ class NotificationService extends GetxController {
               'inviteId': invite.inviteId,
               'chatId': invite.chatId,
               'fromUserId': invite.invitedBy,
+              'source': 'invite',
             },
           ));
         }
@@ -88,11 +103,132 @@ class NotificationService extends GetxController {
   /// 채팅 알림 로드
   Future<void> _loadChatNotifications(String userId) async {
     try {
-      // 채팅 알림이 있다면 추가
-      // 실제 구현에서는 ChatNotificationService에서 알림 데이터를 가져와야 함
-      // 현재는 예시로 추가
+      final chatService = _chatNotificationService;
+      if (chatService == null) return;
+      // 기존 채팅 소스 알림 제거 후 재적재
+      allNotifications.removeWhere((n) => n.data['source'] == 'chat');
+      for (final n in chatService.notifications) {
+        if (n.userId != userId) continue;
+        if (n.status == ChatNotif.NotificationStatus.dismissed) continue;
+        allNotifications.add(_mapChatNotificationToItem(n));
+      }
     } catch (e) {
       print('채팅 알림 로드 실패: $e');
+    }
+  }
+
+  // 로그인 상태 바인딩 설정
+  void _setupAuthBinding() {
+    final auth = _authController;
+    if (auth == null) return;
+    ever<String>(auth.currentUserId, (uid) async {
+      if (uid.isNotEmpty) {
+        try {
+          await _inviteService?.loadInvites();
+        } catch (_) {}
+        _bindStreamsOnce();
+        await refreshNotifications();
+      } else {
+        allNotifications.clear();
+        _updateUnreadCount();
+      }
+    });
+  }
+
+  // 서비스 스트림을 한 번만 바인딩
+  void _bindStreamsOnce() {
+    if (_streamsBound) return;
+    _streamsBound = true;
+    final inviteService = _inviteService;
+    if (inviteService != null) {
+      ever(inviteService.receivedInvites, (_) {
+        _rebuildInviteNotifications();
+      });
+    }
+    final chatService = _chatNotificationService;
+    if (chatService != null) {
+      ever(chatService.notifications, (_) {
+        _rebuildChatNotifications();
+      });
+    }
+  }
+
+  // 초대 알림을 스트림 변경에 맞춰 재구성
+  void _rebuildInviteNotifications() {
+    final inviteService = _inviteService;
+    final auth = _authController;
+    if (inviteService == null || auth?.userId == null) return;
+    allNotifications.removeWhere((n) => n.type == NotificationType.chatInvite && n.data['source'] == 'invite');
+    for (final invite in inviteService.receivedInvites) {
+      if (invite.isPending) {
+        allNotifications.add(NotificationItem(
+          id: 'invite_${invite.inviteId}',
+          type: NotificationType.chatInvite,
+          title: '새로운 채팅 초대',
+          message: invite.metadata.message ?? '안녕하세요! 대화를 나누고 싶어요.',
+          timestamp: invite.createdAt,
+          isRead: false,
+          data: {
+            'inviteId': invite.inviteId,
+            'chatId': invite.chatId,
+            'fromUserId': invite.invitedBy,
+            'source': 'invite',
+          },
+        ));
+      }
+    }
+    _sortNotifications();
+    _updateUnreadCount();
+  }
+
+  // 채팅 알림을 스트림 변경에 맞춰 재구성
+  void _rebuildChatNotifications() {
+    final chatService = _chatNotificationService;
+    final auth = _authController;
+    final userId = auth?.userId;
+    if (chatService == null || userId == null) return;
+    allNotifications.removeWhere((n) => n.data['source'] == 'chat');
+    for (final n in chatService.notifications) {
+      if (n.userId != userId) continue;
+      if (n.status == ChatNotif.NotificationStatus.dismissed) continue;
+      allNotifications.add(_mapChatNotificationToItem(n));
+    }
+    _sortNotifications();
+    _updateUnreadCount();
+  }
+
+  // ChatNotificationModel -> NotificationItem 매핑
+  NotificationItem _mapChatNotificationToItem(ChatNotif.ChatNotificationModel n) {
+    final mappedType = _mapType(n.type);
+    return NotificationItem(
+      id: 'chat_${n.notificationId}',
+      type: mappedType,
+      title: n.title,
+      message: n.body,
+      timestamp: n.createdAt,
+      isRead: n.status != ChatNotif.NotificationStatus.unread,
+      data: {
+        'chatNotificationId': n.notificationId,
+        'chatId': n.chatId,
+        'source': 'chat',
+        'rawType': n.type.value,
+      },
+    );
+  }
+
+  // 외부 알림 타입을 내부 타입으로 변환
+  NotificationType _mapType(ChatNotif.NotificationType t) {
+    switch (t) {
+      case ChatNotif.NotificationType.invite:
+      case ChatNotif.NotificationType.chatInvite:
+        return NotificationType.chatInvite;
+      case ChatNotif.NotificationType.message:
+      case ChatNotif.NotificationType.chatMessage:
+      case ChatNotif.NotificationType.mention:
+      case ChatNotif.NotificationType.reaction:
+        return NotificationType.chatMessage;
+      case ChatNotif.NotificationType.system:
+        return NotificationType.system;
     }
   }
 
@@ -112,6 +248,13 @@ class NotificationService extends GetxController {
       final notification = allNotifications.firstWhereOrNull((n) => n.id == notificationId);
       if (notification != null) {
         notification.isRead = true;
+        // 채팅 알림이면 원본 서비스에도 읽음 반영
+        final chatId = notification.data['chatNotificationId'];
+        if (chatId != null) {
+          try {
+            await _chatNotificationService?.markAsRead(chatId);
+          } catch (_) {}
+        }
         _updateUnreadCount();
       }
     } catch (e) {
@@ -125,6 +268,9 @@ class NotificationService extends GetxController {
       for (final notification in allNotifications) {
         notification.isRead = true;
       }
+      try {
+        await _chatNotificationService?.markAllAsRead();
+      } catch (_) {}
       _updateUnreadCount();
     } catch (e) {
       print('모든 알림 읽음 처리 실패: $e');

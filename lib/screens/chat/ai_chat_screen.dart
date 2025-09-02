@@ -29,6 +29,10 @@ class _AIChatScreenState extends State<AIChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 가상 사용자 페르소나 정보 수신
+    final args = Get.arguments is Map ? Get.arguments as Map : {};
+    final personaName = (args['personaName'] as String?) ?? '새 친구';
+    final personaMBTI = (args['personaMBTI'] as String?) ?? _authController.userModel.value?.mbtiType;
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -40,10 +44,13 @@ class _AIChatScreenState extends State<AIChatScreen> {
                 color: const Color(0xFF9C27B0).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12.r),
               ),
-              child: Icon(
-                Icons.smart_toy,
-                color: const Color(0xFF9C27B0),
-                size: 24.sp,
+              child: Text(
+                personaName.characters.first,
+                style: TextStyle(
+                  color: const Color(0xFF9C27B0),
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             SizedBox(width: 12.w),
@@ -51,15 +58,15 @@ class _AIChatScreenState extends State<AIChatScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'AI 어시스턴트',
+                  personaName,
                   style: TextStyle(
                     fontSize: 18.sp,
                     fontWeight: FontWeight.w600,
                     color: Colors.black87,
                   ),
                 ),
-                Text(
-                  'GEMINI AI와 대화하세요',
+                if (personaMBTI != null) Text(
+                  'MBTI: $personaMBTI',
                   style: TextStyle(
                     fontSize: 12.sp,
                     color: Colors.grey[600],
@@ -85,8 +92,8 @@ class _AIChatScreenState extends State<AIChatScreen> {
       ),
       body: Column(
         children: [
-          // MBTI 정보 표시
-          if (userMBTI != null)
+          // 페르소나 정보 표시 (사용자 MBTI 대신)
+          if (personaMBTI != null)
             Container(
               width: double.infinity,
               margin: EdgeInsets.all(16.w),
@@ -101,15 +108,11 @@ class _AIChatScreenState extends State<AIChatScreen> {
               ),
               child: Row(
                 children: [
-                  Icon(
-                    Icons.psychology,
-                    color: const Color(0xFF9C27B0),
-                    size: 20.sp,
-                  ),
+                  Icon(Icons.person, color: const Color(0xFF9C27B0), size: 20.sp),
                   SizedBox(width: 12.w),
                   Expanded(
                     child: Text(
-                      '당신의 MBTI: $userMBTI',
+                      '$personaName · $personaMBTI',
                       style: TextStyle(
                         fontSize: 14.sp,
                         fontWeight: FontWeight.w500,
@@ -117,13 +120,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
                       ),
                     ),
                   ),
-                  Text(
-                    'AI가 더 개인화된 답변을 제공합니다',
-                    style: TextStyle(
-                      fontSize: 12.sp,
-                      color: const Color(0xFF9C27B0).withOpacity(0.7),
-                    ),
-                  ),
+                  const SizedBox.shrink(),
                 ],
               ),
             ),
@@ -146,6 +143,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
                   return _buildMessageBubble(
                     message['content'] ?? '',
                     isUser: isUser,
+                    otherName: personaName,
                   );
                 },
               );
@@ -246,7 +244,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
   }
 
   /// 메시지 버블
-  Widget _buildMessageBubble(String message, {required bool isUser}) {
+  Widget _buildMessageBubble(String message, {required bool isUser, required String otherName}) {
     return Container(
       margin: EdgeInsets.only(bottom: 16.h),
       child: Row(
@@ -261,10 +259,11 @@ class _AIChatScreenState extends State<AIChatScreen> {
                 color: const Color(0xFF9C27B0),
                 borderRadius: BorderRadius.circular(16.r),
               ),
-              child: Icon(
-                Icons.smart_toy,
-                color: Colors.white,
-                size: 18.sp,
+              child: Center(
+                child: Text(
+                  otherName.characters.first,
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14.sp),
+                ),
               ),
             ),
             SizedBox(width: 8.w),

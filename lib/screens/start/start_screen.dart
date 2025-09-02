@@ -4,7 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:typetalk/core/theme/app_colors.dart';
 import 'package:typetalk/routes/app_routes.dart';
 import 'package:typetalk/services/notification_service.dart';
-import 'package:typetalk/services/location_service.dart';
+
 import 'package:typetalk/controllers/profile_controller.dart';
 
 class StartScreen extends StatelessWidget {
@@ -213,7 +213,6 @@ class StartScreen extends StatelessWidget {
 
   /// 설정 패널 표시
   void _showSettingsPanel() {
-    final locationService = Get.put(LocationService());
     // ProfileController 초기화 (회원 탈퇴 기능을 위해)
     Get.put(ProfileController());
     
@@ -346,7 +345,14 @@ class StartScreen extends StatelessWidget {
                           children: [
                             Expanded(
                               child: ElevatedButton(
-                                onPressed: () => _showLocationPermissionDialog(locationService),
+                                onPressed: () {
+                                  Get.snackbar(
+                                    '알림',
+                                    '위치 기반 서비스는 현재 사용하지 않습니다.',
+                                    backgroundColor: Colors.orange.withOpacity(0.1),
+                                    colorText: Colors.orange,
+                                  );
+                                },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.primary,
                                   foregroundColor: Colors.white,
@@ -367,7 +373,14 @@ class StartScreen extends StatelessWidget {
                             ),
                             SizedBox(width: 12.w),
                             OutlinedButton(
-                              onPressed: () => locationService.openLocationSettings(),
+                              onPressed: () {
+                                Get.snackbar(
+                                  '알림',
+                                  '위치 기반 서비스는 현재 사용하지 않습니다.',
+                                  backgroundColor: Colors.orange.withOpacity(0.1),
+                                  colorText: Colors.orange,
+                                );
+                              },
                               style: OutlinedButton.styleFrom(
                                 side: BorderSide(color: AppColors.primary),
                                 padding: EdgeInsets.symmetric(vertical: 12.h),
@@ -577,8 +590,8 @@ class StartScreen extends StatelessWidget {
     );
   }
 
-  /// 위치 권한 설정 다이얼로그 표시
-  void _showLocationPermissionDialog(LocationService locationService) {
+  /// 위치 권한 설정 다이얼로그 표시 (사용하지 않음)
+  void _showLocationPermissionDialog() {
     Get.dialog(
       AlertDialog(
         title: Row(
@@ -675,7 +688,12 @@ class StartScreen extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               Get.back();
-              _requestLocationPermission(locationService);
+              Get.snackbar(
+                '알림',
+                '위치 기반 서비스는 현재 사용하지 않습니다.',
+                backgroundColor: Colors.orange.withOpacity(0.1),
+                colorText: Colors.orange,
+              );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
@@ -979,27 +997,7 @@ class StartScreen extends StatelessWidget {
     }
   }
 
-  /// 위치 권한 요청
-  Future<void> _requestLocationPermission(LocationService locationService) async {
-    try {
-      final position = await locationService.getCurrentLocation();
-      if (position != null) {
-        Get.snackbar(
-          '위치 권한 허용',
-          '위치 기반 추천을 사용할 수 있습니다.',
-          backgroundColor: AppColors.primary.withOpacity(0.1),
-          colorText: AppColors.primary,
-        );
-      }
-    } catch (e) {
-      Get.snackbar(
-        '오류',
-        '위치 권한 요청 중 오류가 발생했습니다: $e',
-        backgroundColor: Colors.red.withOpacity(0.1),
-        colorText: Colors.red,
-      );
-    }
-  }
+
 
   /// 채팅 초대 처리
   void _handleChatInvite(NotificationItem notification, NotificationService notificationService) {

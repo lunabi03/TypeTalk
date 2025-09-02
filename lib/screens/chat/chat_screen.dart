@@ -10,7 +10,7 @@ import 'package:typetalk/services/real_user_repository.dart';
 import 'package:typetalk/services/chat_invite_service.dart';
 import 'package:typetalk/models/chat_invite_model.dart';
 import 'package:typetalk/routes/app_routes.dart';
-import 'package:typetalk/services/location_service.dart';
+
 
 class ChatScreen extends StatelessWidget {
   const ChatScreen({super.key});

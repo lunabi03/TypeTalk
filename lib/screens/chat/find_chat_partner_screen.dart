@@ -4,8 +4,11 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:typetalk/core/theme/app_colors.dart';
 import 'package:typetalk/core/theme/app_text_styles.dart';
 import 'package:typetalk/models/user_model.dart';
-import 'package:typetalk/services/location_service.dart';
+
 import 'package:typetalk/controllers/chat_controller.dart';
+import 'package:typetalk/services/gemini_service.dart';
+import 'package:typetalk/controllers/auth_controller.dart';
+import 'package:typetalk/screens/chat/_inline_ai_chat.dart';
 
 /// 대화 상대 찾기 화면
 class FindChatPartnerScreen extends StatelessWidget {
@@ -13,13 +16,11 @@ class FindChatPartnerScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final selectedTab = 0.obs; // 0: 위치 기반, 1: MBTI 궁합 기반
-    
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: Text(
-          '대화 상대 찾기',
+          'MBTI 궁합 기반 대화 상대 찾기',
           style: TextStyle(
             fontSize: 18.sp,
             fontWeight: FontWeight.w600,
@@ -41,510 +42,367 @@ class FindChatPartnerScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // 추천 방식 선택 탭
-          Container(
-            margin: EdgeInsets.all(16.w),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16.r),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Obx(() => GestureDetector(
-                    onTap: () => selectedTab.value = 0,
-                    child: Container(
-                      padding: EdgeInsets.symmetric(vertical: 16.h),
-                      decoration: BoxDecoration(
-                        color: selectedTab.value == 0 
-                            ? AppColors.primary 
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(16.r),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.location_on,
-                            color: selectedTab.value == 0 
-                                ? Colors.white 
-                                : Colors.grey[600],
-                            size: 20.sp,
-                          ),
-                          SizedBox(width: 8.w),
-                          Text(
-                            '위치 기반',
-                            style: TextStyle(
-                              fontSize: 16.sp,
-                              fontWeight: FontWeight.w600,
-                              color: selectedTab.value == 0 
-                                  ? Colors.white 
-                                  : Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )),
-                ),
-                Expanded(
-                  child: Obx(() => GestureDetector(
-                    onTap: () => selectedTab.value = 1,
-                    child: Container(
-                      padding: EdgeInsets.symmetric(vertical: 16.h),
-                      decoration: BoxDecoration(
-                        color: selectedTab.value == 1 
-                            ? const Color(0xFF9C27B0) 
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(16.r),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.psychology,
-                            color: selectedTab.value == 1 
-                                ? Colors.white 
-                                : Colors.grey[600],
-                            size: 20.sp,
-                          ),
-                          SizedBox(width: 8.w),
-                          Text(
-                            'MBTI 궁합',
-                            style: TextStyle(
-                              fontSize: 16.sp,
-                              fontWeight: FontWeight.w600,
-                              color: selectedTab.value == 1 
-                                  ? Colors.white 
-                                  : Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )),
-                ),
-              ],
-            ),
-          ),
-          // 선택된 탭에 따른 내용 표시
-          Expanded(
-            child: Obx(() {
-              if (selectedTab.value == 0) {
-                return _buildLocationBasedTab();
-              } else {
-                return _buildMBTICompatibilityTab();
-              }
-            }),
-          ),
-        ],
-      ),
+      body: _buildMBTICompatibilityTab(),
     );
   }
 
-  /// 위치 기반 추천 탭
-  Widget _buildLocationBasedTab() {
-    final locationService = Get.put(LocationService());
-    final searchQuery = ''.obs;
-    
-    return SingleChildScrollView(
-      padding: EdgeInsets.symmetric(horizontal: 16.w),
-      child: Column(
-        children: [
-          // 위치 기반 추천 헤더
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.all(20.w),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(16.r),
-              border: Border.all(
-                color: AppColors.primary.withOpacity(0.3),
-                width: 1,
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: EdgeInsets.all(12.w),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  child: Icon(
-                    Icons.location_on,
-                    color: AppColors.primary,
-                    size: 24.sp,
-                  ),
-                ),
-                SizedBox(width: 16.w),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '위치 기반 추천',
-                        style: TextStyle(
-                          fontSize: 18.sp,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                      SizedBox(height: 4.h),
-                      Text(
-                        '가까운 거리에 있는 사용자를 우선적으로 추천합니다',
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          color: AppColors.primary.withOpacity(0.8),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Obx(() => locationService.isLoading
-                    ? SizedBox(
-                        width: 24.w,
-                        height: 24.w,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                        ),
-                      )
-                    : IconButton(
-                        onPressed: () => _refreshLocationBasedRecommendations(locationService),
-                        icon: Icon(Icons.refresh, color: AppColors.primary, size: 24.sp),
-                        tooltip: '위치 새로고침',
-                      )),
-              ],
-            ),
-          ),
-          SizedBox(height: 20.h),
-          // 검색 바
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 16.w),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16.r),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: '이름, MBTI, 관심사로 검색',
-                border: InputBorder.none,
-                icon: Icon(Icons.search, color: Colors.grey[600]),
-                suffixIcon: Icon(Icons.filter_list, color: Colors.grey[600]),
-              ),
-              onChanged: (value) {
-                searchQuery.value = value;
-                // TODO: 사용자 검색 로직 구현
-              },
-            ),
-          ),
-          SizedBox(height: 20.h),
-          // 사용자 목록
-          Obx(() {
-            if (locationService.isLoading) {
-              return Container(
-                height: 200.h,
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                      ),
-                      SizedBox(height: 16.h),
-                      Text(
-                        '가까운 사용자를 찾고 있습니다...',
-                        style: TextStyle(
-                          fontSize: 16.sp,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }
-            
-            if (locationService.error.isNotEmpty) {
-              return Container(
-                height: 200.h,
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.location_off,
-                        size: 64.sp,
-                        color: Colors.grey,
-                      ),
-                      SizedBox(height: 16.h),
-                      Text(
-                        locationService.error,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 16.sp,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      SizedBox(height: 20.h),
-                      ElevatedButton.icon(
-                        onPressed: () => locationService.openLocationSettings(),
-                        icon: Icon(Icons.settings),
-                        label: Text('위치 설정 열기'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }
-            
-            // 위치 기반 사용자 목록 (예시 데이터)
-            return ListView.builder(
-              shrinkWrap: true,
-              physics: NeverScrollableScrollPhysics(),
-              itemCount: 10,
-              itemBuilder: (context, index) {
-                // 위치 정보가 포함된 사용자 모델 생성
-                final user = UserModel(
-                  uid: 'user-$index',
-                  email: 'user${index + 1}@example.com',
-                  name: '사용자${index + 1}',
-                  createdAt: DateTime.now(),
-                  updatedAt: DateTime.now(),
-                  mbtiType: ['ENFP', 'INTJ', 'ISFP', 'ENTP', 'INFJ'][index % 5],
-                  profileImageUrl: null,
-                  // 위치 정보 추가 (서울 지역 기준)
-                  latitude: 37.5665 + (index * 0.01), // 위도
-                  longitude: 126.9780 + (index * 0.01), // 경도
-                  locationName: '서울시 ${['강남구', '서초구', '마포구', '종로구', '중구'][index % 5]}',
-                  stats: UserStats(
-                    friendCount: (index + 1) * 5,
-                    chatCount: (index + 1) * 3,
-                    lastLoginAt: DateTime.now(),
-                  ),
-                );
-                
-                return _buildLocationBasedUserListItem(
-                  user,
-                  Get.find<ChatController>(),
-                  locationService,
-                );
-              },
-            );
-          }),
-          SizedBox(height: 20.h),
-        ],
-      ),
-    );
-  }
+  
+
+
 
   /// MBTI 궁합 기반 추천 탭
   Widget _buildMBTICompatibilityTab() {
     final selectedMBTI = 'ENFP'.obs; // 기본값
     final searchQuery = ''.obs;
+    final geminiService = Get.put(GeminiService());
+    final authController = Get.find<AuthController>();
     
-    return SingleChildScrollView(
-      padding: EdgeInsets.symmetric(horizontal: 16.w),
-      child: Column(
-        children: [
-          // MBTI 궁합 추천 헤더
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.all(20.w),
-            decoration: BoxDecoration(
-              color: const Color(0xFF9C27B0).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(16.r),
-              border: Border.all(
-                color: const Color(0xFF9C27B0).withOpacity(0.3),
-                width: 1,
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: EdgeInsets.all(12.w),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF9C27B0).withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  child: Icon(
-                    Icons.psychology,
-                    color: const Color(0xFF9C27B0),
-                    size: 24.sp,
+    return Column(
+      children: [
+        // 상단 고정 영역
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 16.w),
+          child: Column(
+            children: [
+              // MBTI 궁합 추천 헤더
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(20.w),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF9C27B0).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16.r),
+                  border: Border.all(
+                    color: const Color(0xFF9C27B0).withOpacity(0.3),
+                    width: 1,
                   ),
                 ),
-                SizedBox(width: 16.w),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'MBTI 궁합 기반 추천',
-                        style: TextStyle(
-                          fontSize: 18.sp,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF9C27B0),
-                        ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(12.w),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF9C27B0).withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12.r),
                       ),
-                      SizedBox(height: 4.h),
-                      Text(
-                        '성격 유형 궁합이 좋은 사용자를 추천합니다',
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          color: const Color(0xFF9C27B0).withOpacity(0.8),
-                        ),
+                      child: Icon(
+                        Icons.psychology,
+                        color: const Color(0xFF9C27B0),
+                        size: 24.sp,
                       ),
-                    ],
-                  ),
+                    ),
+                    SizedBox(width: 16.w),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'MBTI 궁합 기반 추천',
+                            style: TextStyle(
+                              fontSize: 18.sp,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF9C27B0),
+                            ),
+                          ),
+                          SizedBox(height: 4.h),
+                          Text(
+                            '성격 유형 궁합이 좋은 사용자를 추천합니다',
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              color: const Color(0xFF9C27B0).withOpacity(0.8),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-          SizedBox(height: 20.h),
-          // MBTI 선택
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.all(20.w),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16.r),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '찾고 싶은 MBTI 유형:',
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[700],
-                  ),
-                ),
-                SizedBox(height: 16.h),
-                // 두 줄 텍스트 칩 높이에 맞춰 컨테이너 높이를 늘려 오버플로우 방지
-                SizedBox(
-                  height: 72.h,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    children: [
-                      _buildMBTISelectionChip('ENFP', '열정적인', selectedMBTI),
-                      _buildMBTISelectionChip('INTJ', '전략적인', selectedMBTI),
-                      _buildMBTISelectionChip('ISFP', '예술적인', selectedMBTI),
-                      _buildMBTISelectionChip('ENTP', '혁신적인', selectedMBTI),
-                      _buildMBTISelectionChip('INFJ', '통찰력 있는', selectedMBTI),
-                      _buildMBTISelectionChip('ESTJ', '체계적인', selectedMBTI),
-                      _buildMBTISelectionChip('INFP', '이상주의적인', selectedMBTI),
-                      _buildMBTISelectionChip('ISTP', '실용적인', selectedMBTI),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(height: 20.h),
-          // 검색 바
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 16.w),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16.r),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: '이름, 관심사로 검색',
-                border: InputBorder.none,
-                icon: Icon(Icons.search, color: Colors.grey[600]),
-                suffixIcon: Icon(Icons.filter_list, color: Colors.grey[600]),
               ),
-              onChanged: (value) {
-                searchQuery.value = value;
+              SizedBox(height: 20.h),
+              // MBTI 선택
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(20.w),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '찾고 싶은 MBTI 유형:',
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                    SizedBox(height: 16.h),
+                    SizedBox(
+                      height: 72.h,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        children: [
+                          _buildMBTISelectionChip('ENFP', '열정적인', selectedMBTI),
+                          _buildMBTISelectionChip('INTJ', '전략적인', selectedMBTI),
+                          _buildMBTISelectionChip('ISFP', '예술적인', selectedMBTI),
+                          _buildMBTISelectionChip('ENTP', '혁신적인', selectedMBTI),
+                          _buildMBTISelectionChip('INFJ', '통찰력 있는', selectedMBTI),
+                          _buildMBTISelectionChip('ESTJ', '체계적인', selectedMBTI),
+                          _buildMBTISelectionChip('INFP', '이상주의적인', selectedMBTI),
+                          _buildMBTISelectionChip('ISTP', '실용적인', selectedMBTI),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 20.h),
+              // 검색 바
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 16.w),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: TextField(
+                  decoration: InputDecoration(
+                    hintText: '이름, 관심사로 검색',
+                    border: InputBorder.none,
+                    icon: Icon(Icons.search, color: Colors.grey[600]),
+                    suffixIcon: Icon(Icons.filter_list, color: Colors.grey[600]),
+                  ),
+                  onChanged: (value) {
+                    searchQuery.value = value;
+                  },
+                ),
+              ),
+              SizedBox(height: 20.h),
+            ],
+          ),
+        ),
+        // 사용자 목록 영역 (Expanded로 남은 공간 차지)
+        Expanded(
+          child: Obx(() {
+            final mbtiUsers = _generateMBTIUsers(selectedMBTI.value);
+            
+            if (mbtiUsers.isEmpty) {
+              return Container(
+                padding: EdgeInsets.symmetric(horizontal: 16.w),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.psychology_alt_outlined,
+                      size: 56.sp,
+                      color: Colors.grey[400],
+                    ),
+                    SizedBox(height: 16.h),
+                    Text(
+                      '${selectedMBTI.value} 사용자가 없습니다',
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        color: Colors.grey[700],
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 8.h),
+                    Text(
+                      '다른 MBTI 유형을 선택해보세요',
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        color: Colors.grey[500],
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              );
+            }
+            
+            return ListView.builder(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              itemCount: mbtiUsers.length,
+              itemBuilder: (context, index) {
+                final user = mbtiUsers[index];
+                return _buildMBTICompatibilityUserListItem(
+                  user,
+                  Get.find<ChatController>(),
+                  selectedMBTI.value,
+                  _getUserDescription(user.name),
+                );
               },
-            ),
+            );
+          }),
+        ),
+      ],
+    );
+  }
+
+  /// MBTI 기반 사용자 목록 생성
+  List<UserModel> _generateMBTIUsers(String selectedMBTI) {
+    // MBTI별 다양한 닉네임과 프로필 데이터
+    final userProfiles = {
+      'ENFP': [
+        {'name': '열정맨', 'description': '새로운 경험을 사랑하는 모험가', 'friendCount': 127, 'chatCount': 45},
+        {'name': '창의킹', 'description': '아이디어가 넘치는 발명가', 'friendCount': 89, 'chatCount': 32},
+        {'name': '에너지봄', 'description': '활력이 넘치는 소통왕', 'friendCount': 156, 'chatCount': 67},
+      ],
+      'INTJ': [
+        {'name': '전략가', 'description': '체계적으로 계획하는 리더', 'friendCount': 78, 'chatCount': 23},
+        {'name': '분석왕', 'description': '논리적 사고의 전문가', 'friendCount': 92, 'chatCount': 34},
+        {'name': '미래설계사', 'description': '장기적 비전을 가진 설계자', 'friendCount': 65, 'chatCount': 19},
+      ],
+      'ISFP': [
+        {'name': '예술가', 'description': '감성적인 창작자', 'friendCount': 103, 'chatCount': 28},
+        {'name': '자유혼', 'description': '개성 넘치는 독립가', 'friendCount': 87, 'chatCount': 31},
+        {'name': '감성킹', 'description': '따뜻한 마음의 소유자', 'friendCount': 134, 'chatCount': 42},
+      ],
+      'ENTP': [
+        {'name': '혁신가', 'description': '새로운 아이디어의 창조자', 'friendCount': 145, 'chatCount': 58},
+        {'name': '토론왕', 'description': '논리적 토론을 즐기는 사상가', 'friendCount': 98, 'chatCount': 37},
+        {'name': '변화추구자', 'description': '끊임없는 변화를 추구하는 혁신가', 'friendCount': 112, 'chatCount': 44},
+      ],
+      'INFJ': [
+        {'name': '통찰자', 'description': '깊은 통찰력을 가진 조언자', 'friendCount': 76, 'chatCount': 25},
+        {'name': '공감왕', 'description': '타인의 마음을 이해하는 공감자', 'friendCount': 89, 'chatCount': 33},
+        {'name': '비전가', 'description': '미래를 내다보는 비전가', 'friendCount': 67, 'chatCount': 21},
+      ],
+      'ESTJ': [
+        {'name': '관리자', 'description': '체계적인 조직 관리자', 'friendCount': 123, 'chatCount': 41},
+        {'name': '책임왕', 'description': '책임감 넘치는 리더', 'friendCount': 98, 'chatCount': 35},
+        {'name': '실행가', 'description': '효율적인 실행 전문가', 'friendCount': 87, 'chatCount': 29},
+      ],
+      'INFP': [
+        {'name': '이상주의자', 'description': '순수한 마음의 이상주의자', 'friendCount': 95, 'chatCount': 26},
+        {'name': '감성예술가', 'description': '깊은 감성을 가진 예술가', 'friendCount': 78, 'chatCount': 22},
+        {'name': '평화주의자', 'description': '조화를 추구하는 평화주의자', 'friendCount': 112, 'chatCount': 38},
+      ],
+      'ISTP': [
+        {'name': '장인', 'description': '손재주가 뛰어난 장인', 'friendCount': 84, 'chatCount': 27},
+        {'name': '실용가', 'description': '실용적인 해결사', 'friendCount': 76, 'chatCount': 24},
+        {'name': '모험가', 'description': '도전을 즐기는 모험가', 'friendCount': 92, 'chatCount': 31},
+      ],
+    };
+    
+    final profiles = userProfiles[selectedMBTI] ?? [
+      {'name': '친구1', 'description': '친근한 사용자', 'friendCount': 50, 'chatCount': 15},
+      {'name': '친구2', 'description': '활발한 사용자', 'friendCount': 60, 'chatCount': 20},
+      {'name': '친구3', 'description': '따뜻한 사용자', 'friendCount': 45, 'chatCount': 18},
+    ];
+    
+    final users = <UserModel>[];
+    
+    for (int i = 0; i < profiles.length; i++) {
+      final profile = profiles[i];
+      final user = UserModel(
+        uid: 'mbti-$selectedMBTI-$i',
+        email: '${profile['name']}@example.com',
+        name: profile['name'] as String,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        mbtiType: selectedMBTI,
+        profileImageUrl: null,
+        stats: UserStats(
+          friendCount: profile['friendCount'] as int,
+          chatCount: profile['chatCount'] as int,
+          lastLoginAt: DateTime.now(),
+        ),
+      );
+      users.add(user);
+    }
+    
+    return users;
+  }
+
+  /// MBTI 설명 반환
+  String _getMBTIDescription(String mbti) {
+    final descriptions = {
+      'ENFP': '열정적이고 창의적인',
+      'INTJ': '전략적이고 분석적인',
+      'ISFP': '예술적이고 감성적인',
+      'ENTP': '혁신적이고 도전적인',
+      'INFJ': '통찰력 있고 공감적인',
+      'ESTJ': '체계적이고 책임감 있는',
+      'INFP': '이상주의적이고 창의적인',
+      'ISTP': '실용적이고 적응력 있는',
+    };
+    return descriptions[mbti] ?? '친근하고 도움이 되는';
+  }
+
+  /// 사용자별 개별 설명 반환
+  String _getUserDescription(String userName) {
+    final userDescriptions = {
+      '열정맨': '새로운 경험을 사랑하는 모험가',
+      '창의킹': '아이디어가 넘치는 발명가',
+      '에너지봄': '활력이 넘치는 소통왕',
+      '전략가': '체계적으로 계획하는 리더',
+      '분석왕': '논리적 사고의 전문가',
+      '미래설계사': '장기적 비전을 가진 설계자',
+      '예술가': '감성적인 창작자',
+      '자유혼': '개성 넘치는 독립가',
+      '감성킹': '따뜻한 마음의 소유자',
+      '혁신가': '새로운 아이디어의 창조자',
+      '토론왕': '논리적 토론을 즐기는 사상가',
+      '변화추구자': '끊임없는 변화를 추구하는 혁신가',
+      '통찰자': '깊은 통찰력을 가진 조언자',
+      '공감왕': '타인의 마음을 이해하는 공감자',
+      '비전가': '미래를 내다보는 비전가',
+      '관리자': '체계적인 조직 관리자',
+      '책임왕': '책임감 넘치는 리더',
+      '실행가': '효율적인 실행 전문가',
+      '이상주의자': '순수한 마음의 이상주의자',
+      '감성예술가': '깊은 감성을 가진 예술가',
+      '평화주의자': '조화를 추구하는 평화주의자',
+      '장인': '손재주가 뛰어난 장인',
+      '실용가': '실용적인 해결사',
+      '모험가': '도전을 즐기는 모험가',
+    };
+    return userDescriptions[userName] ?? '친근하고 도움이 되는';
+  }
+
+
+
+  /// 하단 시트로 인라인 AI 채팅 열기
+  void _openInlineAIChat(String mbti) {
+    final geminiService = Get.find<GeminiService>();
+    final auth = Get.find<AuthController>();
+    final personaName = '$mbti 친구';
+
+    Get.bottomSheet(
+      Container(
+        height: Get.height * 0.85,
+        padding: EdgeInsets.only(bottom: MediaQuery.of(Get.context!).viewInsets.bottom),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: InlineAIChat(
+            personaName: personaName,
+            personaMBTI: mbti,
+            geminiService: geminiService,
+            userMBTI: auth.userModel.value?.mbtiType ?? 'UNKNOWN',
           ),
-          SizedBox(height: 20.h),
-          // 사용자 목록
-          ListView.builder(
-            shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
-            itemCount: 8,
-            itemBuilder: (context, index) {
-              final mbtiTypes = ['ENFP', 'INTJ', 'ISFP', 'ENTP', 'INFJ', 'ESTJ', 'INFP', 'ISTP'];
-              final mbtiDescriptions = [
-                '열정적이고 창의적인',
-                '전략적이고 분석적인',
-                '예술적이고 감성적인',
-                '혁신적이고 도전적인',
-                '통찰력 있고 공감적인',
-                '체계적이고 책임감 있는',
-                '이상주의적이고 창의적인',
-                '실용적이고 적응력 있는'
-              ];
-              
-              final user = UserModel(
-                uid: 'mbti-user-$index',
-                email: 'mbti${index + 1}@example.com',
-                name: '${mbtiTypes[index]} 사용자${index + 1}',
-                createdAt: DateTime.now(),
-                updatedAt: DateTime.now(),
-                mbtiType: mbtiTypes[index],
-                profileImageUrl: null,
-                stats: UserStats(
-                  friendCount: (index + 1) * 3,
-                  chatCount: (index + 1) * 2,
-                  lastLoginAt: DateTime.now(),
-                ),
-              );
-              
-              return _buildMBTICompatibilityUserListItem(
-                user,
-                Get.find<ChatController>(),
-                selectedMBTI.value,
-                mbtiDescriptions[index],
-              );
-            },
-          ),
-          SizedBox(height: 20.h),
-        ],
+        ),
       ),
+      isScrollControlled: true,
     );
   }
 
@@ -595,184 +453,7 @@ class FindChatPartnerScreen extends StatelessWidget {
     );
   }
 
-  /// 위치 기반 사용자 목록 항목 위젯
-  Widget _buildLocationBasedUserListItem(
-    UserModel user,
-    ChatController controller,
-    LocationService locationService,
-  ) {
-    // 현재 위치가 있을 때 거리 계산
-    String distanceText = '위치 정보 없음';
-    if (locationService.currentPosition != null && user.latitude != null && user.longitude != null) {
-      final distance = locationService.calculateDistance(
-        locationService.currentPosition!.latitude,
-        locationService.currentPosition!.longitude,
-        user.latitude!,
-        user.longitude!,
-      );
-      distanceText = locationService.formatDistance(distance);
-    }
-    
-    return Container(
-      margin: EdgeInsets.only(bottom: 16.h),
-      padding: EdgeInsets.all(20.w),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // 프로필 이미지 또는 아바타
-          Container(
-            width: 60.w,
-            height: 60.w,
-            decoration: BoxDecoration(
-              color: _getMBTIColor(user.mbtiType).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(30.r),
-            ),
-            child: Center(
-              child: user.profileImageUrl != null
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(30.r),
-                      child: Image.network(
-                        user.profileImageUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Text(
-                            user.name.characters.first,
-                            style: TextStyle(
-                              color: _getMBTIColor(user.mbtiType),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 24.sp,
-                            ),
-                          );
-                        },
-                      ),
-                    )
-                  : Text(
-                      user.name.characters.first,
-                      style: TextStyle(
-                        color: _getMBTIColor(user.mbtiType),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 24.sp,
-                      ),
-                    ),
-            ),
-          ),
-          SizedBox(width: 20.w),
-          // 사용자 정보
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        user.name,
-                        style: TextStyle(
-                          fontSize: 18.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    SizedBox(width: 12.w),
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                      decoration: BoxDecoration(
-                        color: _getMBTIColor(user.mbtiType).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(16.r),
-                      ),
-                      child: Text(
-                        user.mbtiType!,
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w500,
-                          color: _getMBTIColor(user.mbtiType),
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8.h),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.location_on,
-                      size: 16.sp,
-                      color: Colors.grey[600],
-                    ),
-                    SizedBox(width: 4.w),
-                    Expanded(
-                      child: Text(
-                        user.locationName ?? '위치 정보 없음',
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          color: Colors.grey[600],
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    SizedBox(width: 12.w),
-                    Text(
-                      distanceText,
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8.h),
-                Text(
-                  '친구 ${user.stats.friendCount}명 • 채팅 ${user.stats.chatCount}개',
-                  style: TextStyle(
-                    fontSize: 14.sp,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // 채팅 시작 버튼
-          ElevatedButton(
-            onPressed: () {
-              Get.back(); // 화면 닫기
-              controller.startPrivateChatWith(user);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12.r),
-              ),
-              elevation: 0,
-            ),
-            child: Text(
-              '채팅',
-              style: TextStyle(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   /// MBTI 궁합 기반 사용자 목록 항목 위젯
   Widget _buildMBTICompatibilityUserListItem(
@@ -877,7 +558,7 @@ class FindChatPartnerScreen extends StatelessWidget {
                 ),
                 SizedBox(height: 8.h),
                 Text(
-                  mbtiDescription,
+                  _getUserDescription(user.name),
                   style: TextStyle(
                     fontSize: 14.sp,
                     color: Colors.grey[600],
@@ -917,12 +598,9 @@ class FindChatPartnerScreen extends StatelessWidget {
               ],
             ),
           ),
-          // 채팅 시작 버튼
+          // 채팅 시작 버튼 (AI 어시스턴트로 이동)
           ElevatedButton(
-            onPressed: () {
-              Get.back(); // 화면 닫기
-              controller.startPrivateChatWith(user);
-            },
+            onPressed: () => _openInlineAIChat(user.mbtiType ?? 'ENFP'),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF9C27B0),
               foregroundColor: Colors.white,
@@ -987,26 +665,5 @@ class FindChatPartnerScreen extends StatelessWidget {
     return mbtiColors[mbtiType] ?? Colors.grey;
   }
 
-  /// 위치 기반 추천 새로고침
-  Future<void> _refreshLocationBasedRecommendations(LocationService locationService) async {
-    try {
-      // 현재 위치 가져오기
-      final position = await locationService.getCurrentLocation();
-      if (position != null) {
-        Get.snackbar(
-          '위치 업데이트',
-          '현재 위치가 업데이트되었습니다.',
-          backgroundColor: AppColors.primary.withOpacity(0.1),
-          colorText: AppColors.primary,
-        );
-      }
-    } catch (e) {
-      Get.snackbar(
-        '오류',
-        '위치를 가져오는 중 오류가 발생했습니다: $e',
-        backgroundColor: Colors.red.withOpacity(0.1),
-        colorText: Colors.red,
-      );
-    }
-  }
+
 }

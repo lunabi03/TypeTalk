@@ -36,6 +36,10 @@ dependencies:
   
   # 이미지 선택 및 업로드
   image_picker: ^1.0.7
+  
+  # GEMINI API 및 HTTP 요청
+  http: ^1.1.0
+  flutter_dotenv: ^5.1.0
 
 dev_dependencies:
   flutter_test:
@@ -48,6 +52,7 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
+
 
   # fonts:
   #   - family: Pretendard

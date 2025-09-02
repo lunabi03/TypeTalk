@@ -1228,6 +1228,42 @@ class StartScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
+              // AI 어시스턴트와 대화하기 버튼
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: SizedBox(
+                  height: 48,
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => Get.toNamed(AppRoutes.aiChat),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFF9C27B0)),
+                      shape: const StadiumBorder(),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.smart_toy,
+                          size: 20.sp,
+                          color: const Color(0xFF9C27B0),
+                        ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          'AI 어시스턴트와 대화하기',
+                          style: TextStyle(
+                            fontSize: 14,
+                            letterSpacing: 0.0,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF9C27B0),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
             ],
           ),
         ),

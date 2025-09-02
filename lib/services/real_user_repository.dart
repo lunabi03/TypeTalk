@@ -120,17 +120,31 @@ class RealUserRepository extends GetxService {
   // MBTI 타입으로 사용자 목록 조회
   Future<List<UserModel>> getUsersByMBTI(String mbtiType) async {
     try {
-      final querySnapshot = await _firebase.queryDocuments(
-        _collectionName,
-        field: 'mbtiType',
-        isEqualTo: mbtiType,
-        orderByField: 'updatedAt',
-        descending: true,
-      );
+      // 우선 최신순 정렬로 시도 (인덱스 필요)
+      try {
+        final querySnapshot = await _firebase.queryDocuments(
+          _collectionName,
+          field: 'mbtiType',
+          isEqualTo: mbtiType,
+          orderByField: 'updatedAt',
+          descending: true,
+        );
 
-      return querySnapshot.docs
-          .map((doc) => _convertFirestoreToUserModel(doc))
-          .toList();
+        return querySnapshot.docs
+            .map((doc) => _convertFirestoreToUserModel(doc))
+            .toList();
+      } catch (e) {
+        // 인덱스 미구성 등으로 실패하면 정렬 없이 재시도 (단일 필드 인덱스만 필요)
+        print('MBTI 쿼리(정렬 포함) 실패, 정렬 없이 재시도합니다: $e');
+        final fallbackSnapshot = await _firebase.queryDocuments(
+          _collectionName,
+          field: 'mbtiType',
+          isEqualTo: mbtiType,
+        );
+        return fallbackSnapshot.docs
+            .map((doc) => _convertFirestoreToUserModel(doc))
+            .toList();
+      }
     } catch (e) {
       print('실제 Firebase MBTI로 사용자 조회 실패: $e');
       throw Exception('사용자 조회 중 오류가 발생했습니다: ${e.toString()}');

@@ -55,8 +55,8 @@ service cloud.firestore {
     }
     
     // 타임스탬프 검증
-    function isValidTimestamp(timestamp) {
-      return timestamp is timestamp;
+    function isValidTimestamp(ts) {
+      return ts is timestamp;
     }
     
     // 점수 범위 검증 (0-100)

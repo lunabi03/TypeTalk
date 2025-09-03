@@ -127,3 +127,4 @@ class GeminiConfig {
 **참고**: 이 가이드는 GEMINI API의 최신 버전을 기준으로 작성되었습니다. API 변경사항이 있을 수 있으니 [공식 문서](https://ai.google.dev/docs)를 참고하세요.
 
 
+

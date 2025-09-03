@@ -227,18 +227,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             final effectiveBio = bio ?? userModelBio;
                             
                             if (effectiveBio != null && effectiveBio.isNotEmpty) {
-                              return Container(
-                                width: double.infinity,
-                                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-                                margin: EdgeInsets.symmetric(horizontal: 8.w),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.7),
-                                  borderRadius: BorderRadius.circular(12.r),
-                                  border: Border.all(
-                                    color: const Color(0xFFE3F2FD),
-                                    width: 1,
-                                  ),
-                                ),
+                              return Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
                                 child: Text(
                                   effectiveBio,
                                   style: TextStyle(

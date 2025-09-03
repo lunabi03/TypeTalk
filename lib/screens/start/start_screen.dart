@@ -1123,7 +1123,7 @@ class StartScreen extends StatelessWidget {
                 ),
               ),
               Transform.translate(
-                offset: Offset(0, -5.h),
+                offset: Offset(0, -30.h),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: SizedBox(

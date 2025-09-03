@@ -450,30 +450,6 @@ class StartScreen extends StatelessWidget {
                           ],
                         ),
                         SizedBox(height: 16.h),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton(
-                            onPressed: () {
-                              Get.back();
-                              Get.toNamed(AppRoutes.fcmDemo);
-                            },
-                            style: OutlinedButton.styleFrom(
-                              side: BorderSide(color: Colors.grey[400]!),
-                              padding: EdgeInsets.symmetric(vertical: 12.h),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8.r),
-                              ),
-                            ),
-                            child: Text(
-                              '알림 설정 확인',
-                              style: TextStyle(
-                                fontSize: 14.sp,
-                                color: Colors.grey[600],
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -1176,30 +1152,7 @@ class StartScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              // FCM 데모 버튼
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: SizedBox(
-                  height: 48,
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: () => Get.toNamed(AppRoutes.fcmDemo),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFF6C63FF)),
-                      shape: const StadiumBorder(),
-                    ),
-                    child: const Text(
-                      'FCM 데모 화면',
-                      style: TextStyle(
-                        fontSize: 14,
-                        letterSpacing: 0.0,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF6C63FF),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+
               const SizedBox(height: 16),
               // MBTI 아바타와 대화하기 버튼
               Padding(

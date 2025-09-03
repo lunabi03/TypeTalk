@@ -600,7 +600,16 @@ class FindChatPartnerScreen extends StatelessWidget {
           ),
           // 채팅 시작 버튼 (AI 어시스턴트로 이동)
           ElevatedButton(
-            onPressed: () => _openInlineAIChat(user.mbtiType ?? 'ENFP'),
+            onPressed: () {
+              // 채팅 요청 발송 안내 스낵바
+              Get.snackbar(
+                '알림',
+                '채팅 요청을 보냈습니다!',
+                backgroundColor: const Color(0xFF9C27B0).withOpacity(0.1),
+                colorText: const Color(0xFF9C27B0),
+              );
+              _openInlineAIChat(user.mbtiType ?? 'ENFP');
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF9C27B0),
               foregroundColor: Colors.white,

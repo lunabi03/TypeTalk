@@ -100,7 +100,7 @@ class ChatNotificationService extends GetxService {
       notifications.add(notification);
       _updateNotificationStats();
       
-      // 푸시 알림 전송 (실제로는 FCM 등 사용)
+      // 푸시 알림 전송
       if (pushNotificationsEnabled.value) {
         await _sendPushNotification(notification);
       }
@@ -326,7 +326,7 @@ class ChatNotificationService extends GetxService {
     ChatNotificationModel notification, {
     String priority = 'normal',
   }) async {
-    // 실제로는 FCM(Firebase Cloud Messaging) 등을 사용
+    // 실제로는 푸시 알림 서비스를 사용
     print('푸시 알림 전송: ${notification.title} - ${notification.body}');
     
     // 알림 설정에 따른 처리

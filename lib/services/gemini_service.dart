@@ -89,7 +89,12 @@ class GeminiResponse {
         );
       }
       
-      final text = firstPart['text'] as String;
+      String text = firstPart['text'] as String;
+      
+      // AI 라벨 제거 (AI:, Assistant:, Bot: 등)
+      text = text.replaceAll(RegExp(r'^(AI|Assistant|Bot|시스템|너|사용자|상대|나|User|Human):\s*', multiLine: true), '');
+      text = text.trim();
+      
       print('✅ 텍스트 추출 성공: ${text.substring(0, text.length > 100 ? 100 : text.length)}...');
       
       return GeminiResponse(text: text, success: true);
@@ -229,7 +234,7 @@ class GeminiService extends GetxService {
     print('📚 대화 히스토리 ${recentHistory.length}개 메시지 추가');
     for (final entry in recentHistory) {
       parts.add({
-        'text': '${entry['role'] == 'user' ? '사용자' : 'AI'}: ${entry['content']}\n',
+        'text': '${entry['role'] == 'user' ? '사용자' : ''}: ${entry['content']}\n',
       });
     }
 

@@ -36,38 +36,6 @@ class _InlineAIChatState extends State<InlineAIChat> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // 헤더
-        Padding(
-          padding: EdgeInsets.all(16.w),
-          child: Row(
-            children: [
-              Container(
-                width: 36.w,
-                height: 36.w,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF9C27B0),
-                  borderRadius: BorderRadius.circular(18.r),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  widget.personaName.characters.first,
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16.sp),
-                ),
-              ),
-              SizedBox(width: 12.w),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(widget.personaName, style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600)),
-                  Text('MBTI: ${widget.personaMBTI}', style: TextStyle(fontSize: 12.sp, color: Colors.grey[600])),
-                ],
-              ),
-              const Spacer(),
-              IconButton(onPressed: () => Get.back(), icon: const Icon(Icons.close)),
-            ],
-          ),
-        ),
-        const Divider(height: 1),
         // 대화 내용
         Expanded(
           child: Obx(() {

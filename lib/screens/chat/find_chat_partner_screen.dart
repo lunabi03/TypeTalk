@@ -259,51 +259,51 @@ class FindChatPartnerScreen extends StatelessWidget {
     // MBTI별 다양한 닉네임과 프로필 데이터
     final userProfiles = {
       'ENFP': [
-        {'name': '민서_98', 'description': '새로운 경험을 사랑하는 모험가', 'friendCount': 127, 'chatCount': 45},
-        {'name': '준호93', 'description': '아이디어가 넘치는 발명가', 'friendCount': 89, 'chatCount': 32},
-        {'name': '다연이에요', 'description': '활력이 넘치는 소통왕', 'friendCount': 156, 'chatCount': 67},
+        {'name': '민서_98', 'description': '새로운 경험을 사랑하는 모험가', 'bio': 'ㅎㅇ', 'friendCount': 127, 'chatCount': 45},
+        {'name': '준호93', 'description': '아이디어가 넘치는 발명가', 'bio': '', 'friendCount': 89, 'chatCount': 32},
+        {'name': '다연이에요', 'description': '활력이 넘치는 소통왕', 'bio': '반가워요~', 'friendCount': 156, 'chatCount': 67},
       ],
       'INTJ': [
-        {'name': '진우_k', 'description': '체계적으로 계획하는 리더', 'friendCount': 78, 'chatCount': 23},
-        {'name': 'yuna.j', 'description': '논리적 사고의 전문가', 'friendCount': 92, 'chatCount': 34},
-        {'name': 'warmguy', 'description': '장기적 비전을 가진 설계자', 'friendCount': 65, 'chatCount': 19},
+        {'name': '진우_k', 'description': '체계적으로 계획하는 리더', 'bio': '안녕하세요', 'friendCount': 78, 'chatCount': 23},
+        {'name': 'yuna.j', 'description': '논리적 사고의 전문가', 'bio': '', 'friendCount': 92, 'chatCount': 34},
+        {'name': 'warmguy', 'description': '장기적 비전을 가진 설계자', 'bio': '하이', 'friendCount': 65, 'chatCount': 19},
       ],
       'ISFP': [
-        {'name': '하늘조각', 'description': '감성적인 창작자', 'friendCount': 103, 'chatCount': 28},
-        {'name': '민혁__', 'description': '개성 넘치는 독립가', 'friendCount': 87, 'chatCount': 31},
-        {'name': '소소한행복', 'description': '따뜻한 마음의 소유자', 'friendCount': 134, 'chatCount': 42},
+        {'name': '하늘조각', 'description': '감성적인 창작자', 'bio': '안녕', 'friendCount': 103, 'chatCount': 28},
+        {'name': '민혁__', 'description': '개성 넘치는 독립가', 'bio': '', 'friendCount': 87, 'chatCount': 31},
+        {'name': '소소한행복', 'description': '따뜻한 마음의 소유자', 'bio': '반갑습니다', 'friendCount': 134, 'chatCount': 42},
       ],
       'ENTP': [
-        {'name': 'coffee_addict', 'description': '새로운 아이디어의 창조자', 'friendCount': 145, 'chatCount': 58},
-        {'name': 'jay.p', 'description': '논리적 토론을 즐기는 사상가', 'friendCount': 98, 'chatCount': 37},
-        {'name': '도시산책러', 'description': '끊임없는 변화를 추구하는 혁신가', 'friendCount': 112, 'chatCount': 44},
+        {'name': 'coffee_addict', 'description': '새로운 아이디어의 창조자', 'bio': '헬로', 'friendCount': 145, 'chatCount': 58},
+        {'name': 'jay.p', 'description': '논리적 토론을 즐기는 사상가', 'bio': '', 'friendCount': 98, 'chatCount': 37},
+        {'name': '도시산책러', 'description': '끊임없는 변화를 추구하는 혁신가', 'bio': '안녕하세요', 'friendCount': 112, 'chatCount': 44},
       ],
       'INFJ': [
-        {'name': '바람결', 'description': '깊은 통찰력을 가진 조언자', 'friendCount': 76, 'chatCount': 25},
-        {'name': '여름밤', 'description': '타인의 마음을 이해하는 공감자', 'friendCount': 89, 'chatCount': 33},
-        {'name': 'moody_day', 'description': '미래를 내다보는 비전가', 'friendCount': 67, 'chatCount': 21},
+        {'name': '바람결', 'description': '깊은 통찰력을 가진 조언자', 'bio': '반가워요', 'friendCount': 76, 'chatCount': 25},
+        {'name': '여름밤', 'description': '타인의 마음을 이해하는 공감자', 'bio': '', 'friendCount': 89, 'chatCount': 33},
+        {'name': 'moody_day', 'description': '미래를 내다보는 비전가', 'bio': 'ㅎㅇ', 'friendCount': 67, 'chatCount': 21},
       ],
       'ESTJ': [
-        {'name': 'hello.sun', 'description': '체계적인 조직 관리자', 'friendCount': 123, 'chatCount': 41},
-        {'name': 'filmlover', 'description': '책임감 넘치는 리더', 'friendCount': 98, 'chatCount': 35},
-        {'name': '새벽감성', 'description': '효율적인 실행 전문가', 'friendCount': 87, 'chatCount': 29},
+        {'name': 'hello.sun', 'description': '체계적인 조직 관리자', 'bio': '안녕하세요', 'friendCount': 123, 'chatCount': 41},
+        {'name': 'filmlover', 'description': '책임감 넘치는 리더', 'bio': '', 'friendCount': 98, 'chatCount': 35},
+        {'name': '새벽감성', 'description': '효율적인 실행 전문가', 'bio': '하이요', 'friendCount': 87, 'chatCount': 29},
       ],
       'INFP': [
-        {'name': 'mellow_', 'description': '순수한 마음의 이상주의자', 'friendCount': 95, 'chatCount': 26},
-        {'name': '하루커피☕', 'description': '깊은 감성을 가진 예술가', 'friendCount': 78, 'chatCount': 22},
-        {'name': 'luna_', 'description': '조화를 추구하는 평화주의자', 'friendCount': 112, 'chatCount': 38},
+        {'name': 'mellow_', 'description': '순수한 마음의 이상주의자', 'bio': '안녕', 'friendCount': 95, 'chatCount': 26},
+        {'name': '하루커피☕', 'description': '깊은 감성을 가진 예술가', 'bio': '', 'friendCount': 78, 'chatCount': 22},
+        {'name': 'luna_', 'description': '조화를 추구하는 평화주의자', 'bio': '반갑습니다', 'friendCount': 112, 'chatCount': 38},
       ],
       'ISTP': [
-        {'name': 'moody_day', 'description': '손재주가 뛰어난 장인', 'friendCount': 84, 'chatCount': 27},
-        {'name': 'filmlover', 'description': '실용적인 해결사', 'friendCount': 76, 'chatCount': 24},
-        {'name': '새벽감성', 'description': '도전을 즐기는 모험가', 'friendCount': 92, 'chatCount': 31},
+        {'name': 'moody_day', 'description': '손재주가 뛰어난 장인', 'bio': '헬로우', 'friendCount': 84, 'chatCount': 27},
+        {'name': 'filmlover', 'description': '실용적인 해결사', 'bio': '', 'friendCount': 76, 'chatCount': 24},
+        {'name': '새벽감성', 'description': '도전을 즐기는 모험가', 'bio': '안녕하세요', 'friendCount': 92, 'chatCount': 31},
       ],
     };
     
     final profiles = userProfiles[selectedMBTI] ?? [
-      {'name': '바람결', 'description': '친근한 사용자', 'friendCount': 50, 'chatCount': 15},
-      {'name': '여름밤', 'description': '활발한 사용자', 'friendCount': 60, 'chatCount': 20},
-      {'name': 'moody_day', 'description': '따뜻한 사용자', 'friendCount': 45, 'chatCount': 18},
+      {'name': '바람결', 'description': '친근한 사용자', 'bio': '하이', 'friendCount': 50, 'chatCount': 15},
+      {'name': '여름밤', 'description': '활발한 사용자', 'bio': '', 'friendCount': 60, 'chatCount': 20},
+      {'name': 'moody_day', 'description': '따뜻한 사용자', 'bio': '헬로우', 'friendCount': 45, 'chatCount': 18},
     ];
     
     final users = <UserModel>[];
@@ -318,6 +318,7 @@ class FindChatPartnerScreen extends StatelessWidget {
         updatedAt: DateTime.now(),
         mbtiType: selectedMBTI,
         profileImageUrl: null,
+        bio: profile['bio'] as String?,
         stats: UserStats(
           friendCount: profile['friendCount'] as int,
           chatCount: profile['chatCount'] as int,
@@ -333,16 +334,24 @@ class FindChatPartnerScreen extends StatelessWidget {
   /// MBTI 설명 반환
   String _getMBTIDescription(String mbti) {
     final descriptions = {
-      'ENFP': '열정적이고 창의적인',
-      'INTJ': '전략적이고 분석적인',
-      'ISFP': '예술적이고 감성적인',
-      'ENTP': '혁신적이고 도전적인',
-      'INFJ': '통찰력 있고 공감적인',
-      'ESTJ': '체계적이고 책임감 있는',
-      'INFP': '이상주의적이고 창의적인',
-      'ISTP': '실용적이고 적응력 있는',
+      'ENFP': '재기발랄한 모험가',
+      'ENFJ': '정의로운 사회운동가',
+      'ENTP': '뜨거운 논쟁을 즐기는 변론가',
+      'ENTJ': '대담한 통솔자',
+      'ESFP': '자유로운 영혼의 연예인',
+      'ESFJ': '사교적인 외교관',
+      'ESTP': '모험을 즐기는 사업가',
+      'ESTJ': '엄격한 관리자',
+      'INFP': '열정적인 중재자',
+      'INFJ': '선의의 옹호자',
+      'INTP': '논리적인 사색가',
+      'INTJ': '용의주도한 전략가',
+      'ISFP': '호기심 많은 예술가',
+      'ISFJ': '용감한 수호자',
+      'ISTP': '만능 재주꾼',
+      'ISTJ': '실용주의자',
     };
-    return descriptions[mbti] ?? '친근하고 도움이 되는';
+    return descriptions[mbti] ?? '성격 유형';
   }
 
   /// 사용자별 개별 설명 반환
@@ -480,17 +489,6 @@ class FindChatPartnerScreen extends StatelessWidget {
                             ),
                             SizedBox(height: 8.h),
                             
-                            // 이메일
-                            Text(
-                              '이메일: ${user.email}',
-                              style: TextStyle(
-                                fontSize: 13.sp,
-                                color: const Color(0xFF6C757D),
-                                height: 1.3,
-                              ),
-                            ),
-                            SizedBox(height: 8.h),
-                            
                             // 소개글 (있는 경우)
                             if (user.bio != null && user.bio!.isNotEmpty)
                               Padding(
@@ -613,12 +611,8 @@ class FindChatPartnerScreen extends StatelessWidget {
                         child: ElevatedButton(
                           onPressed: () {
                             Get.back(); // 모달 닫기
-                            Get.snackbar(
-                              '알림',
-                              '${user.name}님과 채팅을 시작합니다!',
-                              backgroundColor: const Color(0xFF9C27B0).withOpacity(0.1),
-                              colorText: const Color(0xFF9C27B0),
-                            );
+                            // AI 채팅방으로 전체 화면 이동
+                            _openFullScreenAIChat(user.mbtiType ?? 'ENFP', user.name);
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF9C27B0),
@@ -634,7 +628,7 @@ class FindChatPartnerScreen extends StatelessWidget {
                               Icon(Icons.chat, size: 20.sp),
                               SizedBox(width: 8.w),
                               Text(
-                                '채팅 시작하기',
+                                '채팅 신청 보내기',
                                 style: TextStyle(
                                   fontSize: 16.sp,
                                   fontWeight: FontWeight.w600,
@@ -813,6 +807,104 @@ class FindChatPartnerScreen extends StatelessWidget {
       default:
         return Icons.psychology_outlined;
     }
+  }
+
+
+
+  /// 전체 화면 AI 채팅 열기
+  void _openFullScreenAIChat(String mbti, String userName) {
+    final geminiService = Get.find<GeminiService>();
+    final auth = Get.find<AuthController>();
+    final personaName = userName; // 실제 사용자 이름 사용
+
+    Get.to(
+      Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          leading: IconButton(
+            onPressed: () => Get.back(),
+            icon: const Icon(
+              Icons.arrow_back_ios,
+              color: Color(0xFF1A1A1A),
+            ),
+          ),
+          title: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 프로필 아바타
+              Container(
+                width: 32.w,
+                height: 32.w,
+                decoration: BoxDecoration(
+                  color: _getMBTIColor(mbti),
+                  borderRadius: BorderRadius.circular(16.r),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  personaName.characters.first,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14.sp,
+                  ),
+                ),
+              ),
+              SizedBox(width: 8.w),
+              // 이름과 MBTI 정보
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    personaName,
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF1A1A1A),
+                    ),
+                  ),
+                  Text(
+                    'MBTI: $mbti',
+                    style: TextStyle(
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          centerTitle: false,
+          actions: [
+            Container(
+              margin: EdgeInsets.only(right: 16.w),
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+              decoration: BoxDecoration(
+                color: _getMBTIColor(mbti).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12.r),
+              ),
+              child: Text(
+                _getMBTIDescription(mbti),
+                style: TextStyle(
+                  fontSize: 11.sp,
+                  fontWeight: FontWeight.w600,
+                  color: _getMBTIColor(mbti),
+                ),
+              ),
+            ),
+          ],
+        ),
+        body: InlineAIChat(
+          personaName: personaName,
+          personaMBTI: mbti,
+          geminiService: geminiService,
+          userMBTI: auth.userModel.value?.mbtiType ?? 'UNKNOWN',
+        ),
+      ),
+    );
   }
 
   /// 하단 시트로 인라인 AI 채팅 열기

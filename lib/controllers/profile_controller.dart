@@ -225,6 +225,9 @@ class ProfileController extends GetxController {
         );
       }
 
+      // AuthController의 userProfile도 새로고침
+      await _authController.loadUserProfile();
+      
       Get.snackbar('성공', '프로필이 업데이트되었습니다.');
       return true;
       

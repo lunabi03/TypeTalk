@@ -1139,7 +1139,7 @@ class StartScreen extends StatelessWidget {
                         shape: const StadiumBorder(),
                       ),
                       child: const Text(
-                        '테스트 시작하기',
+                        'MBTI 테스트 시작하기',
                         style: TextStyle(
                           fontSize: 16,
                           letterSpacing: 0.0,
@@ -1153,67 +1153,7 @@ class StartScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
 
-              const SizedBox(height: 16),
-              // MBTI 아바타와 대화하기 버튼
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: SizedBox(
-                  height: 48,
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: () => Get.toNamed(AppRoutes.mbtiAvatarSelection),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFF6C63FF)),
-                      shape: const StadiumBorder(),
-                    ),
-                    child: const Text(
-                      'MBTI 아바타와 대화하기',
-                      style: TextStyle(
-                        fontSize: 14,
-                        letterSpacing: 0.0,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF6C63FF),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              // AI 어시스턴트와 대화하기 버튼
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: SizedBox(
-                  height: 48,
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: () => Get.toNamed(AppRoutes.aiChat),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFF9C27B0)),
-                      shape: const StadiumBorder(),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.smart_toy,
-                          size: 20.sp,
-                          color: const Color(0xFF9C27B0),
-                        ),
-                        SizedBox(width: 8.w),
-                        Text(
-                          'AI 어시스턴트와 대화하기',
-                          style: TextStyle(
-                            fontSize: 14,
-                            letterSpacing: 0.0,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF9C27B0),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+
               const SizedBox(height: 16),
             ],
           ),

@@ -209,6 +209,52 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               height: 1.3,
                             ),
                           )),
+                          SizedBox(height: 8.h),
+                          
+                          // Bio (소개글)
+                          Obx(() {
+                            final bio = authController.userProfile['bio'] as String?;
+                            final userModelBio = authController.userModel.value?.bio;
+                            
+                            // 디버그 정보 출력
+                            print('=== Bio 디버그 정보 ===');
+                            print('userProfile bio: $bio');
+                            print('userModel bio: $userModelBio');
+                            print('userProfile 전체: ${authController.userProfile}');
+                            print('=======================');
+                            
+                            // bio 정보를 여러 소스에서 확인
+                            final effectiveBio = bio ?? userModelBio;
+                            
+                            if (effectiveBio != null && effectiveBio.isNotEmpty) {
+                              return Container(
+                                width: double.infinity,
+                                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                                margin: EdgeInsets.symmetric(horizontal: 8.w),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.7),
+                                  borderRadius: BorderRadius.circular(12.r),
+                                  border: Border.all(
+                                    color: const Color(0xFFE3F2FD),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Text(
+                                  effectiveBio,
+                                  style: TextStyle(
+                                    fontSize: 13.sp,
+                                    color: const Color(0xFF424242),
+                                    height: 1.4,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              );
+                            }
+                            return const SizedBox.shrink();
+                          }),
                           SizedBox(height: 4.h),
                           
                           // Join Date

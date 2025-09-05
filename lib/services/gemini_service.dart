@@ -93,6 +93,14 @@ class GeminiResponse {
       
       // AI 라벨 제거 (AI:, Assistant:, Bot: 등)
       text = text.replaceAll(RegExp(r'^(AI|Assistant|Bot|시스템|너|사용자|상대|나|User|Human):\s*', multiLine: true), '');
+      
+      // 콜론으로 시작하는 패턴 제거 (AI가 자신의 역할을 드러내는 표현)
+      text = text.replaceAll(RegExp(r'^:\s*', multiLine: true), '');
+      text = text.replaceAll(RegExp(r'^[가-힣]+:\s*', multiLine: true), '');
+      
+      // 불필요한 접두사 제거
+      text = text.replaceAll(RegExp(r'^(응답|답변|대답|말씀|이야기):\s*', multiLine: true), '');
+      
       text = text.trim();
       
       print('✅ 텍스트 추출 성공: ${text.substring(0, text.length > 100 ? 100 : text.length)}...');

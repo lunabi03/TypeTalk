@@ -1,4 +1,4 @@
-// import removed: demo Firestore
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 // 메시지 타입 열거형
 enum MessageType {
@@ -185,7 +185,7 @@ class MessageModel {
       'senderMBTI': senderMBTI,
       'content': content,
       'type': type,
-      'createdAt': createdAt,
+      'createdAt': createdAt, // DateTime 객체로 저장
       'updatedAt': updatedAt,
       'media': media?.toMap(),
       'status': status.toMap(),
@@ -225,13 +225,28 @@ class MessageModel {
 
   static DateTime _parseDateTime(dynamic value) {
     if (value is DateTime) return value;
+    if (value is Timestamp) {
+      // Firestore Timestamp인 경우
+      return value.toDate();
+    }
     if (value is String) {
       try {
         return DateTime.parse(value);
       } catch (e) {
+        print('⚠️ DateTime 파싱 실패: $value, 오류: $e');
         return DateTime.now();
       }
     }
+    if (value is int) {
+      // Timestamp의 milliseconds 값인 경우
+      try {
+        return DateTime.fromMillisecondsSinceEpoch(value);
+      } catch (e) {
+        print('⚠️ Timestamp 파싱 실패: $value, 오류: $e');
+        return DateTime.now();
+      }
+    }
+    print('⚠️ 알 수 없는 DateTime 타입: ${value.runtimeType}, 값: $value');
     return DateTime.now();
   }
 

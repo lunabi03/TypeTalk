@@ -381,6 +381,11 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  /// 정확한 시간 표시 (디버그용)
+  String _formatExactTime(DateTime time) {
+    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}:${time.second.toString().padLeft(2, '0')}';
+  }
+
   /// 초대 수락
   Future<void> _acceptInvite(ChatInviteModel invite, ChatInviteService inviteService) async {
     try {
@@ -719,12 +724,20 @@ class _ChatScreenState extends State<ChatScreen> {
         );
       }
 
+      // 메시지 목록을 시간순으로 정렬 (UI 표시용)
+      final sortedMessages = List<MessageModel>.from(messages);
+      sortedMessages.sort((a, b) {
+        final timeComparison = a.createdAt.compareTo(b.createdAt);
+        if (timeComparison != 0) return timeComparison;
+        return a.messageId.compareTo(b.messageId);
+      });
+
       return ListView.builder(
         controller: chatController.scrollController,
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-        itemCount: messages.length,
+        itemCount: sortedMessages.length,
         itemBuilder: (context, index) {
-          final message = messages[index];
+          final message = sortedMessages[index];
           final isMyMessage = chatController.isMyMessage(message);
           
           return _buildMessageBubble(message, isMyMessage);

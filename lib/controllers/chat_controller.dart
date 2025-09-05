@@ -166,17 +166,35 @@ class ChatController extends GetxController {
       final loaded = snapshots.docs.map((s) => MessageModel.fromSnapshot(s)).toList();
       print('📊 Firestore에서 ${loaded.length}개의 메시지 발견');
       
-      // 생성 시간순으로 정렬 (오래된 것부터)
-      loaded.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      // 생성 시간순으로 정렬 (오래된 것부터) - 더 정확한 정렬
+      loaded.sort((a, b) {
+        // 먼저 createdAt으로 정렬
+        final timeComparison = a.createdAt.compareTo(b.createdAt);
+        if (timeComparison != 0) return timeComparison;
+        
+        // 시간이 같으면 messageId로 정렬 (문자열 정렬로 일관성 보장)
+        return a.messageId.compareTo(b.messageId);
+      });
       
       print('📝 정렬된 메시지 목록:');
-      for (final msg in loaded) {
-        print('  - ${msg.senderName}: ${msg.content} (${msg.createdAt})');
+      for (int i = 0; i < loaded.length; i++) {
+        final msg = loaded[i];
+        final timeDiff = DateTime.now().difference(msg.createdAt);
+        print('  [$i] ${msg.senderName}: ${msg.content}');
+        print('      시간: ${msg.createdAt.toIso8601String()} (${timeDiff.inMinutes}분 전)');
+        print('      ID: ${msg.messageId}');
       }
       
       // assignAll 대신 clear + addAll 사용하여 UI 업데이트 보장
       messages.clear();
       messages.addAll(loaded);
+      
+      // 정렬 후 한 번 더 확인
+      print('🔍 최종 메시지 목록 정렬 확인:');
+      for (int i = 0; i < messages.length; i++) {
+        final msg = messages[i];
+        print('  [$i] ${msg.senderName}: ${msg.content} (${msg.createdAt.toIso8601String()})');
+      }
       
       print('✅ 메시지 로드 완료 - 총 ${messages.length}개');
     } catch (e) {
@@ -363,15 +381,18 @@ class ChatController extends GetxController {
     try {
       isSending.value = true;
 
+      final now = DateTime.now();
+      print('📤 메시지 생성 - 시간: ${now.toIso8601String()}, 내용: $content');
+      
       final newMessage = MessageModel(
-        messageId: 'msg-${DateTime.now().millisecondsSinceEpoch}',
+        messageId: 'msg-${now.millisecondsSinceEpoch}-${now.microsecond}',
         chatId: chatId.value,
         senderId: authController.userId ?? 'current-user',
         senderName: authController.userName ?? '나',
         senderMBTI: authController.userProfile['mbti'] ?? 'ENFP',
         content: content,
         type: MessageType.text.value,
-        createdAt: DateTime.now(),
+        createdAt: now,
         status: MessageStatus(
           isEdited: false,
           isDeleted: false,
@@ -383,8 +404,12 @@ class ChatController extends GetxController {
       // 메시지 목록에 추가
       messages.add(newMessage);
       
-      // 메시지 목록 정렬 (시간순)
-      messages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      // 메시지 목록 정렬 (시간순) - 더 정확한 정렬
+      messages.sort((a, b) {
+        final timeComparison = a.createdAt.compareTo(b.createdAt);
+        if (timeComparison != 0) return timeComparison;
+        return a.messageId.compareTo(b.messageId);
+      });
       
       // 입력창 초기화
       messageController.clear();
@@ -392,9 +417,15 @@ class ChatController extends GetxController {
       // 스크롤을 맨 아래로
       _scrollToBottom();
 
-      // Firestore에 메시지 저장
+      // Firestore에 메시지 저장 (Timestamp 사용)
       try {
-        await _firestore.setDocument('messages/${newMessage.messageId}', newMessage.toMap());
+        final messageData = newMessage.toMap();
+        messageData['createdAt'] = Timestamp.fromDate(newMessage.createdAt);
+        if (newMessage.updatedAt != null) {
+          messageData['updatedAt'] = Timestamp.fromDate(newMessage.updatedAt!);
+        }
+        
+        await _firestore.setDocument('messages/${newMessage.messageId}', messageData);
         
         // 채팅방의 마지막 메시지 정보 업데이트
         try {
@@ -491,15 +522,18 @@ class ChatController extends GetxController {
       
       if (response.isNotEmpty) {
         // AI 응답 메시지 생성
+        final now = DateTime.now();
+        print('🤖 AI 메시지 생성 - 시간: ${now.toIso8601String()}, 내용: $response');
+        
         final aiMessage = MessageModel(
-          messageId: 'ai-${DateTime.now().millisecondsSinceEpoch}',
+          messageId: 'ai-${now.millisecondsSinceEpoch}-${now.microsecond}',
           chatId: chat.chatId,
           senderId: simulatedUserId,
           senderName: userName,
           senderMBTI: 'ENFP', // 기본값, 실제로는 사용자 프로필에서 가져와야 함
           content: response,
           type: MessageType.text.value,
-          createdAt: DateTime.now(),
+          createdAt: now,
           status: MessageStatus(
             isEdited: false,
             isDeleted: false,
@@ -511,11 +545,22 @@ class ChatController extends GetxController {
         // 메시지 목록에 추가
         messages.add(aiMessage);
         
-        // 메시지 목록 정렬 (시간순)
-        messages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+        // 메시지 목록 정렬 (시간순) - 더 정확한 정렬
+        messages.sort((a, b) {
+          final timeComparison = a.createdAt.compareTo(b.createdAt);
+          if (timeComparison != 0) return timeComparison;
+          return a.messageId.compareTo(b.messageId);
+        });
         
         // Firestore에 저장
-        await _firestore.setDocument('messages/${aiMessage.messageId}', aiMessage.toMap());
+        // Firestore에 AI 메시지 저장 (Timestamp 사용)
+        final aiMessageData = aiMessage.toMap();
+        aiMessageData['createdAt'] = Timestamp.fromDate(aiMessage.createdAt);
+        if (aiMessage.updatedAt != null) {
+          aiMessageData['updatedAt'] = Timestamp.fromDate(aiMessage.updatedAt!);
+        }
+        
+        await _firestore.setDocument('messages/${aiMessage.messageId}', aiMessageData);
         
         // 채팅방의 마지막 메시지 정보 업데이트
         await _firestore.updateDocument('chats/${chat.chatId}', {
@@ -561,15 +606,13 @@ class ChatController extends GetxController {
     final now = DateTime.now();
     final difference = now.difference(time);
 
-    if (difference.inMinutes < 1) {
+    // 5분 이내는 "방금"만 표시
+    if (difference.inMinutes < 5) {
       return '방금';
-    } else if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}분 전';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours}시간 전';
-    } else {
-      return '${time.month}/${time.day}';
     }
+    
+    // 5분 이후는 정확한 시간만 표시
+    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
   }
 
   /// 내가 보낸 메시지인지 확인

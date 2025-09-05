@@ -12,35 +12,53 @@ import 'package:typetalk/models/chat_invite_model.dart';
 import 'package:typetalk/routes/app_routes.dart';
 
 
-class ChatScreen extends StatelessWidget {
+class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
 
   @override
+  State<ChatScreen> createState() => _ChatScreenState();
+}
+
+class _ChatScreenState extends State<ChatScreen> {
+  late final ChatController chatController;
+  late final ChatInviteService? inviteService;
+
+  @override
+  void initState() {
+    super.initState();
+    chatController = Get.find<ChatController>();
+    inviteService = Get.isRegistered<ChatInviteService>() ? Get.find<ChatInviteService>() : null;
+    
+    // 화면이 로드될 때마다 채팅 목록 새로고침
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      chatController.loadChatList();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final chatController = Get.put(ChatController());
-    final inviteService = Get.isRegistered<ChatInviteService>() ? Get.find<ChatInviteService>() : null;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF0F8FF), // 연한 파란색 배경
-      appBar: _buildAppBar(chatController),
+      appBar: _buildAppBar(),
       body: Obx(() {
         // 채팅방이 선택되지 않은 경우: 채팅 목록 또는 빈 상태 표시
         if (chatController.currentChat.value == null) {
           return Column(
             children: [
               // 초대 알림 표시 (서비스가 사용 가능할 때만)
-              if (inviteService != null && inviteService.pendingInviteCount > 0) 
-                _buildInviteNotification(inviteService),
+              if (inviteService != null && inviteService!.pendingInviteCount > 0) 
+                _buildInviteNotification(inviteService!),
               // 채팅 목록 또는 빈 상태
-              Expanded(child: _buildChatListOrEmpty(chatController)),
+              Expanded(child: _buildChatListOrEmpty()),
             ],
           );
         }
         // 채팅방이 선택된 경우: 메시지 UI
         return Column(
           children: [
-            Expanded(child: _buildMessageList(chatController)),
-            _buildMessageInput(chatController),
+            Expanded(child: _buildMessageList()),
+            _buildMessageInput(),
           ],
         );
       }),
@@ -416,12 +434,13 @@ class ChatScreen extends StatelessWidget {
   }
 
   /// 채팅 목록 또는 빈 상태
-  Widget _buildChatListOrEmpty(ChatController controller) {
+  Widget _buildChatListOrEmpty() {
     return Obx(() {
-      if (controller.isLoading.value) {
+      if (chatController.isLoading.value) {
         return const Center(child: CircularProgressIndicator());
       }
-      final chats = controller.chatList;
+      final chats = chatController.chatList;
+      print('🖥️ UI 업데이트 - 채팅 목록 개수: ${chats.length}');
       if (chats.isEmpty) {
         return Center(
           child: Column(
@@ -490,7 +509,7 @@ class ChatScreen extends StatelessWidget {
                         SizedBox(width: 8.w),
                         Expanded(
                           child: TextField(
-                            onChanged: (v) => controller.searchQuery.value = v,
+                            onChanged: (v) => chatController.searchQuery.value = v,
                             decoration: const InputDecoration(
                               hintText: '대화 검색',
                               border: InputBorder.none,
@@ -503,9 +522,9 @@ class ChatScreen extends StatelessWidget {
                 ),
                 SizedBox(width: 12.w),
                 Obx(() {
-                  final desc = controller.sortByRecentDesc.value;
+                  final desc = chatController.sortByRecentDesc.value;
                   return GestureDetector(
-                    onTap: () => controller.sortByRecentDesc.value = !desc,
+                    onTap: () => chatController.sortByRecentDesc.value = !desc,
                     child: Container(
                       padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
                       decoration: BoxDecoration(
@@ -561,14 +580,14 @@ class ChatScreen extends StatelessWidget {
           ),
           Expanded(
             child: Obx(() {
-              final filtered = controller.visibleChats;
+              final filtered = chatController.visibleChats;
               return ListView.separated(
                 padding: EdgeInsets.symmetric(vertical: 8.h),
                 itemCount: filtered.length,
                 separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey[200]),
                 itemBuilder: (context, index) {
                   final chat = filtered[index];
-                  final unread = controller.getUnreadCount(chat);
+                  final unread = chatController.getUnreadCount(chat);
                   return ListTile(
                     leading: Stack(
                       children: [
@@ -607,10 +626,10 @@ class ChatScreen extends StatelessWidget {
                     title: Text(chat.title),
                     subtitle: Text(chat.lastMessage?.content ?? '메시지가 없습니다'),
                     trailing: Text(
-                      controller.formatMessageTime(chat.stats.lastActivity),
+                      chatController.formatMessageTime(chat.stats.lastActivity),
                       style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
                     ),
-                    onTap: () => controller.openChat(chat),
+                    onTap: () => chatController.openChat(chat),
                   );
                 },
               );
@@ -622,15 +641,15 @@ class ChatScreen extends StatelessWidget {
   }
 
   /// 앱바 구성
-  PreferredSizeWidget _buildAppBar(ChatController controller) {
+  PreferredSizeWidget _buildAppBar() {
     return AppBar(
       backgroundColor: Colors.white,
       elevation: 1,
       leading: IconButton(
         onPressed: () {
-          if (controller.currentChat.value != null) {
+          if (chatController.currentChat.value != null) {
             // 채팅 중일 때: 목록으로 돌아가기
-            controller.leaveChat();
+            chatController.leaveChat();
           } else {
             // 목록 화면일 때: 메인으로 돌아가기
             Get.offAllNamed(AppRoutes.start);
@@ -643,7 +662,7 @@ class ChatScreen extends StatelessWidget {
         ),
       ),
       title: Obx(() {
-        final chat = controller.currentChat.value;
+        final chat = chatController.currentChat.value;
         if (chat == null) {
           return Text('채팅');
         }
@@ -678,7 +697,7 @@ class ChatScreen extends StatelessWidget {
       }),
       actions: [
         IconButton(
-          onPressed: () => controller.openChatSettings(),
+          onPressed: () => chatController.openChatSettings(),
           icon: Icon(
             Icons.more_vert,
             color: AppColors.textPrimary,
@@ -690,9 +709,9 @@ class ChatScreen extends StatelessWidget {
   }
 
   /// 메시지 목록
-  Widget _buildMessageList(ChatController controller) {
+  Widget _buildMessageList() {
     return Obx(() {
-      final messages = controller.messages;
+      final messages = chatController.messages;
       
       if (messages.isEmpty) {
         return const Center(
@@ -701,21 +720,21 @@ class ChatScreen extends StatelessWidget {
       }
 
       return ListView.builder(
-        controller: controller.scrollController,
+        controller: chatController.scrollController,
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
         itemCount: messages.length,
         itemBuilder: (context, index) {
           final message = messages[index];
-          final isMyMessage = controller.isMyMessage(message);
+          final isMyMessage = chatController.isMyMessage(message);
           
-          return _buildMessageBubble(message, isMyMessage, controller);
+          return _buildMessageBubble(message, isMyMessage);
         },
       );
     });
   }
 
   /// 메시지 버블
-  Widget _buildMessageBubble(MessageModel message, bool isMyMessage, ChatController controller) {
+  Widget _buildMessageBubble(MessageModel message, bool isMyMessage) {
     return Container(
       margin: EdgeInsets.only(bottom: 16.h),
       child: Row(
@@ -728,7 +747,7 @@ class ChatScreen extends StatelessWidget {
               width: 32.w,
               height: 32.w,
               decoration: BoxDecoration(
-                color: controller.getMBTIColor(message.senderMBTI),
+                color: chatController.getMBTIColor(message.senderMBTI),
                 borderRadius: BorderRadius.circular(8.r),
               ),
               child: Center(
@@ -769,7 +788,7 @@ class ChatScreen extends StatelessWidget {
                           Container(
                             padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
                             decoration: BoxDecoration(
-                              color: controller.getMBTIColor(message.senderMBTI),
+                              color: chatController.getMBTIColor(message.senderMBTI),
                               borderRadius: BorderRadius.circular(8.r),
                             ),
                             child: Text(
@@ -796,7 +815,7 @@ class ChatScreen extends StatelessWidget {
                       Padding(
                         padding: EdgeInsets.only(right: 8.w, bottom: 4.h),
                         child: Text(
-                          controller.formatMessageTime(message.createdAt),
+                          chatController.formatMessageTime(message.createdAt),
                           style: AppTextStyles.bodySmall.copyWith(
                             color: AppColors.textSecondary,
                             fontSize: 10.sp,
@@ -808,7 +827,7 @@ class ChatScreen extends StatelessWidget {
                     // 메시지 버블
                     Flexible(
                       child: GestureDetector(
-                        onLongPress: () => _showMessageOptions(message, controller),
+                        onLongPress: () => _showMessageOptions(message),
                         child: Container(
                           padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
                           decoration: BoxDecoration(
@@ -845,7 +864,7 @@ class ChatScreen extends StatelessWidget {
                       Padding(
                         padding: EdgeInsets.only(left: 8.w, bottom: 4.h),
                         child: Text(
-                          controller.formatMessageTime(message.createdAt),
+                          chatController.formatMessageTime(message.createdAt),
                           style: AppTextStyles.bodySmall.copyWith(
                             color: AppColors.textSecondary,
                             fontSize: 10.sp,
@@ -859,7 +878,7 @@ class ChatScreen extends StatelessWidget {
                 // 반응 이모지
                 if (message.reactions.isNotEmpty) ...[
                   SizedBox(height: 4.h),
-                  _buildReactions(message, controller),
+                  _buildReactions(message),
                 ],
               ],
             ),
@@ -890,7 +909,7 @@ class ChatScreen extends StatelessWidget {
   }
 
   /// 반응 이모지
-  Widget _buildReactions(MessageModel message, ChatController controller) {
+  Widget _buildReactions(MessageModel message) {
     return Wrap(
       children: message.reactions.entries.map((entry) {
         final emoji = entry.key;
@@ -925,7 +944,7 @@ class ChatScreen extends StatelessWidget {
   }
 
   /// 메시지 입력창
-  Widget _buildMessageInput(ChatController controller) {
+  Widget _buildMessageInput() {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
       decoration: BoxDecoration(
@@ -949,7 +968,7 @@ class ChatScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20.r),
                 ),
                 child: TextField(
-                  controller: controller.messageController,
+                  controller: chatController.messageController,
                   decoration: InputDecoration(
                     hintText: '메시지를 입력하세요...',
                     hintStyle: AppTextStyles.bodyMedium.copyWith(
@@ -966,7 +985,7 @@ class ChatScreen extends StatelessWidget {
                   ),
                   maxLines: 4,
                   minLines: 1,
-                  onSubmitted: (_) => controller.sendMessage(),
+                  onSubmitted: (_) => chatController.sendMessage(),
                 ),
               ),
             ),
@@ -975,18 +994,18 @@ class ChatScreen extends StatelessWidget {
             
             // 전송 버튼
             Obx(() => GestureDetector(
-              onTap: controller.isSending.value ? null : controller.sendMessage,
+              onTap: chatController.isSending.value ? null : chatController.sendMessage,
               child: Container(
                 width: 44.w,
                 height: 44.w,
                 decoration: BoxDecoration(
-                  color: controller.isSending.value 
+                  color: chatController.isSending.value 
                       ? Colors.grey 
                       : const Color(0xFF6C63FF),
                   borderRadius: BorderRadius.circular(22.r),
                 ),
                 child: Center(
-                  child: controller.isSending.value
+                  child: chatController.isSending.value
                       ? SizedBox(
                           width: 20.w,
                           height: 20.w,
@@ -1010,7 +1029,7 @@ class ChatScreen extends StatelessWidget {
   }
 
   /// 메시지 옵션 표시 (길게 누르기)
-  void _showMessageOptions(MessageModel message, ChatController controller) {
+  void _showMessageOptions(MessageModel message) {
     Get.bottomSheet(
       Container(
         padding: EdgeInsets.all(20.w),
@@ -1053,7 +1072,7 @@ class ChatScreen extends StatelessWidget {
                   ),
                   SizedBox(height: 8.h),
                   Text(
-                    '${message.senderName} • ${controller.formatMessageTime(message.createdAt)}',
+                    '${message.senderName} • ${chatController.formatMessageTime(message.createdAt)}',
                     style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.textSecondary,
                     ),
@@ -1068,19 +1087,19 @@ class ChatScreen extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildReactionButton('👍', message, controller),
-                _buildReactionButton('❤️', message, controller),
-                _buildReactionButton('😂', message, controller),
-                _buildReactionButton('😮', message, controller),
-                _buildReactionButton('😢', message, controller),
-                _buildReactionButton('😡', message, controller),
+                _buildReactionButton('👍', message),
+                _buildReactionButton('❤️', message),
+                _buildReactionButton('😂', message),
+                _buildReactionButton('😮', message),
+                _buildReactionButton('😢', message),
+                _buildReactionButton('😡', message),
               ],
             ),
             
             SizedBox(height: 20.h),
             
             // 액션 버튼들
-            if (!controller.isMyMessage(message)) ...[
+            if (!chatController.isMyMessage(message)) ...[
               ListTile(
                 leading: Icon(Icons.reply, color: AppColors.primary),
                 title: Text('답장하기'),
@@ -1101,13 +1120,13 @@ class ChatScreen extends StatelessWidget {
               },
             ),
             
-            if (controller.isMyMessage(message)) ...[
+            if (chatController.isMyMessage(message)) ...[
               ListTile(
                 leading: Icon(Icons.delete, color: Colors.red),
                 title: Text('삭제하기'),
                 onTap: () {
                   Get.back();
-                  _confirmDeleteMessage(message, controller);
+                  _confirmDeleteMessage(message);
                 },
               ),
             ],
@@ -1343,7 +1362,7 @@ class ChatScreen extends StatelessWidget {
       ),
       onTap: () {
         Get.back();
-        controller.startPrivateChatWith(user);
+        chatController.startPrivateChatWith(user);
       },
     );
   }
@@ -1351,13 +1370,13 @@ class ChatScreen extends StatelessWidget {
 
 
   /// 반응 버튼
-  Widget _buildReactionButton(String emoji, MessageModel message, ChatController controller) {
-    final currentUserId = controller.authController.currentUserId ?? 'current-user';
+  Widget _buildReactionButton(String emoji, MessageModel message) {
+    final currentUserId = chatController.authController.currentUserId ?? 'current-user';
     final isReacted = message.reactions[emoji]?.contains(currentUserId) ?? false;
     
     return GestureDetector(
       onTap: () {
-        controller.addReaction(message.messageId, emoji);
+        chatController.addReaction(message.messageId, emoji);
         Get.back();
       },
       child: Container(
@@ -1375,7 +1394,7 @@ class ChatScreen extends StatelessWidget {
   }
 
   /// 메시지 삭제 확인
-  void _confirmDeleteMessage(MessageModel message, ChatController controller) {
+  void _confirmDeleteMessage(MessageModel message) {
     Get.dialog(
       AlertDialog(
         title: Text('메시지 삭제'),
@@ -1389,7 +1408,7 @@ class ChatScreen extends StatelessWidget {
             onPressed: () {
               Get.back();
               // 메시지 삭제 로직
-              controller.messages.removeWhere((m) => m.messageId == message.messageId);
+              chatController.messages.removeWhere((m) => m.messageId == message.messageId);
               Get.snackbar('삭제됨', '메시지가 삭제되었습니다.');
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),

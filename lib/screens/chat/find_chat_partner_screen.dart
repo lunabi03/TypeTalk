@@ -9,6 +9,7 @@ import 'package:typetalk/controllers/chat_controller.dart';
 import 'package:typetalk/services/gemini_service.dart';
 import 'package:typetalk/controllers/auth_controller.dart';
 import 'package:typetalk/screens/chat/_inline_ai_chat.dart';
+import 'package:typetalk/routes/app_routes.dart';
 
 /// 대화 상대 찾기 화면
 class FindChatPartnerScreen extends StatelessWidget {
@@ -1131,11 +1132,19 @@ class FindChatPartnerScreen extends StatelessWidget {
               Expanded(
                 child: SizedBox.shrink(),
               ),
-              // 프로필 보기 버튼
+              // 대화 시작 버튼
               ElevatedButton(
-                onPressed: () {
-                  // 상대방 프로필 모달로 표시
-                  _showUserProfileModal(user);
+                onPressed: () async {
+                  // 일반 사용자와의 대화 시작
+                  final chatController = Get.find<ChatController>();
+                  await chatController.startUserChat(
+                    user.name,
+                    user.mbtiType ?? 'UNKNOWN',
+                    user.bio,
+                  );
+                  
+                  // 대화 시작 후 채팅 화면으로 이동
+                  Get.toNamed(AppRoutes.chat);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF9C27B0),
@@ -1148,7 +1157,7 @@ class FindChatPartnerScreen extends StatelessWidget {
                   minimumSize: Size(0, 32.h),
                 ),
                 child: Text(
-                  '프로필 보기',
+                  '대화 시작',
                   style: TextStyle(
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w600,

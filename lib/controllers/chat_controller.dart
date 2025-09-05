@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:collection/collection.dart';
 import 'package:typetalk/controllers/auth_controller.dart';
 import 'package:typetalk/models/message_model.dart';
 import 'package:typetalk/models/chat_model.dart';
@@ -59,21 +60,33 @@ class ChatController extends GetxController {
     try {
       isLoading.value = true;
       final myId = authController.userId ?? 'current-user';
+      print('🔍 채팅 목록 로드 시작 - 사용자 ID: $myId');
+      
       final snapshots = await _firestore.queryDocuments(
         'chats',
         field: 'participants',
         arrayContains: myId,
-        orderByField: 'stats.lastActivity',
-        descending: true,
       );
+      
+      print('📊 Firestore에서 ${snapshots.docs.length}개의 채팅방 발견');
+      
       var loaded = snapshots.docs
           .map((s) => ChatModel.fromSnapshot(s))
           .toList();
+      
       // 기본 정렬: 최근 활동 내림차순
       loaded.sort((a, b) => b.stats.lastActivity.compareTo(a.stats.lastActivity));
-      chatList.assignAll(loaded);
+      
+      print('📝 로드된 채팅방 목록:');
+      for (final chat in loaded) {
+        print('  - ${chat.title} (${chat.chatId}) - 마지막 활동: ${chat.stats.lastActivity}');
+      }
+      
+      chatList.clear();
+      chatList.addAll(loaded);
+      print('✅ 채팅 목록 로드 완료 - 총 ${chatList.length}개');
     } catch (e) {
-      print('채팅방 목록 로드 실패: $e');
+      print('❌ 채팅방 목록 로드 실패: $e');
       chatList.clear();
     } finally {
       isLoading.value = false;
@@ -113,10 +126,10 @@ class ChatController extends GetxController {
         'messages',
         field: 'chatId',
         isEqualTo: id,
-        orderByField: 'createdAt',
-        descending: false,
       );
       final loaded = snapshots.docs.map((s) => MessageModel.fromSnapshot(s)).toList();
+      // 생성 시간순으로 정렬 (오래된 것부터)
+      loaded.sort((a, b) => a.createdAt.compareTo(b.createdAt));
       messages.assignAll(loaded);
     } catch (e) {
       print('메시지 목록 로드 실패: $e');
@@ -719,4 +732,102 @@ class ChatController extends GetxController {
       ),
     );
   }
+
+  // ========== 일반 사용자 대화 관리 메서드들 ==========
+
+  /// 일반 사용자와의 대화 시작
+  Future<void> startUserChat(String userName, String userMBTI, String? userBio) async {
+    final currentUserId = authController.userId ?? 'current-user';
+    print('🚀 대화 시작 - 사용자: $userName, MBTI: $userMBTI, 현재 사용자 ID: $currentUserId');
+    
+    // Firestore에서 기존 채팅방 확인 (더 정확한 중복 체크)
+    try {
+      final existingSnapshots = await _firestore.queryDocuments(
+        'chats',
+        field: 'participants',
+        arrayContains: currentUserId,
+      );
+      
+      final existingChats = existingSnapshots.docs
+          .map((s) => ChatModel.fromSnapshot(s))
+          .where((chat) => 
+            chat.title == userName && 
+            chat.type == 'private' &&
+            chat.participants.contains('simulated_$userName')
+          )
+          .toList();
+      
+      if (existingChats.isNotEmpty) {
+        // 가장 최근 채팅방 선택
+        existingChats.sort((a, b) => b.stats.lastActivity.compareTo(a.stats.lastActivity));
+        final existingChat = existingChats.first;
+        
+        print('📋 기존 대화 발견 - 채팅방 ID: ${existingChat.chatId}');
+        // 기존 대화가 있으면 해당 대화방 열기
+        await openChat(existingChat);
+        return;
+      }
+    } catch (e) {
+      print('⚠️ 기존 채팅방 확인 중 오류: $e');
+      // 오류가 있어도 계속 진행 (새 채팅방 생성)
+    }
+    
+    print('🆕 새로운 채팅방 생성 중...');
+    
+    // 새로운 채팅방 생성
+    final chatId = 'user_${DateTime.now().millisecondsSinceEpoch}';
+    final now = DateTime.now();
+    final newChat = ChatModel(
+      chatId: chatId,
+      type: 'private',
+      title: userName,
+      createdBy: currentUserId,
+      createdAt: now,
+      updatedAt: now,
+      participants: [currentUserId, 'simulated_${userName}'], // 실제 사용자 ID와 시뮬레이션 사용자 ID
+      participantCount: 2,
+      settings: ChatSettings(
+        isPrivate: true,
+        allowInvites: false,
+        moderatedMode: false,
+        autoDelete: false,
+      ),
+      lastMessage: LastMessage(
+        content: '대화를 시작해보세요!',
+        senderId: 'system',
+        senderName: '시스템',
+        timestamp: now,
+        type: 'text',
+      ),
+      stats: ChatStats(
+        messageCount: 1,
+        lastActivity: now,
+      ),
+    );
+    
+    // Firestore에 채팅방 저장
+    try {
+      print('💾 Firestore에 채팅방 저장 중... - ID: ${newChat.chatId}');
+      await _firestore.setDocument('chats/${newChat.chatId}', newChat.toMap());
+      print('✅ Firestore 저장 완료');
+      
+      // 채팅 목록에 추가
+      chatList.add(newChat);
+      print('📝 로컬 채팅 목록에 추가 완료 - 총 ${chatList.length}개');
+      
+      // 새로 생성된 채팅방 열기
+      print('🔓 채팅방 열기 중...');
+      await openChat(newChat);
+      print('✅ 채팅방 열기 완료');
+    } catch (e) {
+      print('❌ 채팅방 저장 오류: $e');
+      Get.snackbar(
+        '오류',
+        '채팅방 생성 중 오류가 발생했습니다.',
+        backgroundColor: Colors.red.withOpacity(0.1),
+        colorText: Colors.red,
+      );
+    }
+  }
+
 }

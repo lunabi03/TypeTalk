@@ -37,6 +37,7 @@ import 'package:typetalk/services/notification_service.dart';
 
 import 'package:typetalk/services/ai_chat_service.dart';
 import 'package:typetalk/controllers/auth_controller.dart';
+import 'package:typetalk/controllers/chat_controller.dart';
 import 'package:typetalk/middleware/auth_middleware.dart';
 
 void main() async {
@@ -76,6 +77,7 @@ void main() async {
   Get.put(RealUserRepository());
   Get.put(RealAuthService());
   Get.put(AuthController()); // AuthController를 먼저 등록
+  Get.put(ChatController()); // ChatController 등록
   Get.put(RecommendationService());
   Get.put(ChatStatsService());
   Get.put(ChatSearchService());

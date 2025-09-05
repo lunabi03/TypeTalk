@@ -129,7 +129,7 @@ class GeminiService extends GetxService {
   List<Map<String, String>> get conversationHistory => _conversationHistory;
 
   /// GEMINI API에 메시지 전송
-  Future<GeminiResponse> sendMessage(String message, {String? context}) async {
+  Future<GeminiResponse> sendMessage(String message, {String? context, int? maxTokens}) async {
     try {
       _isLoading.value = true;
       
@@ -145,7 +145,7 @@ class GeminiService extends GetxService {
       });
 
       // API 요청 본문 구성
-      final requestBody = _buildRequestBody(message, context);
+      final requestBody = _buildRequestBody(message, context, maxTokens);
       print('📦 요청 본문 구성 완료');
       print('📊 요청 본문 크기: ${jsonEncode(requestBody).length} bytes');
       
@@ -209,7 +209,7 @@ class GeminiService extends GetxService {
   }
 
   /// API 요청 본문 구성
-  Map<String, dynamic> _buildRequestBody(String message, String? context) {
+  Map<String, dynamic> _buildRequestBody(String message, String? context, int? maxTokens) {
     print('🔧 API 요청 본문 구성 시작');
     
     final parts = [
@@ -254,7 +254,7 @@ class GeminiService extends GetxService {
         'temperature': 0.7,
         'topK': 40,
         'topP': 0.95,
-        'maxOutputTokens': 1024,
+        'maxOutputTokens': maxTokens ?? 200, // 동적 토큰 수 설정
       },
       'safetySettings': [
         {

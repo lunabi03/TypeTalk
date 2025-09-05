@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:collection/collection.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:typetalk/controllers/auth_controller.dart';
 import 'package:typetalk/models/message_model.dart';
 import 'package:typetalk/models/chat_model.dart';
@@ -9,7 +10,9 @@ import 'package:typetalk/services/real_user_repository.dart';
 import 'package:typetalk/models/user_model.dart';
 import 'package:typetalk/services/real_firebase_service.dart';
 import 'package:typetalk/services/chat_invite_service.dart';
+import 'package:typetalk/services/gemini_service.dart';
 import 'package:typetalk/routes/app_routes.dart';
+import 'package:typetalk/core/theme/app_colors.dart';
 
 /// 채팅 화면 컨트롤러
 /// 실시간 메시지 전송/수신 및 채팅방 관리를 담당합니다.
@@ -74,6 +77,27 @@ class ChatController extends GetxController {
           .map((s) => ChatModel.fromSnapshot(s))
           .toList();
       
+      // 불필요한 채팅방 필터링
+      loaded = loaded.where((chat) {
+        // 자신과의 채팅방 제거
+        if (chat.participants.length == 1 && chat.participants.contains(myId)) {
+          print('🗑️ 자신과의 채팅방 제거: ${chat.title}');
+          return false;
+        }
+        
+        // 데모/테스트 채팅방 제거
+        if (chat.title == '개인 채팅' || 
+            chat.title == 'TaeHyeon Kim' ||
+            chat.title == '데이터1' ||
+            chat.title.contains('데이터') ||
+            chat.title.contains('테스트')) {
+          print('🗑️ 데모 채팅방 제거: ${chat.title}');
+          return false;
+        }
+        
+        return true;
+      }).toList();
+      
       // 기본 정렬: 최근 활동 내림차순
       loaded.sort((a, b) => b.stats.lastActivity.compareTo(a.stats.lastActivity));
       
@@ -111,28 +135,52 @@ class ChatController extends GetxController {
 
   /// 채팅 열기
   Future<void> openChat(ChatModel chat) async {
+    print('💬 채팅 열기 - ${chat.title} (${chat.chatId})');
     currentChat.value = chat;
     chatId.value = chat.chatId;
+    
+    // 메시지 목록 초기화 후 로드
+    messages.clear();
     await loadMessagesForChat(chat.chatId);
+    
     _lastReadAt[chat.chatId] = DateTime.now();
-    _scrollToBottom();
+    
+    // 스크롤을 맨 아래로 (약간의 지연을 두어 UI 업데이트 후 실행)
+    Future.delayed(const Duration(milliseconds: 100), () {
+      _scrollToBottom();
+    });
   }
 
   /// 메시지 목록 로드 (실제 Firestore)
   Future<void> loadMessagesForChat(String id) async {
     try {
       isLoading.value = true;
+      print('📨 메시지 로드 시작 - 채팅방 ID: $id');
+      
       final snapshots = await _firestore.queryDocuments(
         'messages',
         field: 'chatId',
         isEqualTo: id,
       );
+      
       final loaded = snapshots.docs.map((s) => MessageModel.fromSnapshot(s)).toList();
+      print('📊 Firestore에서 ${loaded.length}개의 메시지 발견');
+      
       // 생성 시간순으로 정렬 (오래된 것부터)
       loaded.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-      messages.assignAll(loaded);
+      
+      print('📝 정렬된 메시지 목록:');
+      for (final msg in loaded) {
+        print('  - ${msg.senderName}: ${msg.content} (${msg.createdAt})');
+      }
+      
+      // assignAll 대신 clear + addAll 사용하여 UI 업데이트 보장
+      messages.clear();
+      messages.addAll(loaded);
+      
+      print('✅ 메시지 로드 완료 - 총 ${messages.length}개');
     } catch (e) {
-      print('메시지 목록 로드 실패: $e');
+      print('❌ 메시지 목록 로드 실패: $e');
       messages.clear();
     } finally {
       isLoading.value = false;
@@ -335,6 +383,9 @@ class ChatController extends GetxController {
       // 메시지 목록에 추가
       messages.add(newMessage);
       
+      // 메시지 목록 정렬 (시간순)
+      messages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      
       // 입력창 초기화
       messageController.clear();
       
@@ -371,6 +422,11 @@ class ChatController extends GetxController {
       // 메시지 전송 완료 후 읽음 상태 업데이트
       _updateReadStatus(newMessage.messageId);
 
+      // 시뮬레이션 사용자와의 채팅인 경우 AI 자동 응답 생성
+      if (currentChat.value?.participants.any((p) => p.startsWith('simulated_')) == true) {
+        await _generateAIResponse(content, currentChat.value!);
+      }
+
     } catch (e) {
       print('메시지 전송 오류: $e');
       Get.snackbar(
@@ -387,6 +443,105 @@ class ChatController extends GetxController {
 
 
 
+
+  /// AI 자동 응답 생성
+  Future<void> _generateAIResponse(String userMessage, ChatModel chat) async {
+    try {
+      print('🤖 AI 응답 생성 시작 - 사용자 메시지: $userMessage');
+      
+      // 시뮬레이션 사용자 정보 추출
+      final simulatedUserId = chat.participants.firstWhere(
+        (p) => p.startsWith('simulated_'),
+        orElse: () => 'simulated_unknown',
+      );
+      final userName = simulatedUserId.replaceFirst('simulated_', '');
+      
+      // 대화 길이에 따른 응답 스타일 결정
+      final messageCount = messages.where((m) => m.senderId == simulatedUserId).length;
+      final isFirstTime = messageCount == 0;
+      final isEarlyConversation = messageCount < 3;
+      final isMidConversation = messageCount < 6;
+      
+      String responseStyle = '';
+      int maxTokens = 200;
+      
+      if (isFirstTime) {
+        responseStyle = '첫 만남이므로 매우 짧고 간단하게 인사하세요. 1문장으로만 답변하세요.';
+        maxTokens = 50;
+      } else if (isEarlyConversation) {
+        responseStyle = '아직 초기 대화이므로 짧고 간단하게 답변하세요. 1-2문장 정도로 답변하세요.';
+        maxTokens = 100;
+      } else if (isMidConversation) {
+        responseStyle = '조금 더 친해진 상태이므로 자연스럽게 대화하세요. 2-3문장 정도로 답변하세요.';
+        maxTokens = 150;
+      } else {
+        responseStyle = '이미 친한 상태이므로 자연스럽고 친근하게 대화하세요. 적당한 길이로 답변하세요.';
+        maxTokens = 200;
+      }
+      
+      // Gemini 서비스로 AI 응답 생성
+      final geminiService = Get.find<GeminiService>();
+      final geminiResponse = await geminiService.sendMessage(
+        userMessage,
+        context: '당신은 $userName입니다. $responseStyle 자연스럽고 친근한 대화를 나누세요.',
+        maxTokens: maxTokens,
+      );
+      
+      final response = geminiResponse.text;
+      
+      if (response.isNotEmpty) {
+        // AI 응답 메시지 생성
+        final aiMessage = MessageModel(
+          messageId: 'ai-${DateTime.now().millisecondsSinceEpoch}',
+          chatId: chat.chatId,
+          senderId: simulatedUserId,
+          senderName: userName,
+          senderMBTI: 'ENFP', // 기본값, 실제로는 사용자 프로필에서 가져와야 함
+          content: response,
+          type: MessageType.text.value,
+          createdAt: DateTime.now(),
+          status: MessageStatus(
+            isEdited: false,
+            isDeleted: false,
+            readBy: [authController.userId ?? 'current-user'],
+          ),
+          reactions: {},
+        );
+        
+        // 메시지 목록에 추가
+        messages.add(aiMessage);
+        
+        // 메시지 목록 정렬 (시간순)
+        messages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+        
+        // Firestore에 저장
+        await _firestore.setDocument('messages/${aiMessage.messageId}', aiMessage.toMap());
+        
+        // 채팅방의 마지막 메시지 정보 업데이트
+        await _firestore.updateDocument('chats/${chat.chatId}', {
+          'lastMessage': {
+            'content': response,
+            'timestamp': aiMessage.createdAt.toIso8601String(),
+            'senderId': aiMessage.senderId,
+          },
+          'stats.lastActivity': aiMessage.createdAt.toIso8601String(),
+          'stats.messageCount': FieldValue.increment(1),
+        });
+        
+        // 채팅 목록 새로고침
+        await loadChatList();
+        
+        // 스크롤을 맨 아래로
+        _scrollToBottom();
+        
+        print('✅ AI 응답 생성 완료: $response');
+      }
+      
+    } catch (e) {
+      print('❌ AI 응답 생성 실패: $e');
+      // AI 응답 실패해도 사용자 경험에 영향 없음
+    }
+  }
 
   /// 스크롤을 맨 아래로
   void _scrollToBottom() {
@@ -503,7 +658,211 @@ class ChatController extends GetxController {
 
   /// 채팅방 설정
   void openChatSettings() {
-    Get.snackbar('설정', '채팅방 설정 기능은 곧 추가될 예정입니다.');
+    if (currentChat.value == null) {
+      Get.snackbar(
+        '알림',
+        '채팅방을 선택해주세요.',
+        backgroundColor: Colors.orange.withOpacity(0.1),
+        colorText: Colors.orange,
+      );
+      return;
+    }
+    
+    Get.bottomSheet(
+      Container(
+        padding: EdgeInsets.all(20.w),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 드래그 핸들
+            Container(
+              width: 40.w,
+              height: 4.h,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2.r),
+              ),
+            ),
+            SizedBox(height: 20.h),
+            
+            // 채팅방 정보
+            Text(
+              '채팅방 설정',
+              style: TextStyle(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            SizedBox(height: 16.h),
+            
+            Text(
+              '${currentChat.value!.title}',
+              style: TextStyle(
+                fontSize: 16.sp,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            SizedBox(height: 24.h),
+            
+            // 나가기 버튼
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Get.back(); // 바텀시트 닫기
+                  _showExitChatConfirmation();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(vertical: 16.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                ),
+                child: Text(
+                  '채팅방 나가기',
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(height: 12.h),
+            
+            // 취소 버튼
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () => Get.back(),
+                child: Text(
+                  '취소',
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      isScrollControlled: true,
+    );
+  }
+
+  /// 채팅방 나가기 확인 다이얼로그
+  void _showExitChatConfirmation() {
+    Get.dialog(
+      AlertDialog(
+        title: Text(
+          '채팅방 나가기',
+          style: TextStyle(
+            fontSize: 18.sp,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        content: Text(
+          '정말로 이 채팅방을 나가시겠습니까?\n\n나가면 채팅 내역이 모두 삭제되며 복구할 수 없습니다.',
+          style: TextStyle(
+            fontSize: 14.sp,
+            color: AppColors.textSecondary,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text(
+              '취소',
+              style: TextStyle(
+                fontSize: 14.sp,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Get.back(); // 다이얼로그 닫기
+              exitChat();
+            },
+            child: Text(
+              '나가기',
+              style: TextStyle(
+                fontSize: 14.sp,
+                color: Colors.red,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 채팅방 나가기 실행
+  Future<void> exitChat() async {
+    if (currentChat.value == null) return;
+    
+    try {
+      final currentChatId = currentChat.value!.chatId;
+      final chatTitle = currentChat.value!.title;
+      
+      print('🚪 채팅방 나가기 시작 - ${chatTitle} (${currentChatId})');
+      
+      // 1. 관련 메시지들 삭제
+      print('📨 관련 메시지 삭제 중...');
+      final messageSnapshots = await _firestore.queryDocuments(
+        'messages',
+        field: 'chatId',
+        isEqualTo: currentChatId,
+      );
+      
+      for (final messageDoc in messageSnapshots.docs) {
+        await _firestore.deleteDocument('messages/${messageDoc.id}');
+      }
+      print('✅ 메시지 삭제 완료 - ${messageSnapshots.docs.length}개');
+      
+      // 2. 채팅방 삭제
+      print('💬 채팅방 삭제 중...');
+      await _firestore.deleteDocument('chats/$currentChatId');
+      print('✅ 채팅방 삭제 완료');
+      
+      // 3. 로컬 상태 초기화
+      currentChat.value = null;
+      chatId.value = '';
+      messages.clear();
+      
+      // 4. 채팅 목록 새로고침
+      await loadChatList();
+      
+      // 5. 채팅 목록 화면으로 이동
+      Get.back();
+      
+      Get.snackbar(
+        '완료',
+        '채팅방을 나갔습니다.',
+        backgroundColor: Colors.green.withOpacity(0.1),
+        colorText: Colors.green,
+      );
+      
+      print('✅ 채팅방 나가기 완료');
+      
+    } catch (e) {
+      print('❌ 채팅방 나가기 실패: $e');
+      Get.snackbar(
+        '오류',
+        '채팅방 나가기에 실패했습니다: $e',
+        backgroundColor: Colors.red.withOpacity(0.1),
+        colorText: Colors.red,
+      );
+    }
   }
 
   // ============================================================================
@@ -740,6 +1099,18 @@ class ChatController extends GetxController {
     final currentUserId = authController.userId ?? 'current-user';
     print('🚀 대화 시작 - 사용자: $userName, MBTI: $userMBTI, 현재 사용자 ID: $currentUserId');
     
+    // 자신과의 채팅방 생성 방지
+    if (userName == currentUserId || userName == '나' || userName == 'me') {
+      print('❌ 자신과의 채팅방 생성 방지: $userName');
+      Get.snackbar(
+        '오류',
+        '자신과의 채팅방은 생성할 수 없습니다.',
+        backgroundColor: Colors.red.withOpacity(0.1),
+        colorText: Colors.red,
+      );
+      return;
+    }
+    
     // Firestore에서 기존 채팅방 확인 (더 정확한 중복 체크)
     try {
       final existingSnapshots = await _firestore.queryDocuments(
@@ -824,6 +1195,85 @@ class ChatController extends GetxController {
       Get.snackbar(
         '오류',
         '채팅방 생성 중 오류가 발생했습니다.',
+        backgroundColor: Colors.red.withOpacity(0.1),
+        colorText: Colors.red,
+      );
+    }
+  }
+
+  /// 불필요한 채팅방 정리 (관리자 기능)
+  Future<void> cleanupUnnecessaryChats() async {
+    try {
+      print('🧹 불필요한 채팅방 정리 시작...');
+      
+      final myId = authController.userId ?? 'current-user';
+      
+      // 모든 채팅방 로드
+      final snapshots = await _firestore.queryDocuments('chats');
+      final allChats = snapshots.docs.map((s) => ChatModel.fromSnapshot(s)).toList();
+      
+      int deletedCount = 0;
+      
+      for (final chat in allChats) {
+        bool shouldDelete = false;
+        String reason = '';
+        
+        // 자신과의 채팅방
+        if (chat.participants.length == 1 && chat.participants.contains(myId)) {
+          shouldDelete = true;
+          reason = '자신과의 채팅방';
+        }
+        // 데모/테스트 채팅방
+        else if (chat.title == '개인 채팅' || 
+                 chat.title == 'TaeHyeon Kim' ||
+                 chat.title == '데이터1' ||
+                 chat.title.contains('데이터') ||
+                 chat.title.contains('테스트')) {
+          shouldDelete = true;
+          reason = '데모/테스트 채팅방';
+        }
+        
+        if (shouldDelete) {
+          try {
+            // 채팅방 삭제
+            await _firestore.deleteDocument('chats/${chat.chatId}');
+            
+            // 관련 메시지들도 삭제
+            final messageSnapshots = await _firestore.queryDocuments(
+              'messages',
+              field: 'chatId',
+              isEqualTo: chat.chatId,
+            );
+            
+            for (final messageDoc in messageSnapshots.docs) {
+              await _firestore.deleteDocument('messages/${messageDoc.id}');
+            }
+            
+            deletedCount++;
+            print('🗑️ 삭제됨: ${chat.title} - $reason');
+          } catch (e) {
+            print('❌ 삭제 실패: ${chat.title} - $e');
+          }
+        }
+      }
+      
+      print('✅ 불필요한 채팅방 정리 완료 - ${deletedCount}개 삭제됨');
+      
+      // 로컬 목록 새로고침
+      await loadChatList();
+      
+      Get.snackbar(
+        '정리 완료',
+        '불필요한 채팅방 ${deletedCount}개가 삭제되었습니다.',
+        backgroundColor: Colors.green.withOpacity(0.1),
+        colorText: Colors.green,
+      );
+      
+    } catch (e) {
+      print('❌ 불필요한 채팅방 정리 실패: $e');
+      Get.snackbar(
+        '오류',
+        '채팅방 정리에 실패했습니다: $e',
         backgroundColor: Colors.red.withOpacity(0.1),
         colorText: Colors.red,
       );

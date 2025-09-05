@@ -36,6 +36,7 @@ import 'package:typetalk/services/chat_invite_service.dart';
 import 'package:typetalk/services/notification_service.dart';
 
 import 'package:typetalk/services/ai_chat_service.dart';
+import 'package:typetalk/services/gemini_service.dart';
 import 'package:typetalk/controllers/auth_controller.dart';
 import 'package:typetalk/controllers/chat_controller.dart';
 import 'package:typetalk/middleware/auth_middleware.dart';
@@ -86,6 +87,7 @@ void main() async {
   Get.put(NotificationService()); // 통합 알림 서비스 등록
 
   Get.put(AIChatService()); // AI 채팅 서비스 등록
+  Get.put(GeminiService()); // Gemini AI 서비스 등록
   
   await Future.delayed(const Duration(milliseconds: 500)); // Firebase Auth 상태 로드 대기
   

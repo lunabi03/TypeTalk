@@ -122,14 +122,14 @@ class FindChatPartnerScreen extends StatelessWidget {
               // MBTI 선택
               Container(
                 width: double.infinity,
-                padding: EdgeInsets.all(20.w),
+                padding: EdgeInsets.all(12.w),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(16.r),
+                  borderRadius: BorderRadius.circular(12.r),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
+                      blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
                   ],
@@ -140,27 +140,33 @@ class FindChatPartnerScreen extends StatelessWidget {
                     Text(
                       '찾고 싶은 MBTI 유형:',
                       style: TextStyle(
-                        fontSize: 16.sp,
+                        fontSize: 14.sp,
                         fontWeight: FontWeight.w600,
                         color: Colors.grey[700],
                       ),
                     ),
-                    SizedBox(height: 16.h),
-                    SizedBox(
-                      height: 72.h,
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        children: [
-                          _buildMBTISelectionChip('ENFP', '열정적인', selectedMBTI),
-                          _buildMBTISelectionChip('INTJ', '전략적인', selectedMBTI),
-                          _buildMBTISelectionChip('ISFP', '예술적인', selectedMBTI),
-                          _buildMBTISelectionChip('ENTP', '혁신적인', selectedMBTI),
-                          _buildMBTISelectionChip('INFJ', '통찰력 있는', selectedMBTI),
-                          _buildMBTISelectionChip('ESTJ', '체계적인', selectedMBTI),
-                          _buildMBTISelectionChip('INFP', '이상주의적인', selectedMBTI),
-                          _buildMBTISelectionChip('ISTP', '실용적인', selectedMBTI),
-                        ],
-                      ),
+                    SizedBox(height: 8.h),
+                    Wrap(
+                      spacing: 6.w,
+                      runSpacing: 8.h,
+                      children: [
+                        _buildMBTISelectionChip('ENFP', selectedMBTI),
+                        _buildMBTISelectionChip('INTJ', selectedMBTI),
+                        _buildMBTISelectionChip('ISFP', selectedMBTI),
+                        _buildMBTISelectionChip('ENTP', selectedMBTI),
+                        _buildMBTISelectionChip('INFJ', selectedMBTI),
+                        _buildMBTISelectionChip('ESTJ', selectedMBTI),
+                        _buildMBTISelectionChip('INFP', selectedMBTI),
+                        _buildMBTISelectionChip('ISTP', selectedMBTI),
+                        _buildMBTISelectionChip('ENFJ', selectedMBTI),
+                        _buildMBTISelectionChip('ISTJ', selectedMBTI),
+                        _buildMBTISelectionChip('ESFP', selectedMBTI),
+                        _buildMBTISelectionChip('ENTJ', selectedMBTI),
+                        _buildMBTISelectionChip('ISFJ', selectedMBTI),
+                        _buildMBTISelectionChip('ESTP', selectedMBTI),
+                        _buildMBTISelectionChip('INTP', selectedMBTI),
+                        _buildMBTISelectionChip('ESFJ', selectedMBTI),
+                      ],
                     ),
                   ],
                 ),
@@ -298,6 +304,46 @@ class FindChatPartnerScreen extends StatelessWidget {
         {'name': 'moody_day', 'description': '손재주가 뛰어난 장인', 'bio': '헬로우', 'friendCount': 84, 'chatCount': 27},
         {'name': 'filmlover', 'description': '실용적인 해결사', 'bio': '', 'friendCount': 76, 'chatCount': 24},
         {'name': '새벽감성', 'description': '도전을 즐기는 모험가', 'bio': '안녕하세요', 'friendCount': 92, 'chatCount': 31},
+      ],
+      'ENFJ': [
+        {'name': '카리스마_리더', 'description': '타인을 이끄는 카리스마', 'bio': '안녕하세요', 'friendCount': 118, 'chatCount': 52},
+        {'name': '영감주는사람', 'description': '동기부여의 달인', 'bio': '반가워요', 'friendCount': 95, 'chatCount': 38},
+        {'name': '소통왕', 'description': '사람들과의 소통을 사랑', 'bio': '', 'friendCount': 142, 'chatCount': 61},
+      ],
+      'ISTJ': [
+        {'name': '신뢰할수있는', 'description': '책임감 넘치는 신뢰자', 'bio': '안녕', 'friendCount': 89, 'chatCount': 28},
+        {'name': '체계적인사람', 'description': '완벽한 계획의 실행자', 'bio': '하이', 'friendCount': 76, 'chatCount': 24},
+        {'name': '꼼꼼한관리자', 'description': '세심한 관리 전문가', 'bio': '반갑습니다', 'friendCount': 103, 'chatCount': 35},
+      ],
+      'ESFP': [
+        {'name': '자유로운영혼', 'description': '자유롭고 활발한 에너지', 'bio': 'ㅎㅇ', 'friendCount': 127, 'chatCount': 45},
+        {'name': '즐거운사람', 'description': '긍정적인 에너지의 소유자', 'bio': '', 'friendCount': 98, 'chatCount': 33},
+        {'name': '사교적인친구', 'description': '사람들과 어울리기를 좋아', 'bio': '헬로우', 'friendCount': 156, 'chatCount': 58},
+      ],
+      'ENTJ': [
+        {'name': '리더십_왕', 'description': '타고난 리더십의 소유자', 'bio': '안녕하세요', 'friendCount': 134, 'chatCount': 67},
+        {'name': '목표지향적', 'description': '명확한 목표를 향해 나아가는', 'bio': '반가워요', 'friendCount': 112, 'chatCount': 49},
+        {'name': '결단력있는', 'description': '빠른 판단과 실행력', 'bio': '', 'friendCount': 98, 'chatCount': 41},
+      ],
+      'ISFJ': [
+        {'name': '따뜻한마음', 'description': '타인을 배려하는 따뜻함', 'bio': '안녕', 'friendCount': 95, 'chatCount': 31},
+        {'name': '조용한지지자', 'description': '조용히 도움을 주는 사람', 'bio': '하이', 'friendCount': 78, 'chatCount': 26},
+        {'name': '헌신적인사람', 'description': '타인을 위해 헌신하는', 'bio': '반갑습니다', 'friendCount': 89, 'chatCount': 29},
+      ],
+      'ESTP': [
+        {'name': '활동적인모험가', 'description': '끊임없는 활동과 모험', 'bio': 'ㅎㅇ', 'friendCount': 118, 'chatCount': 42},
+        {'name': '에너지폭발', 'description': '넘치는 에너지의 소유자', 'bio': '', 'friendCount': 103, 'chatCount': 37},
+        {'name': '즉흥적인사람', 'description': '즉흥적이고 유연한 사고', 'bio': '헬로우', 'friendCount': 127, 'chatCount': 48},
+      ],
+      'INTP': [
+        {'name': '논리적사고자', 'description': '논리와 분석을 사랑하는', 'bio': '안녕하세요', 'friendCount': 76, 'chatCount': 23},
+        {'name': '호기심많은', 'description': '끊임없는 호기심과 탐구', 'bio': '반가워요', 'friendCount': 84, 'chatCount': 28},
+        {'name': '독립적사고자', 'description': '독립적이고 창의적인 사고', 'bio': '', 'friendCount': 67, 'chatCount': 21},
+      ],
+      'ESFJ': [
+        {'name': '사교적인조화자', 'description': '사교적이고 조화를 추구', 'bio': '안녕', 'friendCount': 142, 'chatCount': 55},
+        {'name': '따뜻한관리자', 'description': '따뜻한 마음의 관리자', 'bio': '하이', 'friendCount': 118, 'chatCount': 43},
+        {'name': '협력적인사람', 'description': '협력과 소통을 중시', 'bio': '반갑습니다', 'friendCount': 127, 'chatCount': 47},
       ],
     };
     
@@ -937,20 +983,20 @@ class FindChatPartnerScreen extends StatelessWidget {
   }
 
   /// MBTI 선택 칩 위젯
-  Widget _buildMBTISelectionChip(String mbti, String description, RxString selectedMBTI) {
-    final isSelected = selectedMBTI.value == mbti;
-    
-    return Container(
-      margin: EdgeInsets.only(right: 12.w),
-      child: GestureDetector(
+  Widget _buildMBTISelectionChip(String mbti, RxString selectedMBTI) {
+    return Obx(() {
+      final isSelected = selectedMBTI.value == mbti;
+      
+      return GestureDetector(
         onTap: () => selectedMBTI.value = mbti,
         child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+          width: 50.w,  // 고정 너비
+          height: 32.h, // 고정 높이
           decoration: BoxDecoration(
             color: isSelected 
                 ? const Color(0xFF9C27B0) 
                 : Colors.grey[200],
-            borderRadius: BorderRadius.circular(20.r),
+            borderRadius: BorderRadius.circular(8.r),
             border: Border.all(
               color: isSelected 
                   ? const Color(0xFF9C27B0) 
@@ -958,29 +1004,19 @@ class FindChatPartnerScreen extends StatelessWidget {
               width: 1,
             ),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                mbti,
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w600,
-                  color: isSelected ? Colors.white : Colors.grey[700],
-                ),
+          child: Center(
+            child: Text(
+              mbti,
+              style: TextStyle(
+                fontSize: 11.sp,
+                fontWeight: FontWeight.w600,
+                color: isSelected ? Colors.white : Colors.grey[700],
               ),
-              Text(
-                description,
-                style: TextStyle(
-                  fontSize: 12.sp,
-                  color: isSelected ? Colors.white70 : Colors.grey[600],
-                ),
-              ),
-            ],
+            ),
           ),
         ),
-      ),
-    );
+      );
+    });
   }
 
 

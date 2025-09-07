@@ -101,6 +101,12 @@ class GeminiResponse {
       // 불필요한 접두사 제거
       text = text.replaceAll(RegExp(r'^(응답|답변|대답|말씀|이야기):\s*', multiLine: true), '');
       
+      // 이름 언급 제거 (다연님, 다연이, 저는 다연 등)
+      text = text.replaceAll(RegExp(r'다연님|다연이|저는 다연|다연은|다연이에요|다연입니다', multiLine: true), '');
+      
+      // 존칭 제거 (님, 씨 등)
+      text = text.replaceAll(RegExp(r'님|씨', multiLine: true), '');
+      
       text = text.trim();
       
       print('✅ 텍스트 추출 성공: ${text.substring(0, text.length > 100 ? 100 : text.length)}...');

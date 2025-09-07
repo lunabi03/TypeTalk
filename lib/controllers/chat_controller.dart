@@ -147,7 +147,7 @@ class ChatController extends GetxController {
     
     // 스크롤을 맨 아래로 (약간의 지연을 두어 UI 업데이트 후 실행)
     Future.delayed(const Duration(milliseconds: 100), () {
-      _scrollToBottom();
+    _scrollToBottom();
     });
   }
 
@@ -383,7 +383,7 @@ class ChatController extends GetxController {
 
       final now = DateTime.now();
       print('📤 메시지 생성 - 시간: ${now.toIso8601String()}, 내용: $content');
-      
+
       final newMessage = MessageModel(
         messageId: 'msg-${now.millisecondsSinceEpoch}-${now.microsecond}',
         chatId: chatId.value,
@@ -455,7 +455,26 @@ class ChatController extends GetxController {
 
       // 시뮬레이션 사용자와의 채팅인 경우 AI 자동 응답 생성
       if (currentChat.value?.participants.any((p) => p.startsWith('simulated_')) == true) {
-        await _generateAIResponse(content, currentChat.value!);
+        print('🤖 AI 응답 생성 시작 - 채팅방 제목: ${currentChat.value!.title}');
+        // 채팅방 제목에서 MBTI 추출
+        String? extractedMBTI;
+        if (currentChat.value!.title.contains(' ')) {
+          final titleParts = currentChat.value!.title.split(' ');
+          print('🔍 sendMessage에서 제목 분할: $titleParts');
+          if (titleParts.length > 1) {
+            final mbti = titleParts.last;
+            print('🔍 sendMessage에서 추출한 MBTI: $mbti');
+            if (mbti.length == 4 && mbti == mbti.toUpperCase()) {
+              extractedMBTI = mbti;
+              print('✅ sendMessage에서 MBTI 추출 성공: $extractedMBTI');
+            } else {
+              print('❌ sendMessage에서 MBTI 형식 검증 실패: $mbti');
+            }
+          }
+        } else {
+          print('❌ 채팅방 제목에 공백이 없음: ${currentChat.value!.title}');
+        }
+        await _generateAIResponse(content, currentChat.value!, userMBTI: extractedMBTI);
       }
 
     } catch (e) {
@@ -476,7 +495,7 @@ class ChatController extends GetxController {
 
 
   /// AI 자동 응답 생성
-  Future<void> _generateAIResponse(String userMessage, ChatModel chat) async {
+  Future<void> _generateAIResponse(String userMessage, ChatModel chat, {String? userMBTI}) async {
     try {
       print('🤖 AI 응답 생성 시작 - 사용자 메시지: $userMessage');
       
@@ -525,12 +544,34 @@ class ChatController extends GetxController {
         final now = DateTime.now();
         print('🤖 AI 메시지 생성 - 시간: ${now.toIso8601String()}, 내용: $response');
         
+        // MBTI 결정 (파라미터로 전달받은 값 우선, 없으면 채팅방 제목에서 추출)
+        String finalUserMBTI = userMBTI ?? 'ENFP'; // 기본값
+        print('🔍 파라미터로 전달받은 MBTI: $userMBTI');
+        print('🔍 채팅방 제목: ${chat.title}');
+        
+        if (finalUserMBTI == 'ENFP' && chat.title.contains(' ')) {
+          final titleParts = chat.title.split(' ');
+          print('🔍 제목 분할 결과: $titleParts');
+          if (titleParts.length > 1) {
+            final extractedMBTI = titleParts.last;
+            print('🔍 추출된 MBTI: $extractedMBTI');
+            // MBTI 형식 검증 (4글자 대문자)
+            if (extractedMBTI.length == 4 && extractedMBTI == extractedMBTI.toUpperCase()) {
+              finalUserMBTI = extractedMBTI;
+              print('✅ MBTI 추출 성공: $finalUserMBTI');
+            } else {
+              print('❌ MBTI 형식 검증 실패: $extractedMBTI');
+            }
+          }
+        }
+        print('🔍 최종 사용할 MBTI: $finalUserMBTI');
+        
         final aiMessage = MessageModel(
           messageId: 'ai-${now.millisecondsSinceEpoch}-${now.microsecond}',
           chatId: chat.chatId,
           senderId: simulatedUserId,
           senderName: userName,
-          senderMBTI: 'ENFP', // 기본값, 실제로는 사용자 프로필에서 가져와야 함
+          senderMBTI: finalUserMBTI, // 결정된 MBTI 사용
           content: response,
           type: MessageType.text.value,
           createdAt: now,
@@ -1165,7 +1206,7 @@ class ChatController extends GetxController {
       final existingChats = existingSnapshots.docs
           .map((s) => ChatModel.fromSnapshot(s))
           .where((chat) => 
-            chat.title == userName && 
+            (chat.title == userName || chat.title == '$userName $userMBTI' || chat.title.startsWith('$userName ')) && 
             chat.type == 'private' &&
             chat.participants.contains('simulated_$userName')
           )
@@ -1176,7 +1217,39 @@ class ChatController extends GetxController {
         existingChats.sort((a, b) => b.stats.lastActivity.compareTo(a.stats.lastActivity));
         final existingChat = existingChats.first;
         
-        print('📋 기존 대화 발견 - 채팅방 ID: ${existingChat.chatId}');
+        print('📋 기존 대화 발견 - 채팅방 ID: ${existingChat.chatId}, 제목: ${existingChat.title}');
+        
+        // 기존 채팅방 제목에 MBTI가 없으면 업데이트
+        if (!existingChat.title.contains(' ')) {
+          print('🔄 채팅방 제목 업데이트 중...');
+          try {
+            await _firestore.updateDocument('chats/${existingChat.chatId}', {
+              'title': '$userName $userMBTI',
+            });
+            print('✅ 채팅방 제목 업데이트 완료: $userName $userMBTI');
+          } catch (e) {
+            print('⚠️ 채팅방 제목 업데이트 실패: $e');
+          }
+        } else {
+          // 기존 채팅방 제목에 MBTI가 있지만 다른 MBTI인 경우 새로 생성
+          final titleParts = existingChat.title.split(' ');
+          if (titleParts.length > 1 && titleParts.last != userMBTI) {
+            print('🔄 기존 채팅방의 MBTI가 다름. 새 채팅방 생성: ${titleParts.last} -> $userMBTI');
+            // 기존 채팅방을 삭제하고 새로 생성
+            try {
+              await _firestore.deleteDocument('chats/${existingChat.chatId}');
+              print('🗑️ 기존 채팅방 삭제 완료');
+            } catch (e) {
+              print('⚠️ 기존 채팅방 삭제 실패: $e');
+            }
+            // 새 채팅방 생성을 위해 계속 진행
+          } else {
+            // 기존 대화가 있으면 해당 대화방 열기
+            await openChat(existingChat);
+            return;
+          }
+        }
+        
         // 기존 대화가 있으면 해당 대화방 열기
         await openChat(existingChat);
         return;
@@ -1187,6 +1260,7 @@ class ChatController extends GetxController {
     }
     
     print('🆕 새로운 채팅방 생성 중...');
+    print('📝 채팅방 제목: $userName $userMBTI');
     
     // 새로운 채팅방 생성
     final chatId = 'user_${DateTime.now().millisecondsSinceEpoch}';
@@ -1194,7 +1268,7 @@ class ChatController extends GetxController {
     final newChat = ChatModel(
       chatId: chatId,
       type: 'private',
-      title: userName,
+      title: '$userName $userMBTI', // 사용자 이름과 MBTI를 함께 저장
       createdBy: currentUserId,
       createdAt: now,
       updatedAt: now,

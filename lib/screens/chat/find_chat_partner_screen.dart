@@ -34,14 +34,7 @@ class FindChatPartnerScreen extends StatelessWidget {
           icon: Icon(Icons.arrow_back, color: Colors.black87),
           onPressed: () => Get.back(),
         ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.search, color: Colors.black87),
-            onPressed: () {
-              // TODO: 전체 검색 기능 구현
-            },
-          ),
-        ],
+        actions: const [],
       ),
       body: _buildMBTICompatibilityTab(),
     );
@@ -54,7 +47,6 @@ class FindChatPartnerScreen extends StatelessWidget {
   /// MBTI 궁합 기반 추천 탭
   Widget _buildMBTICompatibilityTab() {
     final selectedMBTI = 'ENFP'.obs; // 기본값
-    final searchQuery = ''.obs;
     final geminiService = Get.put(GeminiService());
     final authController = Get.find<AuthController>();
     
@@ -172,33 +164,7 @@ class FindChatPartnerScreen extends StatelessWidget {
                 ),
               ),
               SizedBox(height: 20.h),
-              // 검색 바
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 16.w),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: TextField(
-                  decoration: InputDecoration(
-                    hintText: '이름, 관심사로 검색',
-                    border: InputBorder.none,
-                    icon: Icon(Icons.search, color: Colors.grey[600]),
-                    suffixIcon: Icon(Icons.filter_list, color: Colors.grey[600]),
-                  ),
-                  onChanged: (value) {
-                    searchQuery.value = value;
-                  },
-                ),
-              ),
-              SizedBox(height: 20.h),
+              // 검색 기능 제거됨
             ],
           ),
         ),
@@ -664,7 +630,7 @@ class FindChatPartnerScreen extends StatelessWidget {
                             _openFullScreenAIChat(user.mbtiType ?? 'ENFP', user.name);
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF9C27B0),
+                            backgroundColor: _getMBTIColor(user.mbtiType),
                             foregroundColor: Colors.white,
                             elevation: 0,
                             shape: RoundedRectangleBorder(
@@ -1214,7 +1180,7 @@ class FindChatPartnerScreen extends StatelessWidget {
                   Get.toNamed(AppRoutes.chat);
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF9C27B0),
+                  backgroundColor: _getMBTIColor(user.mbtiType),
                   foregroundColor: Colors.white,
                   padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
                   shape: RoundedRectangleBorder(
@@ -1262,21 +1228,27 @@ class FindChatPartnerScreen extends StatelessWidget {
     return 50 + (userMBTI.hashCode % 36);
   }
 
-  /// MBTI 유형별 색상 반환
+  /// MBTI 유형별 색상 반환 (고채도 팔레트)
   Color _getMBTIColor(String? mbtiType) {
     if (mbtiType == null) return Colors.grey;
-    
-    final mbtiColors = {
-      'ENFP': const Color(0xFFFF6B6B), // 빨간색 계열
-      'INTJ': const Color(0xFF4ECDC4), // 청록색 계열
-      'ISFP': const Color(0xFF45B7D1), // 파란색 계열
-      'ENTP': const Color(0xFF96CEB4), // 초록색 계열
-      'INFJ': const Color(0xFFFECA57), // 노란색 계열
-      'ESTJ': const Color(0xFFDDA0DD), // 보라색 계열
-      'INFP': const Color(0xFFFFB6C1), // 분홍색 계열
-      'ISTP': const Color(0xFFDEB887), // 갈색 계열
+    const Map<String, Color> mbtiColors = {
+      'ENFP': Color(0xFFFF6B6B),
+      'ENFJ': Color(0xFFFF8C42),
+      'ENTP': Color(0xFF00C2FF),
+      'ENTJ': Color(0xFF7B61FF),
+      'ESFP': Color(0xFFFF4D94),
+      'ESFJ': Color(0xFF20C997),
+      'ESTP': Color(0xFFFF6F00),
+      'ESTJ': Color(0xFF2F80ED),
+      'INFP': Color(0xFFFFA8A8),
+      'INFJ': Color(0xFF6FCF97),
+      'INTP': Color(0xFF56CCF2),
+      'INTJ': Color(0xFF00B894),
+      'ISFP': Color(0xFF45B7D1),
+      'ISFJ': Color(0xFFFF9F1C),
+      'ISTP': Color(0xFFEB5757),
+      'ISTJ': Color(0xFF6D4C41),
     };
-    
     return mbtiColors[mbtiType] ?? Colors.grey;
   }
 

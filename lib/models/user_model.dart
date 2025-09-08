@@ -97,6 +97,7 @@ class UserModel {
   final String? profileImageUrl;
   final String? bio;
   final int? age;
+  final String? gender;
   final String? loginProvider;
   final double? latitude;
   final double? longitude;
@@ -116,6 +117,7 @@ class UserModel {
     this.profileImageUrl,
     this.bio,
     this.age,
+    this.gender,
     this.loginProvider,
     this.latitude,
     this.longitude,
@@ -139,6 +141,7 @@ class UserModel {
       'profileImageUrl': profileImageUrl,
       'bio': bio,
       'age': age,
+      'gender': gender,
       'loginProvider': loginProvider,
       'latitude': latitude,
       'longitude': longitude,
@@ -150,6 +153,14 @@ class UserModel {
 
   // Firestore 문서에서 생성
   factory UserModel.fromMap(Map<String, dynamic> map) {
+    // 나이 필드 안전 변환 (int | double | String 모두 허용)
+    int? _parseAge(dynamic value) {
+      if (value == null) return null;
+      if (value is int) return value;
+      if (value is double) return value.toInt();
+      if (value is String) return int.tryParse(value);
+      return null;
+    }
     return UserModel(
       uid: map['uid'] ?? '',
       email: map['email'] ?? '',
@@ -167,7 +178,8 @@ class UserModel {
           : null,
       profileImageUrl: map['profileImageUrl'],
       bio: map['bio'],
-      age: map['age'],
+      age: _parseAge(map['age']),
+      gender: map['gender'],
       loginProvider: map['loginProvider'],
       latitude: map['latitude']?.toDouble(),
       longitude: map['longitude']?.toDouble(),
@@ -201,6 +213,8 @@ class UserModel {
     DateTime? lastMBTITestDate,
     String? profileImageUrl,
     String? bio,
+    int? age,
+    String? gender,
     String? loginProvider,
     double? latitude,
     double? longitude,
@@ -219,6 +233,8 @@ class UserModel {
       lastMBTITestDate: lastMBTITestDate ?? this.lastMBTITestDate,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
       bio: bio ?? this.bio,
+      age: age ?? this.age,
+      gender: gender ?? this.gender,
       loginProvider: loginProvider ?? this.loginProvider,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,

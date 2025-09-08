@@ -144,6 +144,8 @@ class AuthController extends GetxController {
         print('userData.mbtiType: ${userData.mbtiType}');
         print('userData.mbtiType 타입: ${userData.mbtiType.runtimeType}');
         print('userData.mbtiTestCount: ${userData.mbtiTestCount}');
+        print('userData.age: ${userData.age}');
+        print('userData.gender: ${userData.gender}');
         print('userData.toMap(): ${userData.toMap()}');
         print('=======================');
         

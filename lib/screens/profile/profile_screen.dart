@@ -23,7 +23,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     authController = Get.find<AuthController>();
-    profileController = Get.put(ProfileController());
+    // 이미 등록된 ProfileController가 있으면 재사용하여 인스턴스 중복을 방지
+    profileController = Get.isRegistered<ProfileController>()
+        ? Get.find<ProfileController>()
+        : Get.put(ProfileController());
     
     // 화면 초기화 시 MBTI 정보 강제 새로고침
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -209,6 +212,67 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               height: 1.3,
                             ),
                           )),
+                          SizedBox(height: 8.h),
+                          
+                          // Age and Gender Display
+                          Obx(() {
+                            final userModel = authController.userModel.value;
+                            final map = authController.userProfile;
+                            final controllerUser = profileController.currentUser.value;
+                            // 나이/성별을 "가장 최근 저장(맵) → 모델 → 로컬" 순으로 폴백
+                            final int? age = (map['age'] as int?) ?? userModel?.age ?? controllerUser?.age;
+                            final String? gender = (map['gender'] as String?) ?? userModel?.gender ?? controllerUser?.gender;
+                            
+                            // 디버그 로그 추가
+                            print('=== 프로필 화면 나이/성별 디버그 ===');
+                            print('userModel: $userModel');
+                            print('age: $age');
+                            print('gender: $gender');
+                            print('userModel?.age: ${userModel?.age}');
+                            print('userModel?.gender: ${userModel?.gender}');
+                            print('userModel?.toMap(): ${userModel?.toMap()}');
+                            print('================================');
+                            
+                            // 나이와 성별을 각각 별도로 표시
+                            List<Widget> infoWidgets = [];
+                            
+                            // 나이 표시 (null이 아니고 0보다 큰 경우)
+                            if (age != null && age > 0) {
+                              infoWidgets.add(
+                                Text(
+                                  '나이: ${age}세',
+                                  style: TextStyle(
+                                    fontSize: 13.sp,
+                                    color: const Color(0xFF6C757D),
+                                    height: 1.3,
+                                  ),
+                                ),
+                              );
+                            }
+                            
+                            // 성별 표시 (null이 아니고 빈 문자열이 아닌 경우)
+                            if (gender != null && gender.isNotEmpty) {
+                              infoWidgets.add(
+                                Text(
+                                  '성별: $gender',
+                                  style: TextStyle(
+                                    fontSize: 13.sp,
+                                    color: const Color(0xFF6C757D),
+                                    height: 1.3,
+                                  ),
+                                ),
+                              );
+                            }
+                            
+                            if (infoWidgets.isNotEmpty) {
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: infoWidgets,
+                              );
+                            }
+                            
+                            return const SizedBox.shrink();
+                          }),
                           SizedBox(height: 8.h),
                           
                           // Bio (소개글)

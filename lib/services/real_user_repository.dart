@@ -466,6 +466,17 @@ class RealUserRepository extends GetxService {
       }
     }
     
+    // age 타입 강제 보정 (서버에 문자열/더블로 저장된 경우)
+    if (data.containsKey('age')) {
+      final dynamic rawAge = data['age'];
+      if (rawAge is double) {
+        data['age'] = rawAge.toInt();
+      } else if (rawAge is String) {
+        final parsed = int.tryParse(rawAge);
+        data['age'] = parsed;
+      }
+    }
+
     final userModel = UserModel.fromMap(data);
     print('변환된 UserModel.mbtiType: ${userModel.mbtiType}');
     print('변환된 UserModel.mbtiTestCount: ${userModel.mbtiTestCount}');

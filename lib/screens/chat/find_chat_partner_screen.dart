@@ -266,84 +266,84 @@ class FindChatPartnerScreen extends StatelessWidget {
     // MBTI별 다양한 닉네임과 프로필 데이터
     final userProfiles = {
       'ENFP': [
-        {'name': '민서_98', 'description': '새로운 경험을 사랑하는 모험가', 'bio': 'ㅎㅇ', 'friendCount': 127, 'chatCount': 45},
-        {'name': '준호93', 'description': '아이디어가 넘치는 발명가', 'bio': '', 'friendCount': 89, 'chatCount': 32},
-        {'name': '다연이에요', 'description': '활력이 넘치는 소통왕', 'bio': '반가워요~', 'friendCount': 156, 'chatCount': 67},
+        {'name': '민서_98', 'description': '새로운 경험을 사랑하는 모험가', 'bio': 'ㅎㅇ', 'friendCount': 127, 'chatCount': 45, 'age': 26, 'gender': '여성'},
+        {'name': '준호93', 'description': '아이디어가 넘치는 발명가', 'bio': '', 'friendCount': 89, 'chatCount': 32, 'age': 31, 'gender': '남성'},
+        {'name': '다연이에요', 'description': '활력이 넘치는 소통왕', 'bio': '반가워요~', 'friendCount': 156, 'chatCount': 67, 'age': 24, 'gender': '여성'},
       ],
       'INTJ': [
-        {'name': '진우_k', 'description': '체계적으로 계획하는 리더', 'bio': '안녕하세요', 'friendCount': 78, 'chatCount': 23},
-        {'name': 'yuna.j', 'description': '논리적 사고의 전문가', 'bio': '', 'friendCount': 92, 'chatCount': 34},
-        {'name': 'warmguy', 'description': '장기적 비전을 가진 설계자', 'bio': '하이', 'friendCount': 65, 'chatCount': 19},
+        {'name': '진우_k', 'description': '체계적으로 계획하는 리더', 'bio': '안녕하세요', 'friendCount': 78, 'chatCount': 23, 'age': 29, 'gender': '남성'},
+        {'name': 'yuna.j', 'description': '논리적 사고의 전문가', 'bio': '', 'friendCount': 92, 'chatCount': 34, 'age': 27, 'gender': '여성'},
+        {'name': 'warmguy', 'description': '장기적 비전을 가진 설계자', 'bio': '하이', 'friendCount': 65, 'chatCount': 19, 'age': 33, 'gender': '남성'},
       ],
       'ISFP': [
-        {'name': '하늘조각', 'description': '감성적인 창작자', 'bio': '안녕', 'friendCount': 103, 'chatCount': 28},
-        {'name': '민혁__', 'description': '개성 넘치는 독립가', 'bio': '', 'friendCount': 87, 'chatCount': 31},
-        {'name': '소소한행복', 'description': '따뜻한 마음의 소유자', 'bio': '반갑습니다', 'friendCount': 134, 'chatCount': 42},
+        {'name': '하늘조각', 'description': '감성적인 창작자', 'bio': '안녕', 'friendCount': 103, 'chatCount': 28, 'age': 25, 'gender': '여성'},
+        {'name': '민혁__', 'description': '개성 넘치는 독립가', 'bio': '', 'friendCount': 87, 'chatCount': 31, 'age': 28, 'gender': '남성'},
+        {'name': '소소한행복', 'description': '따뜻한 마음의 소유자', 'bio': '반갑습니다', 'friendCount': 134, 'chatCount': 42, 'age': 26, 'gender': '여성'},
       ],
       'ENTP': [
-        {'name': 'coffee_addict', 'description': '새로운 아이디어의 창조자', 'bio': '헬로', 'friendCount': 145, 'chatCount': 58},
-        {'name': 'jay.p', 'description': '논리적 토론을 즐기는 사상가', 'bio': '', 'friendCount': 98, 'chatCount': 37},
-        {'name': '도시산책러', 'description': '끊임없는 변화를 추구하는 혁신가', 'bio': '안녕하세요', 'friendCount': 112, 'chatCount': 44},
+        {'name': 'coffee_addict', 'description': '새로운 아이디어의 창조자', 'bio': '헬로', 'friendCount': 145, 'chatCount': 58, 'age': 30, 'gender': '남성'},
+        {'name': 'jay.p', 'description': '논리적 토론을 즐기는 사상가', 'bio': '', 'friendCount': 98, 'chatCount': 37, 'age': 27, 'gender': '남성'},
+        {'name': '도시산책러', 'description': '끊임없는 변화를 추구하는 혁신가', 'bio': '안녕하세요', 'friendCount': 112, 'chatCount': 44, 'age': 29, 'gender': '여성'},
       ],
       'INFJ': [
-        {'name': '바람결', 'description': '깊은 통찰력을 가진 조언자', 'bio': '반가워요', 'friendCount': 76, 'chatCount': 25},
-        {'name': '여름밤', 'description': '타인의 마음을 이해하는 공감자', 'bio': '', 'friendCount': 89, 'chatCount': 33},
-        {'name': 'moody_day', 'description': '미래를 내다보는 비전가', 'bio': 'ㅎㅇ', 'friendCount': 67, 'chatCount': 21},
+        {'name': '바람결', 'description': '깊은 통찰력을 가진 조언자', 'bio': '반가워요', 'friendCount': 76, 'chatCount': 25, 'age': 28, 'gender': '여성'},
+        {'name': '여름밤', 'description': '타인의 마음을 이해하는 공감자', 'bio': '', 'friendCount': 89, 'chatCount': 33, 'age': 25, 'gender': '여성'},
+        {'name': 'moody_day', 'description': '미래를 내다보는 비전가', 'bio': 'ㅎㅇ', 'friendCount': 67, 'chatCount': 21, 'age': 31, 'gender': '남성'},
       ],
       'ESTJ': [
-        {'name': 'hello.sun', 'description': '체계적인 조직 관리자', 'bio': '안녕하세요', 'friendCount': 123, 'chatCount': 41},
-        {'name': 'filmlover', 'description': '책임감 넘치는 리더', 'bio': '', 'friendCount': 98, 'chatCount': 35},
-        {'name': '새벽감성', 'description': '효율적인 실행 전문가', 'bio': '하이요', 'friendCount': 87, 'chatCount': 29},
+        {'name': 'hello.sun', 'description': '체계적인 조직 관리자', 'bio': '안녕하세요', 'friendCount': 123, 'chatCount': 41, 'age': 32, 'gender': '남성'},
+        {'name': 'filmlover', 'description': '책임감 넘치는 리더', 'bio': '', 'friendCount': 98, 'chatCount': 35, 'age': 28, 'gender': '여성'},
+        {'name': '새벽감성', 'description': '효율적인 실행 전문가', 'bio': '하이요', 'friendCount': 87, 'chatCount': 29, 'age': 30, 'gender': '남성'},
       ],
       'INFP': [
-        {'name': 'mellow_', 'description': '순수한 마음의 이상주의자', 'bio': '안녕', 'friendCount': 95, 'chatCount': 26},
-        {'name': '하루커피☕', 'description': '깊은 감성을 가진 예술가', 'bio': '', 'friendCount': 78, 'chatCount': 22},
-        {'name': 'luna_', 'description': '조화를 추구하는 평화주의자', 'bio': '반갑습니다', 'friendCount': 112, 'chatCount': 38},
+        {'name': 'mellow_', 'description': '순수한 마음의 이상주의자', 'bio': '안녕', 'friendCount': 95, 'chatCount': 26, 'age': 24, 'gender': '여성'},
+        {'name': '하루커피☕', 'description': '깊은 감성을 가진 예술가', 'bio': '', 'friendCount': 78, 'chatCount': 22, 'age': 26, 'gender': '여성'},
+        {'name': 'luna_', 'description': '조화를 추구하는 평화주의자', 'bio': '반갑습니다', 'friendCount': 112, 'chatCount': 38, 'age': 27, 'gender': '여성'},
       ],
       'ISTP': [
-        {'name': 'moody_day', 'description': '손재주가 뛰어난 장인', 'bio': '헬로우', 'friendCount': 84, 'chatCount': 27},
-        {'name': 'filmlover', 'description': '실용적인 해결사', 'bio': '', 'friendCount': 76, 'chatCount': 24},
-        {'name': '새벽감성', 'description': '도전을 즐기는 모험가', 'bio': '안녕하세요', 'friendCount': 92, 'chatCount': 31},
+        {'name': 'moody_day', 'description': '손재주가 뛰어난 장인', 'bio': '헬로우', 'friendCount': 84, 'chatCount': 27, 'age': 29, 'gender': '남성'},
+        {'name': 'filmlover', 'description': '실용적인 해결사', 'bio': '', 'friendCount': 76, 'chatCount': 24, 'age': 31, 'gender': '남성'},
+        {'name': '새벽감성', 'description': '도전을 즐기는 모험가', 'bio': '안녕하세요', 'friendCount': 92, 'chatCount': 31, 'age': 26, 'gender': '남성'},
       ],
       'ENFJ': [
-        {'name': '카리스마_리더', 'description': '타인을 이끄는 카리스마', 'bio': '안녕하세요', 'friendCount': 118, 'chatCount': 52},
-        {'name': '영감주는사람', 'description': '동기부여의 달인', 'bio': '반가워요', 'friendCount': 95, 'chatCount': 38},
-        {'name': '소통왕', 'description': '사람들과의 소통을 사랑', 'bio': '', 'friendCount': 142, 'chatCount': 61},
+        {'name': '카리스마_리더', 'description': '타인을 이끄는 카리스마', 'bio': '안녕하세요', 'friendCount': 118, 'chatCount': 52, 'age': 30, 'gender': '남성'},
+        {'name': '영감주는사람', 'description': '동기부여의 달인', 'bio': '반가워요', 'friendCount': 95, 'chatCount': 38, 'age': 28, 'gender': '여성'},
+        {'name': '소통왕', 'description': '사람들과의 소통을 사랑', 'bio': '', 'friendCount': 142, 'chatCount': 61, 'age': 25, 'gender': '여성'},
       ],
       'ISTJ': [
-        {'name': '신뢰할수있는', 'description': '책임감 넘치는 신뢰자', 'bio': '안녕', 'friendCount': 89, 'chatCount': 28},
-        {'name': '체계적인사람', 'description': '완벽한 계획의 실행자', 'bio': '하이', 'friendCount': 76, 'chatCount': 24},
-        {'name': '꼼꼼한관리자', 'description': '세심한 관리 전문가', 'bio': '반갑습니다', 'friendCount': 103, 'chatCount': 35},
+        {'name': '신뢰할수있는', 'description': '책임감 넘치는 신뢰자', 'bio': '안녕', 'friendCount': 89, 'chatCount': 28, 'age': 33, 'gender': '남성'},
+        {'name': '체계적인사람', 'description': '완벽한 계획의 실행자', 'bio': '하이', 'friendCount': 76, 'chatCount': 24, 'age': 29, 'gender': '남성'},
+        {'name': '꼼꼼한관리자', 'description': '세심한 관리 전문가', 'bio': '반갑습니다', 'friendCount': 103, 'chatCount': 35, 'age': 31, 'gender': '여성'},
       ],
       'ESFP': [
-        {'name': '자유로운영혼', 'description': '자유롭고 활발한 에너지', 'bio': 'ㅎㅇ', 'friendCount': 127, 'chatCount': 45},
-        {'name': '즐거운사람', 'description': '긍정적인 에너지의 소유자', 'bio': '', 'friendCount': 98, 'chatCount': 33},
-        {'name': '사교적인친구', 'description': '사람들과 어울리기를 좋아', 'bio': '헬로우', 'friendCount': 156, 'chatCount': 58},
+        {'name': '자유로운영혼', 'description': '자유롭고 활발한 에너지', 'bio': 'ㅎㅇ', 'friendCount': 127, 'chatCount': 45, 'age': 23, 'gender': '여성'},
+        {'name': '즐거운사람', 'description': '긍정적인 에너지의 소유자', 'bio': '', 'friendCount': 98, 'chatCount': 33, 'age': 26, 'gender': '여성'},
+        {'name': '사교적인친구', 'description': '사람들과 어울리기를 좋아', 'bio': '헬로우', 'friendCount': 156, 'chatCount': 58, 'age': 24, 'gender': '남성'},
       ],
       'ENTJ': [
-        {'name': '리더십_왕', 'description': '타고난 리더십의 소유자', 'bio': '안녕하세요', 'friendCount': 134, 'chatCount': 67},
-        {'name': '목표지향적', 'description': '명확한 목표를 향해 나아가는', 'bio': '반가워요', 'friendCount': 112, 'chatCount': 49},
-        {'name': '결단력있는', 'description': '빠른 판단과 실행력', 'bio': '', 'friendCount': 98, 'chatCount': 41},
+        {'name': '리더십_왕', 'description': '타고난 리더십의 소유자', 'bio': '안녕하세요', 'friendCount': 134, 'chatCount': 67, 'age': 34, 'gender': '남성'},
+        {'name': '목표지향적', 'description': '명확한 목표를 향해 나아가는', 'bio': '반가워요', 'friendCount': 112, 'chatCount': 49, 'age': 30, 'gender': '남성'},
+        {'name': '결단력있는', 'description': '빠른 판단과 실행력', 'bio': '', 'friendCount': 98, 'chatCount': 41, 'age': 32, 'gender': '여성'},
       ],
       'ISFJ': [
-        {'name': '따뜻한마음', 'description': '타인을 배려하는 따뜻함', 'bio': '안녕', 'friendCount': 95, 'chatCount': 31},
-        {'name': '조용한지지자', 'description': '조용히 도움을 주는 사람', 'bio': '하이', 'friendCount': 78, 'chatCount': 26},
-        {'name': '헌신적인사람', 'description': '타인을 위해 헌신하는', 'bio': '반갑습니다', 'friendCount': 89, 'chatCount': 29},
+        {'name': '따뜻한마음', 'description': '타인을 배려하는 따뜻함', 'bio': '안녕', 'friendCount': 95, 'chatCount': 31, 'age': 27, 'gender': '여성'},
+        {'name': '조용한지지자', 'description': '조용히 도움을 주는 사람', 'bio': '하이', 'friendCount': 78, 'chatCount': 26, 'age': 25, 'gender': '여성'},
+        {'name': '헌신적인사람', 'description': '타인을 위해 헌신하는', 'bio': '반갑습니다', 'friendCount': 89, 'chatCount': 29, 'age': 28, 'gender': '남성'},
       ],
       'ESTP': [
-        {'name': '활동적인모험가', 'description': '끊임없는 활동과 모험', 'bio': 'ㅎㅇ', 'friendCount': 118, 'chatCount': 42},
-        {'name': '에너지폭발', 'description': '넘치는 에너지의 소유자', 'bio': '', 'friendCount': 103, 'chatCount': 37},
-        {'name': '즉흥적인사람', 'description': '즉흥적이고 유연한 사고', 'bio': '헬로우', 'friendCount': 127, 'chatCount': 48},
+        {'name': '활동적인모험가', 'description': '끊임없는 활동과 모험', 'bio': 'ㅎㅇ', 'friendCount': 118, 'chatCount': 42, 'age': 26, 'gender': '남성'},
+        {'name': '에너지폭발', 'description': '넘치는 에너지의 소유자', 'bio': '', 'friendCount': 103, 'chatCount': 37, 'age': 29, 'gender': '남성'},
+        {'name': '즉흥적인사람', 'description': '즉흥적이고 유연한 사고', 'bio': '헬로우', 'friendCount': 127, 'chatCount': 48, 'age': 24, 'gender': '여성'},
       ],
       'INTP': [
-        {'name': '논리적사고자', 'description': '논리와 분석을 사랑하는', 'bio': '안녕하세요', 'friendCount': 76, 'chatCount': 23},
-        {'name': '호기심많은', 'description': '끊임없는 호기심과 탐구', 'bio': '반가워요', 'friendCount': 84, 'chatCount': 28},
-        {'name': '독립적사고자', 'description': '독립적이고 창의적인 사고', 'bio': '', 'friendCount': 67, 'chatCount': 21},
+        {'name': '논리적사고자', 'description': '논리와 분석을 사랑하는', 'bio': '안녕하세요', 'friendCount': 76, 'chatCount': 23, 'age': 31, 'gender': '남성'},
+        {'name': '호기심많은', 'description': '끊임없는 호기심과 탐구', 'bio': '반가워요', 'friendCount': 84, 'chatCount': 28, 'age': 27, 'gender': '남성'},
+        {'name': '독립적사고자', 'description': '독립적이고 창의적인 사고', 'bio': '', 'friendCount': 67, 'chatCount': 21, 'age': 29, 'gender': '여성'},
       ],
       'ESFJ': [
-        {'name': '사교적인조화자', 'description': '사교적이고 조화를 추구', 'bio': '안녕', 'friendCount': 142, 'chatCount': 55},
-        {'name': '따뜻한관리자', 'description': '따뜻한 마음의 관리자', 'bio': '하이', 'friendCount': 118, 'chatCount': 43},
-        {'name': '협력적인사람', 'description': '협력과 소통을 중시', 'bio': '반갑습니다', 'friendCount': 127, 'chatCount': 47},
+        {'name': '사교적인조화자', 'description': '사교적이고 조화를 추구', 'bio': '안녕', 'friendCount': 142, 'chatCount': 55, 'age': 28, 'gender': '여성'},
+        {'name': '따뜻한관리자', 'description': '따뜻한 마음의 관리자', 'bio': '하이', 'friendCount': 118, 'chatCount': 43, 'age': 26, 'gender': '여성'},
+        {'name': '협력적인사람', 'description': '협력과 소통을 중시', 'bio': '반갑습니다', 'friendCount': 127, 'chatCount': 47, 'age': 30, 'gender': '남성'},
       ],
     };
     
@@ -366,6 +366,8 @@ class FindChatPartnerScreen extends StatelessWidget {
         mbtiType: selectedMBTI,
         profileImageUrl: null,
         bio: profile['bio'] as String?,
+        age: profile['age'] as int?,
+        gender: profile['gender'] as String?,
         stats: UserStats(
           friendCount: profile['friendCount'] as int,
           chatCount: profile['chatCount'] as int,
@@ -1021,6 +1023,19 @@ class FindChatPartnerScreen extends StatelessWidget {
 
 
 
+  /// 나이와 성별 텍스트 생성
+  String _getAgeGenderText(UserModel user) {
+    String text = '';
+    if (user.age != null && user.gender != null) {
+      text = '${user.age}세, ${user.gender}';
+    } else if (user.age != null) {
+      text = '${user.age}세';
+    } else if (user.gender != null) {
+      text = user.gender!;
+    }
+    return text;
+  }
+
   /// MBTI 궁합 기반 사용자 목록 항목 위젯
   Widget _buildMBTICompatibilityUserListItem(
     UserModel user,
@@ -1096,14 +1111,30 @@ class FindChatPartnerScreen extends StatelessWidget {
                     Row(
                       children: [
                         Expanded(
-                          child: Text(
-                            user.name,
-                            style: TextStyle(
-                              fontSize: 18.sp,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
-                            ),
-                            overflow: TextOverflow.ellipsis,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                user.name,
+                                style: TextStyle(
+                                  fontSize: 18.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (user.age != null || user.gender != null) ...[
+                                SizedBox(height: 2.h),
+                                Text(
+                                  _getAgeGenderText(user),
+                                  style: TextStyle(
+                                    fontSize: 12.sp,
+                                    color: Colors.grey[600],
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ),
                         SizedBox(width: 8.w),

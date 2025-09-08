@@ -21,12 +21,17 @@ class ProfileController extends GetxController {
   late TextEditingController nameController;
   late TextEditingController bioController;
   late TextEditingController emailController;
+  late TextEditingController ageController;
 
   // 현재 사용자 모델
   Rx<UserModel?> currentUser = Rx<UserModel?>(null);
 
   // 프로필 이미지 URL
   RxString profileImageUrl = ''.obs;
+  
+  // 나이와 성별 상태
+  RxString age = ''.obs;
+  RxString gender = ''.obs;
 
   @override
   void onInit() {
@@ -46,6 +51,7 @@ class ProfileController extends GetxController {
     nameController = TextEditingController();
     bioController = TextEditingController();
     emailController = TextEditingController();
+    ageController = TextEditingController();
   }
 
   /// 컨트롤러 정리
@@ -54,6 +60,7 @@ class ProfileController extends GetxController {
       nameController.dispose();
       bioController.dispose();
       emailController.dispose();
+      ageController.dispose();
     } catch (e) {
       print('컨트롤러 정리 오류: $e');
     }
@@ -72,7 +79,12 @@ class ProfileController extends GetxController {
       if (emailController.text.isNotEmpty || emailController.text.isEmpty) {
         emailController.text = user.email;
       }
+      if (ageController.text.isNotEmpty || ageController.text.isEmpty) {
+        ageController.text = user.age?.toString() ?? '';
+      }
       profileImageUrl.value = user.profileImageUrl ?? '';
+      age.value = user.age?.toString() ?? '';
+      gender.value = user.gender ?? '';
     } catch (e) {
       print('컨트롤러 업데이트 오류: $e');
       // 컨트롤러가 dispose된 경우 다시 초기화
@@ -81,7 +93,10 @@ class ProfileController extends GetxController {
         nameController.text = user.name;
         bioController.text = user.bio ?? '';
         emailController.text = user.email;
+        ageController.text = user.age?.toString() ?? '';
         profileImageUrl.value = user.profileImageUrl ?? '';
+        age.value = user.age?.toString() ?? '';
+        gender.value = user.gender ?? '';
       } catch (e2) {
         print('컨트롤러 재초기화 오류: $e2');
       }
@@ -208,7 +223,33 @@ class ProfileController extends GetxController {
         'bio': bioController.text.trim(),
       };
 
+      // 나이 처리 (입력 컨트롤러 기준으로 저장)
+      final String ageText = ageController.text.trim();
+      if (ageText.isNotEmpty) {
+        final ageInt = int.tryParse(ageText);
+        print('=== 나이 저장 디버그 ===');
+        print('age.text: $ageText');
+        print('ageInt: $ageInt');
+        if (ageInt != null && ageInt > 0 && ageInt < 150) {
+          updateDataForFirestore['age'] = ageInt;
+          print('나이가 저장됩니다: $ageInt');
+        } else {
+          print('나이 저장 실패: 유효하지 않은 값');
+          updateDataForFirestore['age'] = null;
+        }
+        print('====================');
+      } else {
+        print('나이 값이 비어있습니다');
+        updateDataForFirestore['age'] = null;
+      }
+
+      // 성별 처리
+      updateDataForFirestore['gender'] = (gender.value.isEmpty) ? null : gender.value;
+
       try {
+        print('=== Firestore 저장 데이터 ===');
+        print('updateDataForFirestore: $updateDataForFirestore');
+        print('==========================');
         await _userRepository.updateUserFields(uid, updateDataForFirestore);
       } catch (e) {
         print('Firestore 업데이트 오류: $e');
@@ -221,13 +262,47 @@ class ProfileController extends GetxController {
         currentUser.value = currentUserData.copyWith(
           name: updateDataForFirestore['name'] as String,
           bio: updateDataForFirestore['bio'] as String,
+          age: updateDataForFirestore['age'] as int?,
+          gender: updateDataForFirestore['gender'] as String?,
           updatedAt: now,
         );
       }
 
-      // AuthController의 userProfile도 새로고침
-      await _authController.loadUserProfile();
+      // AuthController의 userModel도 직접 업데이트 (즉시 반영)
+      final authUserModel = _authController.userModel.value;
+      if (authUserModel != null) {
+        _authController.userModel.value = authUserModel.copyWith(
+          name: updateDataForFirestore['name'] as String,
+          bio: updateDataForFirestore['bio'] as String,
+          age: updateDataForFirestore['age'] as int?,
+          gender: updateDataForFirestore['gender'] as String?,
+          updatedAt: now,
+        );
+        print('AuthController userModel 업데이트 완료: age=${updateDataForFirestore['age']}, gender=${updateDataForFirestore['gender']}');
+      }
+
+      // AuthController의 userProfile도 즉시 업데이트
+      _authController.userProfile.value = {
+        'name': updateDataForFirestore['name'] as String,
+        'email': authUserModel?.email ?? '',
+        'mbti': authUserModel?.mbtiType ?? '',
+        'bio': updateDataForFirestore['bio'] as String,
+        'age': updateDataForFirestore['age'] as int?,
+        'gender': updateDataForFirestore['gender'] as String?,
+        'profileImageUrl': authUserModel?.profileImageUrl ?? '',
+        'mbtiTestCount': authUserModel?.mbtiTestCount ?? 0,
+        'createdAt': authUserModel?.createdAt ?? DateTime.now(),
+        'updatedAt': now,
+      };
       
+      // 변경 사항을 즉시 UI에 반영하기 위해 이벤트 브로드캐스트
+      try {
+        // AuthController에 최신 모델이 이미 세팅되어 있으므로 별도 호출 없이도 Obx가 반응
+        // 다만 일부 화면에서 캐시된 userProfile을 참조할 수 있어, 값 동기화 이벤트를 한 번 더 보냄
+        _authController.userProfile.refresh();
+        _authController.userModel.refresh();
+      } catch (_) {}
+
       Get.snackbar('성공', '프로필이 업데이트되었습니다.');
       return true;
       
@@ -655,6 +730,83 @@ class ProfileController extends GetxController {
       print('프로필 이미지 삭제 오류: $e');
       Get.snackbar('오류', '프로필 이미지 삭제 중 오류가 발생했습니다.');
       return false;
+    }
+  }
+
+  /// 나이 업데이트
+  void updateAge(String ageValue) {
+    age.value = ageValue;
+  }
+
+  /// 성별 업데이트
+  void updateGender(String? genderValue) {
+    gender.value = genderValue ?? '';
+  }
+
+  /// 나이와 성별을 Firestore에 저장
+  Future<void> _saveAgeAndGender() async {
+    try {
+      final user = currentUser.value;
+      if (user == null) return;
+
+      final updateData = <String, dynamic>{};
+      
+      // 나이 처리
+      if (age.value.isNotEmpty) {
+        final ageInt = int.tryParse(age.value);
+        if (ageInt != null && ageInt > 0 && ageInt < 150) {
+          updateData['age'] = ageInt;
+        }
+      } else {
+        updateData['age'] = null;
+      }
+
+      // 성별 처리
+      updateData['gender'] = (gender.value.isEmpty) ? null : gender.value;
+
+      if (updateData.isNotEmpty) {
+        await _userRepository.updateUserFields(user.uid, updateData);
+        
+        // 현재 사용자 모델 업데이트
+        currentUser.value = user.copyWith(
+          age: updateData['age'] as int?,
+          gender: updateData['gender'] as String?,
+        );
+        
+        // AuthController의 userModel도 직접 업데이트 (즉시 반영)
+        final authUserModel = _authController.userModel.value;
+        if (authUserModel != null) {
+          _authController.userModel.value = authUserModel.copyWith(
+            age: updateData['age'] as int?,
+            gender: updateData['gender'] as String?,
+          );
+          print('AuthController userModel 업데이트 완료 (나이/성별): age=${updateData['age']}, gender=${updateData['gender']}');
+        }
+        
+        // AuthController의 userProfile도 즉시 업데이트
+        _authController.userProfile.value = {
+          'name': authUserModel?.name ?? '',
+          'email': authUserModel?.email ?? '',
+          'mbti': authUserModel?.mbtiType ?? '',
+          'bio': authUserModel?.bio ?? '',
+          'age': updateData['age'] as int?,
+          'gender': updateData['gender'] as String?,
+          'profileImageUrl': authUserModel?.profileImageUrl ?? '',
+          'mbtiTestCount': authUserModel?.mbtiTestCount ?? 0,
+          'createdAt': authUserModel?.createdAt ?? DateTime.now(),
+          'updatedAt': DateTime.now(),
+        };
+        
+        // 변경 사항을 즉시 UI에 반영
+        try {
+          _authController.userProfile.refresh();
+          _authController.userModel.refresh();
+        } catch (_) {}
+
+        print('나이와 성별이 저장되었습니다: age=${updateData['age']}, gender=${updateData['gender']}');
+      }
+    } catch (e) {
+      print('나이와 성별 저장 오류: $e');
     }
   }
 }

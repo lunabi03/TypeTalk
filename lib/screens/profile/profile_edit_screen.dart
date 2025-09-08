@@ -239,6 +239,34 @@ class ProfileEditScreen extends StatelessWidget {
           hint: '자신을 소개해주세요',
           maxLines: 3,
         ),
+
+        SizedBox(height: 16.h),
+
+        // 나이
+        AppTextField(
+          label: '나이',
+          controller: controller.ageController,
+          hint: '나이를 입력해주세요',
+          keyboardType: TextInputType.number,
+          onChanged: controller.updateAge,
+          suffixIcon: Padding(
+            padding: EdgeInsets.only(right: 12.w),
+            child: Center(
+              widthFactor: 1.0,
+              child: Text(
+                '세',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        SizedBox(height: 16.h),
+
+        // 성별
+        _buildGenderDropdown(controller),
       ],
     );
   }
@@ -480,6 +508,21 @@ class ProfileEditScreen extends StatelessWidget {
 
     final success = await controller.updateUserProfile();
     if (success == true) {
+      // 저장 안내 팝업 표시
+      await Get.dialog(
+        AlertDialog(
+          title: const Text('저장 완료'),
+          content: const Text('프로필 정보가 성공적으로 저장되었습니다.'),
+          actions: [
+            TextButton(
+              onPressed: () => Get.back(),
+              child: const Text('확인'),
+            ),
+          ],
+        ),
+        barrierDismissible: false,
+      );
+      // 팝업 닫힌 후 편집 화면 종료
       Get.back();
     }
   }
@@ -679,5 +722,58 @@ class ProfileEditScreen extends StatelessWidget {
   /// 날짜 포맷팅
   String _formatDate(DateTime date) {
     return '${date.year}.${date.month.toString().padLeft(2, '0')}.${date.day.toString().padLeft(2, '0')}';
+  }
+
+  /// 성별 드롭다운 위젯
+  Widget _buildGenderDropdown(ProfileController controller) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '성별',
+          style: AppTextStyles.bodyMedium.copyWith(
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        SizedBox(height: 8.h),
+        Container(
+          width: double.infinity,
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(
+              color: AppColors.border,
+              width: 1,
+            ),
+          ),
+          child: Obx(() => DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: controller.gender.value.isEmpty ? null : controller.gender.value,
+              isExpanded: true,
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textPrimary,
+              ),
+              hint: Text(
+                '성별을 선택해주세요',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              items: ['남성', '여성'].map((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
+              onChanged: (String? newValue) {
+                controller.updateGender(newValue);
+              },
+            ),
+          )),
+        ),
+      ],
+    );
   }
 }

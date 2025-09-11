@@ -62,6 +62,49 @@ class _ChatScreenState extends State<ChatScreen> {
           ],
         );
       }),
+      // 채팅 목록 화면에서만 네비게이션바 표시, 대화방 입장 시 숨김
+      bottomNavigationBar: Obx(() {
+        final isChatRoomOpen = chatController.currentChat.value != null;
+        if (isChatRoomOpen) return const SizedBox.shrink();
+        return Container(
+          height: 80,
+          child: BottomNavigationBar(
+            type: BottomNavigationBarType.fixed,
+            currentIndex: 2,
+            onTap: (index) {
+              if (index == 0) {
+                Get.offAllNamed(AppRoutes.start);
+              } else if (index == 1) {
+                Get.offAllNamed(AppRoutes.profile);
+              }
+            },
+            showUnselectedLabels: true,
+            selectedItemColor: const Color(0xFF5C3DF7),
+            unselectedItemColor: const Color(0xFF9FA4B0),
+            selectedLabelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            unselectedLabelStyle: const TextStyle(fontSize: 14),
+            backgroundColor: Colors.white,
+            elevation: 8,
+            items: const [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.auto_awesome, size: 28),
+                activeIcon: Icon(Icons.auto_awesome, size: 28),
+                label: 'MBTI 테스트',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.person_outline, size: 28),
+                activeIcon: Icon(Icons.person, size: 28),
+                label: '프로필',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.chat_bubble, size: 28),
+                activeIcon: Icon(Icons.chat_bubble, size: 28),
+                label: '채팅',
+              ),
+            ],
+          ),
+        );
+      }),
     );
   }
 

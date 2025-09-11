@@ -645,6 +645,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                 ),
+                                SizedBox(height: 6.h),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton(
+                                    onPressed: _showCompletenessGuide,
+                                    style: TextButton.styleFrom(
+                                      padding: EdgeInsets.zero,
+                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      minimumSize: Size(0, 0),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.info_outline, size: 16, color: Color(0xFF007AFF)),
+                                        SizedBox(width: 6.w),
+                                        const Text(
+                                          '어떻게 채워지나요?',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Color(0xFF007AFF),
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -661,48 +688,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
       bottomNavigationBar: Container(
-        height: 90,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 20,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
+        height: 80,
         child: BottomNavigationBar(
           type: BottomNavigationBarType.fixed,
           currentIndex: 1,
           onTap: (index) {
             if (index == 0) {
-              Get.offAllNamed(AppRoutes.start);
+              Get.toNamed(AppRoutes.start);
             } else if (index == 2) {
               Get.toNamed(AppRoutes.chat);
             }
           },
           showUnselectedLabels: true,
-          selectedItemColor: const Color(0xFF6C63FF),
+          selectedItemColor: const Color(0xFF5C3DF7),
           unselectedItemColor: const Color(0xFF9FA4B0),
           selectedLabelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
           unselectedLabelStyle: const TextStyle(fontSize: 14),
-          backgroundColor: Colors.transparent,
-          elevation: 0,
+          backgroundColor: Colors.white,
+          elevation: 8,
           items: const [
             BottomNavigationBarItem(
-              icon: Icon(Icons.home, size: 28),
-              activeIcon: Icon(Icons.home, size: 28),
+              icon: Icon(Icons.auto_awesome, size: 28),
+              activeIcon: Icon(Icons.auto_awesome, size: 28),
               label: 'MBTI 테스트',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.person, size: 28),
+              icon: Icon(Icons.person_outline, size: 28),
               activeIcon: Icon(Icons.person, size: 28),
               label: '프로필',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.more_horiz, size: 28),
-              activeIcon: Icon(Icons.more_horiz, size: 28),
+              icon: Icon(Icons.chat_bubble_outline, size: 28),
+              activeIcon: Icon(Icons.chat_bubble, size: 28),
               label: '채팅',
             ),
           ],
@@ -838,5 +855,85 @@ class _ProfileScreenState extends State<ProfileScreen> {
       default:
         return Icons.psychology_outlined;
     }
+  }
+
+  // 프로필 완성도 가이드 바텀시트 표시
+  void _showCompletenessGuide() {
+    // 한글 설명: 각 항목이 몇 %를 차지하는지 안내하는 시트
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 20.w,
+            right: 20.w,
+            top: 16.h,
+            bottom: 16.h + MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.info_outline, color: Color(0xFF007AFF)),
+                  SizedBox(width: 8.w),
+                  Text(
+                    '프로필 완성도 계산 기준',
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 12.h),
+              _buildGuideItem('이름', 20, completed: (profileController.currentUser.value?.name.isNotEmpty ?? false)),
+              _buildGuideItem('이메일', 20, completed: (profileController.currentUser.value?.email.isNotEmpty ?? false)),
+              _buildGuideItem('소개(한 줄 소개)', 10, completed: (profileController.currentUser.value?.bio?.isNotEmpty ?? false)),
+              _buildGuideItem('프로필 이미지', 20, completed: (profileController.currentUser.value?.profileImageUrl?.isNotEmpty ?? false)),
+              _buildGuideItem('MBTI 설정', 30, completed: (profileController.currentUser.value?.mbtiType?.isNotEmpty ?? false)),
+              SizedBox(height: 12.h),
+              Text(
+                '팁: 프로필 이미지를 추가하고 MBTI를 설정하면 빠르게 50%를 채울 수 있어요.',
+                style: TextStyle(fontSize: 12.sp, color: const Color(0xFF6C757D)),
+              ),
+              SizedBox(height: 12.h),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // 가이드 항목 위젯 (항목명, 가중치, 완료 여부)
+  Widget _buildGuideItem(String label, int weight, {required bool completed}) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 8.h),
+      child: Row(
+        children: [
+          Icon(
+            completed ? Icons.check_circle : Icons.radio_button_unchecked,
+            color: completed ? const Color(0xFF28A745) : const Color(0xFFADB5BD),
+            size: 18,
+          ),
+          SizedBox(width: 10.w),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600),
+            ),
+          ),
+          Text(
+            '+${weight}%',
+            style: TextStyle(fontSize: 13.sp, color: const Color(0xFF6C757D)),
+          ),
+        ],
+      ),
+    );
   }
 }

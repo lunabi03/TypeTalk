@@ -56,42 +56,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       color: const Color(0xFF1A1A1A),
                     ),
                   ),
-                  Row(
-                    children: [
-                      // 새로고침 버튼
-                      IconButton(
-                        onPressed: () {
-                          profileController.refreshProfile();
-                          authController.refreshProfile();
-                        },
-                        icon: const Icon(
-                          Icons.refresh,
-                          color: Color(0xFF007AFF),
-                        ),
-                        tooltip: '프로필 새로고침',
-                      ),
-                      // 디버그 버튼 (실제 Firebase 데이터 확인)
-                      IconButton(
-                        onPressed: () {
-                          authController.debugCheckUserData();
-                        },
-                        icon: const Icon(
-                          Icons.cloud_done,
-                          color: Color(0xFF007AFF),
-                        ),
-                        tooltip: 'Firebase 데이터 확인',
-                      ),
-                      IconButton(
-                        onPressed: () {
-                          authController.logout();
-                        },
-                        icon: const Icon(
-                          Icons.logout,
-                          color: Color(0xFF6C757D),
-                        ),
-                      ),
-                    ],
-                  ),
+                  const SizedBox.shrink(),
                 ],
               ),
             ),

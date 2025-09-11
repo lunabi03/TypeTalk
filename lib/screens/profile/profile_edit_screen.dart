@@ -89,8 +89,7 @@ class ProfileEditScreen extends StatelessWidget {
 
               SizedBox(height: 32.h),
 
-              // 삭제 버튼
-              _buildDeleteSection(profileController),
+              // 삭제 기능 제거
 
               SizedBox(height: 40.h),
             ],
@@ -447,58 +446,7 @@ class ProfileEditScreen extends StatelessWidget {
     });
   }
 
-  /// 삭제 섹션
-  Widget _buildDeleteSection(ProfileController controller) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '위험 영역',
-          style: AppTextStyles.titleMedium.copyWith(
-            fontWeight: FontWeight.w700,
-            color: Colors.red,
-          ),
-        ),
-        SizedBox(height: 16.h),
-
-        Container(
-          width: double.infinity,
-          padding: EdgeInsets.all(16.w),
-          decoration: BoxDecoration(
-            color: Colors.red.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(color: Colors.red.withOpacity(0.2)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '프로필 삭제',
-                style: AppTextStyles.bodyMedium.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: Colors.red,
-                ),
-              ),
-              SizedBox(height: 8.h),
-              Text(
-                '프로필을 삭제하면 모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다.',
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              SizedBox(height: 12.h),
-              AppButton(
-                text: '프로필 삭제',
-                onPressed: () => _confirmDelete(controller),
-                backgroundColor: Colors.red,
-                textColor: Colors.white,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
+  // 삭제 섹션 제거됨
 
   /// 프로필 저장
   Future<void> _saveProfile(ProfileController controller) async {
@@ -693,31 +641,7 @@ class ProfileEditScreen extends StatelessWidget {
     }
   }
 
-  /// 삭제 확인
-  void _confirmDelete(ProfileController controller) {
-    Get.dialog(
-      AlertDialog(
-        title: const Text('정말 삭제하시겠습니까?'),
-        content: const Text(
-          '이 작업은 되돌릴 수 없습니다.\n모든 프로필 데이터가 영구적으로 삭제됩니다.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('취소'),
-          ),
-          TextButton(
-            onPressed: () {
-              Get.back();
-              controller.deleteUserProfile(confirmDelete: true);
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('삭제'),
-          ),
-        ],
-      ),
-    );
-  }
+  // 삭제 확인 로직 제거됨
 
   /// 날짜 포맷팅
   String _formatDate(DateTime date) {

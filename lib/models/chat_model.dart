@@ -1,4 +1,4 @@
-// import removed: demo Firestore
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 // 채팅방 타입 열거형
 enum ChatType {
@@ -126,14 +126,23 @@ class ChatStats {
   }
 
   static DateTime _parseDateTime(dynamic value) {
+    if (value == null) return DateTime.now();
     if (value is DateTime) return value;
+    if (value is Timestamp) return value.toDate();
     if (value is String) {
       try {
         return DateTime.parse(value);
-      } catch (e) {
+      } catch (_) {
         return DateTime.now();
       }
     }
+    // Firestore JS SDK 형식({_seconds:..., _nanoseconds:...}) 방어
+    try {
+      final seconds = (value as dynamic)?['_seconds'];
+      if (seconds is int) {
+        return DateTime.fromMillisecondsSinceEpoch(seconds * 1000);
+      }
+    } catch (_) {}
     return DateTime.now();
   }
 
@@ -260,14 +269,22 @@ class LastMessage {
   }
 
   static DateTime _parseDateTime(dynamic value) {
+    if (value == null) return DateTime.now();
     if (value is DateTime) return value;
+    if (value is Timestamp) return value.toDate();
     if (value is String) {
       try {
         return DateTime.parse(value);
-      } catch (e) {
+      } catch (_) {
         return DateTime.now();
       }
     }
+    try {
+      final seconds = (value as dynamic)?['_seconds'];
+      if (seconds is int) {
+        return DateTime.fromMillisecondsSinceEpoch(seconds * 1000);
+      }
+    } catch (_) {}
     return DateTime.now();
   }
 }
@@ -362,14 +379,22 @@ class ChatModel {
   }
 
   static DateTime _parseDateTime(dynamic value) {
+    if (value == null) return DateTime.now();
     if (value is DateTime) return value;
+    if (value is Timestamp) return value.toDate();
     if (value is String) {
       try {
         return DateTime.parse(value);
-      } catch (e) {
+      } catch (_) {
         return DateTime.now();
       }
     }
+    try {
+      final seconds = (value as dynamic)?['_seconds'];
+      if (seconds is int) {
+        return DateTime.fromMillisecondsSinceEpoch(seconds * 1000);
+      }
+    } catch (_) {}
     return DateTime.now();
   }
 

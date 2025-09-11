@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:typetalk/core/theme/app_colors.dart';
 import 'package:typetalk/routes/app_routes.dart';
 import 'package:typetalk/services/notification_service.dart';
+import 'package:typetalk/controllers/auth_controller.dart';
 
 import 'package:typetalk/controllers/profile_controller.dart';
 
@@ -261,147 +262,7 @@ class StartScreen extends StatelessWidget {
               child: ListView(
                 padding: EdgeInsets.all(16.w),
                 children: [
-                  // 위치 권한 설정
-                  Container(
-                    padding: EdgeInsets.all(16.w),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[50],
-                      borderRadius: BorderRadius.circular(12.r),
-                      border: Border.all(
-                        color: Colors.grey[200]!,
-                        width: 1,
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.location_on,
-                              color: AppColors.primary,
-                              size: 24.sp,
-                            ),
-                            SizedBox(width: 12.w),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '위치 권한',
-                                    style: TextStyle(
-                                      fontSize: 16.sp,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.black87,
-                                    ),
-                                  ),
-                                  Text(
-                                    '가까운 사용자를 찾기 위해 필요합니다',
-                                    style: TextStyle(
-                                      fontSize: 14.sp,
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 16.h),
-                        // 위치 권한 상태 표시
-                        Container(
-                          padding: EdgeInsets.all(12.w),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(8.r),
-                            border: Border.all(
-                              color: Colors.grey[300]!,
-                              width: 1,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.info_outline,
-                                color: Colors.grey[600],
-                                size: 20.sp,
-                              ),
-                              SizedBox(width: 8.w),
-                              Expanded(
-                                child: Text(
-                                  '위치 권한을 허용하면 가까운 사용자를 찾을 수 있습니다',
-                                  style: TextStyle(
-                                    fontSize: 13.sp,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(height: 16.h),
-                        // 권한 요청 버튼들
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  Get.snackbar(
-                                    '알림',
-                                    '위치 기반 서비스는 현재 사용하지 않습니다.',
-                                    backgroundColor: Colors.orange.withOpacity(0.1),
-                                    colorText: Colors.orange,
-                                  );
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primary,
-                                  foregroundColor: Colors.white,
-                                  padding: EdgeInsets.symmetric(vertical: 12.h),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8.r),
-                                  ),
-                                  elevation: 0,
-                                ),
-                                child: Text(
-                                  '위치 권한 설정',
-                                  style: TextStyle(
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: 12.w),
-                            OutlinedButton(
-                              onPressed: () {
-                                Get.snackbar(
-                                  '알림',
-                                  '위치 기반 서비스는 현재 사용하지 않습니다.',
-                                  backgroundColor: Colors.orange.withOpacity(0.1),
-                                  colorText: Colors.orange,
-                                );
-                              },
-                              style: OutlinedButton.styleFrom(
-                                side: BorderSide(color: AppColors.primary),
-                                padding: EdgeInsets.symmetric(vertical: 12.h),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8.r),
-                                ),
-                              ),
-                              child: Text(
-                                '시스템 설정',
-                                style: TextStyle(
-                                  fontSize: 14.sp,
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
+                  // 위치 권한 테마 제거됨
                   SizedBox(height: 16.h),
                   // 기타 설정 옵션들
                   Container(
@@ -1071,10 +932,22 @@ class StartScreen extends StatelessWidget {
                         ],
                       );
                     }),
+                    // 설정 버튼 복원
                     IconButton(
                       onPressed: () => _showSettingsPanel(),
                       icon: const Icon(Icons.settings_outlined),
                       color: Colors.black87,
+                      tooltip: '설정',
+                    ),
+                    // 로그아웃 버튼 (프로필 대신 메인에서 제공)
+                    IconButton(
+                      onPressed: () {
+                        final auth = Get.find<AuthController>();
+                        auth.logout();
+                      },
+                      icon: const Icon(Icons.logout),
+                      color: Colors.black87,
+                      tooltip: '로그아웃',
                     ),
                   ],
                 ),

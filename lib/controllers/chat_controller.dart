@@ -33,6 +33,8 @@ class ChatController extends GetxController {
   RxString searchQuery = ''.obs;
   RxBool sortByRecentDesc = true.obs;
   final Map<String, DateTime> _lastReadAt = {};
+  // 앱 실행 시각: 재실행 직후 기존 대화에 읽음 배지가 생기는 것을 방지하기 위함
+  late final DateTime _appLaunchedAt;
   
   // 메시지 목록
   RxList<MessageModel> messages = <MessageModel>[].obs;
@@ -48,6 +50,8 @@ class ChatController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    // 앱 시작 시각 기록 (재실행 시 기존 대화에 불필요한 배지 표시 방지)
+    _appLaunchedAt = DateTime.now();
     loadChatList();
   }
 
@@ -108,6 +112,14 @@ class ChatController extends GetxController {
       
       chatList.clear();
       chatList.addAll(loaded);
+      // 앱 재실행 시 기존 대화에 불필요한 배지가 붙지 않도록,
+      // 아직 읽음 기준이 없는 채팅은 마지막 활동 시각을 초기 읽음 시각으로 설정
+      for (final chat in chatList) {
+        _lastReadAt.putIfAbsent(
+          chat.chatId,
+          () => chat.lastMessage?.timestamp ?? chat.stats.lastActivity,
+        );
+      }
       print('✅ 채팅 목록 로드 완료 - 총 ${chatList.length}개');
     } catch (e) {
       print('❌ 채팅방 목록 로드 실패: $e');
@@ -207,7 +219,9 @@ class ChatController extends GetxController {
 
   /// 채팅별 안 읽은 개수 (데모: 마지막 메시지 시간과 마지막 읽은 시간 비교, 내 메시지는 제외)
   int getUnreadCount(ChatModel chat) {
-    final lastRead = _lastReadAt[chat.chatId] ?? DateTime.fromMillisecondsSinceEpoch(0);
+    // 앱을 처음 켠 뒤 아직 해당 채팅을 열지 않았다면, 최소 기준을 앱 실행 시각으로 설정
+    // 이렇게 하면 재실행만으로 이전에 읽었던 대화에 배지가 붙지 않습니다.
+    final lastRead = _lastReadAt[chat.chatId] ?? _appLaunchedAt;
     if (chat.lastMessage != null && chat.lastMessage!.timestamp.isAfter(lastRead)) {
       final myId = authController.userId ?? 'current-user';
       if (chat.lastMessage!.senderId != myId) {
@@ -432,10 +446,10 @@ class ChatController extends GetxController {
           await _firestore.updateDocument('chats/${chatId.value}', {
             'lastMessage': {
               'content': content,
-              'timestamp': newMessage.createdAt.toIso8601String(),
+              'timestamp': Timestamp.fromDate(newMessage.createdAt),
               'senderId': newMessage.senderId,
             },
-            'stats.lastActivity': newMessage.createdAt.toIso8601String(),
+            'stats.lastActivity': Timestamp.fromDate(newMessage.createdAt),
             'stats.messageCount': FieldValue.increment(1),
           });
         } catch (e) {
@@ -607,10 +621,10 @@ class ChatController extends GetxController {
         await _firestore.updateDocument('chats/${chat.chatId}', {
           'lastMessage': {
             'content': response,
-            'timestamp': aiMessage.createdAt.toIso8601String(),
+            'timestamp': Timestamp.fromDate(aiMessage.createdAt),
             'senderId': aiMessage.senderId,
           },
-          'stats.lastActivity': aiMessage.createdAt.toIso8601String(),
+          'stats.lastActivity': Timestamp.fromDate(aiMessage.createdAt),
           'stats.messageCount': FieldValue.increment(1),
         });
         

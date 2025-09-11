@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
 // 실제 Firebase 서비스
@@ -20,6 +21,13 @@ class RealFirebaseService extends GetxService {
     try {
       _auth = FirebaseAuth.instance;
       _firestore = FirebaseFirestore.instance;
+
+      // 웹 환경에서 인증 지속성을 로컬로 고정하여 새로고침/재실행 시 세션 유지
+      if (kIsWeb) {
+        // ignore: deprecated_member_use
+        _auth.setPersistence(Persistence.LOCAL);
+        print('Firebase Auth persistence set to LOCAL (web)');
+      }
       
       // Firebase 서비스 상태 확인
       print('Firebase Auth 인스턴스 생성 완료');

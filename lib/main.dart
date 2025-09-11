@@ -116,7 +116,8 @@ class MyApp extends StatelessWidget {
           fontFamily: 'Pretendard',
         ),
         debugShowCheckedModeBanner: false,
-        initialRoute: AppRoutes.login, // 로그인 화면부터 시작
+        // 웹에서 자동 로그인 시 세션이 복구되면 게스트 미들웨어가 start로 리다이렉트합니다.
+        initialRoute: AppRoutes.login,
         getPages: [
           GetPage(
             name: AppRoutes.login, 

@@ -7,6 +7,7 @@ import 'package:typetalk/core/widgets/app_button.dart';
 import 'package:typetalk/core/widgets/app_text_field.dart';
 import 'package:typetalk/routes/app_routes.dart';
 import 'package:typetalk/controllers/auth_controller.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -23,6 +24,47 @@ class _LoginScreenState extends State<LoginScreen> {
   
   bool _isLoading = false;
   bool _obscurePassword = true;
+  bool _autoLogin = true; // 자동 로그인 기본값 ON
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAutoLoginSetting();
+
+    // 로그인 상태 변경을 감지하여 자동 리다이렉트
+    _authController.currentUserId.listen((uid) {
+      if (_autoLogin && uid.isNotEmpty) {
+        Get.offAllNamed(AppRoutes.start);
+      }
+    });
+  }
+
+  // 자동 로그인 설정 로드 및 적용
+  Future<void> _loadAutoLoginSetting() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getBool('auto_login_enabled');
+    if (mounted) {
+      setState(() {
+        _autoLogin = saved ?? true; // 저장값 없으면 기본 ON
+      });
+    }
+
+    // 이미 세션이 있으면 바로 메인으로 이동
+    if (_autoLogin && _authController.isLoggedIn) {
+      Get.offAllNamed(AppRoutes.start);
+    }
+    // 혹시 초기화 지연 대비하여 한 번 더 지연 체크
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (_autoLogin && _authController.isLoggedIn) {
+        Get.offAllNamed(AppRoutes.start);
+      }
+    });
+  }
+
+  Future<void> _saveAutoLoginSetting() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('auto_login_enabled', _autoLogin);
+  }
 
   @override
   void dispose() {
@@ -44,7 +86,9 @@ class _LoginScreenState extends State<LoginScreen> {
         _emailController.text.trim(),
         _passwordController.text,
       );
-      // 로그인 성공 시 AuthController에서 자동으로 리다이렉트 처리
+      // 로그인 성공 시 자동 로그인 설정 저장
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('auto_login_enabled', _autoLogin);
     } catch (e) {
       // 로그인 실패 시 오류 메시지는 AuthController에서 처리되므로
       // 여기서는 추가 처리가 필요하지 않음
@@ -186,6 +230,25 @@ class _LoginScreenState extends State<LoginScreen> {
                 
                 SizedBox(height: 32.h),
                 
+                // 자동 로그인 스위치
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '자동 로그인',
+                      style: TextStyle(fontSize: 14.sp, color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+                    ),
+                    Switch(
+                      value: _autoLogin,
+                      onChanged: (v) async {
+                        setState(() => _autoLogin = v);
+                        await _saveAutoLoginSetting();
+                      },
+                    ),
+                  ],
+                ),
+                SizedBox(height: 12.h),
+
                 // 로그인 버튼
                 AppButton(
                   text: '로그인',
@@ -352,7 +415,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       await _authController.signInWithGoogle();
-      // signInWithGoogle이 성공하면 자동으로 리다이렉트됨
+      // 자동 로그인 설정 저장 (구글 로그인 포함)
+      await _saveAutoLoginSetting();
     } catch (e) {
       Get.snackbar('오류', 'Google 로그인 중 오류가 발생했습니다.');
     } finally {
@@ -374,7 +438,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       await _authController.signInWithApple();
-      // signInWithApple이 성공하면 자동으로 리다이렉트됨
+      // 자동 로그인 설정 저장 (애플 로그인 포함)
+      await _saveAutoLoginSetting();
     } catch (e) {
       Get.snackbar('오류', 'Apple 로그인 중 오류가 발생했습니다.');
     } finally {

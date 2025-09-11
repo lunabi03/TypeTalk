@@ -262,8 +262,20 @@ class RealUserRepository extends GetxService {
   // 이메일 중복 확인
   Future<bool> isEmailAvailable(String email) async {
     try {
-      final user = await getUserByEmail(email);
-      return user == null; // 사용자가 없으면 사용 가능
+      final normalized = email.trim().toLowerCase();
+      // 1) 사용자 컬렉션에 동일 이메일 존재 여부 (대소문자 보정 포함)
+      final userExact = await getUserByEmail(email.trim());
+      if (userExact != null) return false;
+      final userLower = await getUserByEmail(normalized);
+      if (userLower != null) return false;
+
+      // 2) 탈퇴로 차단된 이메일인지 확인 (차단 중이면 사용 불가 처리)
+      final blockedUntil = await getEmailBlockedUntil(normalized);
+      if (blockedUntil != null && blockedUntil.isAfter(DateTime.now())) {
+        return false;
+      }
+
+      return true; // 어떤 제약도 없으면 사용 가능
     } catch (e) {
       print('이메일 중복 확인 실패: $e');
       // 오류 발생 시 중복으로 간주하여 안전하게 처리

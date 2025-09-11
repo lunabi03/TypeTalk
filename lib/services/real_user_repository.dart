@@ -9,6 +9,7 @@ class RealUserRepository extends GetxService {
 
   RealFirebaseService get _firebase => Get.find<RealFirebaseService>();
   static const String _collectionName = 'users';
+  static const String _blockedEmailsCollection = 'blocked_emails';
 
   // 사용자 생성
   Future<void> createUser(UserModel user) async {
@@ -114,6 +115,43 @@ class RealUserRepository extends GetxService {
     } catch (e) {
       print('실제 Firebase 이메일로 사용자 조회 실패: $e');
       throw Exception('사용자 조회 중 오류가 발생했습니다: ${e.toString()}');
+    }
+  }
+
+  // 이메일 차단 등록 (회원탈퇴 시)
+  Future<void> blockEmailForDays(String email, {int days = 30}) async {
+    try {
+      final until = DateTime.now().add(Duration(days: days));
+      await _firebase.setDocument(
+        '$_blockedEmailsCollection/${email.toLowerCase()}',
+        {
+          'email': email.toLowerCase(),
+          'blockedUntil': Timestamp.fromDate(until),
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        },
+        merge: true,
+      );
+      print('이메일 차단 등록: $email ~ $until');
+    } catch (e) {
+      print('이메일 차단 등록 실패: $e');
+      // 차단 등록 실패는 치명적이지 않음
+    }
+  }
+
+  // 이메일 차단 여부 확인
+  Future<DateTime?> getEmailBlockedUntil(String email) async {
+    try {
+      final doc = await _firebase.getDocument('$_blockedEmailsCollection/${email.toLowerCase()}');
+      if (!doc.exists) return null;
+      final data = doc.data() as Map<String, dynamic>;
+      final blocked = data['blockedUntil'];
+      if (blocked is Timestamp) return blocked.toDate();
+      if (blocked is DateTime) return blocked;
+      return null;
+    } catch (e) {
+      print('이메일 차단 확인 실패: $e');
+      return null;
     }
   }
 

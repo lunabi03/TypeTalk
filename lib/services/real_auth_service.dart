@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:typetalk/services/real_firebase_service.dart';
 import 'package:typetalk/services/real_user_repository.dart';
 import 'package:typetalk/models/user_model.dart';
+import 'package:typetalk/controllers/auth_controller.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:crypto/crypto.dart';
@@ -126,7 +127,17 @@ class RealAuthService extends GetxService {
       await _firebase.signOut();
       user.value = null;
       print('실제 Firebase 로그아웃 완료');
-      Get.snackbar('알림', '로그아웃되었습니다.');
+      
+      // 차단된 사용자가 아닌 경우에만 로그아웃 메시지 표시
+      try {
+        final authController = Get.find<AuthController>();
+        if (!authController.isBlockedUser.value) {
+          Get.snackbar('알림', '로그아웃되었습니다.');
+        }
+      } catch (e) {
+        // AuthController를 찾을 수 없는 경우 기본 메시지 표시
+        Get.snackbar('알림', '로그아웃되었습니다.');
+      }
     } catch (e) {
       print('실제 Firebase 로그아웃 실패: $e');
       Get.snackbar('오류', '로그아웃 중 오류가 발생했습니다: ${e.toString()}');
@@ -246,7 +257,7 @@ class RealAuthService extends GetxService {
       print('Google 로그인으로 기존 사용자 로그인: ${userCredential.user!.uid}');
     }
     
-    Get.snackbar('성공', 'Google 로그인이 완료되었습니다!');
+    // 성공 스낵바는 컨트롤러에서 차단 검사 후에만 표시하도록 위임
     return userCredential;
   }
 

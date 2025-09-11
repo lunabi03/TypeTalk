@@ -343,6 +343,18 @@ class ProfileController extends GetxController {
         // Auth 계정 삭제 실패 시에도 Firestore 데이터는 삭제되었으므로 계속 진행
       }
 
+      // 이메일을 30일 차단 (재가입 방지)
+      final userEmail = _authController.currentUserEmail.value;
+      if (userEmail.isNotEmpty) {
+        try {
+          await _userRepository.blockEmailForDays(userEmail, days: 30);
+          print('이메일 차단 완료: $userEmail (30일)');
+        } catch (e) {
+          print('이메일 차단 실패: $e');
+          // 차단 실패해도 삭제는 계속 진행
+        }
+      }
+
       // 로그아웃 처리 (Auth 계정 삭제 후)
       await _authController.logout();
 
@@ -357,7 +369,7 @@ class ProfileController extends GetxController {
 
       Get.snackbar(
         '완료',
-        '사용자 프로필이 삭제되었습니다.',
+        '사용자 프로필이 삭제되었습니다. 30일 후에 다시 가입할 수 있습니다.',
         backgroundColor: Colors.orange.withOpacity(0.1),
         colorText: Colors.orange,
       );

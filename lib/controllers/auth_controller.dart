@@ -26,6 +26,9 @@ class AuthController extends GetxController {
   RxBool isLoading = false.obs;
   RxBool isSigningIn = false.obs;
   RxBool isSigningUp = false.obs;
+  
+  // 차단된 사용자 플래그
+  RxBool isBlockedUser = false.obs;
 
   @override
   void onInit() {
@@ -44,11 +47,14 @@ class AuthController extends GetxController {
   // 실제 Firebase 사용자 초기화
   void _initRealUser() {
     // Firebase Auth 상태 변화 감지
-    ever(_authService.user, (User? firebaseUser) {
+    ever(_authService.user, (User? firebaseUser) async {
       if (firebaseUser != null) {
         _onUserLogin(firebaseUser);
       } else {
-        _onUserLogout();
+        // 차단된 사용자가 아닌 경우에만 로그아웃 처리
+        if (!isBlockedUser.value) {
+          _onUserLogout();
+        }
       }
     });
     
@@ -64,7 +70,56 @@ class AuthController extends GetxController {
   }
 
   // 사용자 로그인 시 호출
-  void _onUserLogin(User firebaseUser) {
+  void _onUserLogin(User firebaseUser) async {
+    // 회원탈퇴 차단 이메일인지 검사 (30일) - 로그인 직후 즉시 검사
+    final userEmail = firebaseUser.email ?? '';
+    print('=== 차단 검사 시작 ===');
+    print('사용자 이메일: $userEmail');
+    
+    final blockedUntil = await _userRepository.getEmailBlockedUntil(userEmail);
+    print('차단 정보: $blockedUntil');
+    print('현재 시간: ${DateTime.now()}');
+    
+    if (blockedUntil != null && blockedUntil.isAfter(DateTime.now())) {
+      // 차단 상태이면 즉시 로그아웃시키고 안내
+      final remain = blockedUntil.difference(DateTime.now()).inDays + 1;
+      print('차단된 사용자 - ${remain}일 남음');
+      
+      // 차단된 사용자임을 표시하는 플래그 설정
+      isBlockedUser.value = true;
+      
+      // 직접 로그아웃 처리 (signOut() 호출하지 않음)
+      currentUserId.value = '';
+      currentUserEmail.value = '';
+      currentUserName.value = '';
+      userProfile.value = <String, dynamic>{};
+      userModel.value = null;
+      
+      // Firebase Auth에서 직접 로그아웃 (메시지 없이)
+      try {
+        await _authService.signOut();
+      } catch (e) {
+        print('차단된 사용자 로그아웃 처리: $e');
+      }
+      
+      // 모든 스택을 비우고 로그인 화면으로 이동
+      if (Get.currentRoute != AppRoutes.login) {
+        Get.offAllNamed(AppRoutes.login);
+      }
+      
+      // 차단 전용 메시지만 표시
+      Get.snackbar('로그인 제한', '회원탈퇴로 인해 ${remain}일 후에 다시 로그인할 수 있습니다.');
+      
+      // 차단 플래그 리셋
+      Future.delayed(const Duration(milliseconds: 100), () {
+        isBlockedUser.value = false;
+      });
+      
+      return;
+    }
+    print('차단되지 않은 사용자 - 로그인 진행');
+    print('==================');
+    
     currentUserId.value = firebaseUser.uid;
     currentUserEmail.value = firebaseUser.email ?? '';
     currentUserName.value = firebaseUser.displayName ?? '';
@@ -82,6 +137,12 @@ class AuthController extends GetxController {
           return;
         }
       }
+      
+      // 정상 로그인 성공 메시지 표시 (차단되지 않은 사용자만)
+      if (!isBlockedUser.value) {
+        Get.snackbar('성공', '로그인 되었습니다.');
+      }
+      
       // 기존 사용자이면 메인으로 이동
       Get.offNamed(AppRoutes.start);
     });
@@ -91,11 +152,20 @@ class AuthController extends GetxController {
 
   // 사용자 로그아웃 시 호출
   void _onUserLogout() {
+    // 차단된 사용자인 경우 아무것도 하지 않음
+    if (isBlockedUser.value) {
+      print('차단된 사용자 로그아웃 - 메시지 표시 안 함');
+      return;
+    }
+    
     currentUserId.value = '';
     currentUserEmail.value = '';
     currentUserName.value = '';
     userProfile.value = <String, dynamic>{};
     userModel.value = null;
+    
+    // 정상 로그아웃 메시지 표시
+    Get.snackbar('알림', '로그아웃 되었습니다.');
     
     // 로그아웃 시 로그인 화면으로 이동
     Get.offNamed(AppRoutes.login);
@@ -349,13 +419,19 @@ class AuthController extends GetxController {
   Future<void> signInWithEmailAndPassword(String email, String password) async {
     try {
       isSigningIn.value = true;
+      // 1) 이메일 차단 사전 검사 (회원탈퇴 후 30일 제한)
+      final blockedUntil = await _userRepository.getEmailBlockedUntil(email.trim());
+      if (blockedUntil != null && blockedUntil.isAfter(DateTime.now())) {
+        final remain = blockedUntil.difference(DateTime.now()).inDays + 1;
+        Get.snackbar('로그인 제한', '회원탈퇴로 인해 ${remain}일 후에 다시 로그인할 수 있습니다.');
+        return; // 로그인 시도하지 않음
+      }
       
       // Firebase Auth 로그인
       await _authService.signInWithEmailAndPassword(email: email, password: password);
       
-      // 로그인 성공 시에만 메인 화면으로 이동
-      _redirectToMain();
-      Get.snackbar('성공', '로그인 되었습니다.');
+      // 네비게이션은 Auth 상태 리스너(_onUserLogin)에서
+      // 차단 검사 후에만 진행하도록 위임
       
     } catch (e) {
       print('로그인 실패: $e');
@@ -476,13 +552,12 @@ class AuthController extends GetxController {
   Future<void> signInWithGoogle() async {
     try {
       isSigningIn.value = true;
+      // Google 로그인은 이메일을 몰라 선검사가 어려움 → 로그인 후에 즉시 차단 검사
       
       // Firebase Auth Google 로그인
       await _authService.signInWithGoogle();
       
-      // 로그인 성공 시에만 메인 화면으로 이동
-      _redirectToMain();
-      Get.snackbar('성공', 'Google 로그인이 완료되었습니다.');
+      // 네비게이션은 Auth 상태 리스너(_onUserLogin)에서 처리
       
     } catch (e) {
       print('Google 로그인 실패: $e');
@@ -499,13 +574,12 @@ class AuthController extends GetxController {
   Future<void> signInWithApple() async {
     try {
       isSigningIn.value = true;
+      // Apple도 로그인 후 차단 검사 수행
       
       // Firebase Auth Apple 로그인
       await _authService.signInWithApple();
       
-      // 로그인 성공 시에만 메인 화면으로 이동
-      _redirectToMain();
-      Get.snackbar('성공', 'Apple 로그인이 완료되었습니다.');
+      // 네비게이션은 Auth 상태 리스너(_onUserLogin)에서 처리
       
     } catch (e) {
       print('Apple 로그인 실패: $e');
@@ -634,6 +708,11 @@ class AuthController extends GetxController {
       // Firebase Auth에서 현재 사용자 계정 삭제
       final currentUser = _authService.currentUser;
       if (currentUser != null) {
+        // 이메일 차단 등록 (30일)
+        final email = currentUser.email ?? '';
+        if (email.isNotEmpty) {
+          await _userRepository.blockEmailForDays(email, days: 30);
+        }
         await currentUser.delete();
         print('Firebase Auth 계정 삭제 완료: ${currentUserId.value}');
       } else {

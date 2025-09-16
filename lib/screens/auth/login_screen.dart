@@ -90,15 +90,80 @@ class _LoginScreenState extends State<LoginScreen> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('auto_login_enabled', _autoLogin);
     } catch (e) {
-      // 로그인 실패 시 오류 메시지는 AuthController에서 처리되므로
-      // 여기서는 추가 처리가 필요하지 않음
-      print('로그인 화면에서 오류 처리: $e');
+      String errorMessage = e.toString();
+      
+      // 이메일 인증 관련 오류 처리
+      if (errorMessage.contains('이메일 인증이 필요합니다')) {
+        _showEmailVerificationDialog();
+      } else {
+        print('로그인 화면에서 오류 처리: $e');
+      }
     } finally {
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  // 이메일 인증 다이얼로그 표시
+  void _showEmailVerificationDialog() {
+    Get.dialog(
+      AlertDialog(
+        title: Text(
+          '이메일 인증 필요',
+          style: TextStyle(
+            fontSize: 18.sp,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        content: Text(
+          '이메일 인증이 완료되지 않았습니다.\n이메일을 확인하고 인증을 완료해주세요.',
+          style: TextStyle(
+            fontSize: 14.sp,
+            color: AppColors.textSecondary,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Get.back();
+            },
+            child: Text(
+              '취소',
+              style: TextStyle(
+                fontSize: 14.sp,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Get.back();
+              _resendEmailVerification();
+            },
+            child: Text(
+              '인증 이메일 재발송',
+              style: TextStyle(
+                fontSize: 14.sp,
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 이메일 인증 재발송
+  Future<void> _resendEmailVerification() async {
+    try {
+      await _authController.resendEmailVerification(_emailController.text.trim());
+    } catch (e) {
+      Get.snackbar('오류', '이메일 인증 재발송 중 오류가 발생했습니다: ${e.toString()}');
     }
   }
 
@@ -344,18 +409,6 @@ class _LoginScreenState extends State<LoginScreen> {
           icon: Icons.g_mobiledata, // Google 아이콘 (실제로는 Google 로고 이미지를 사용하는 것이 좋음)
           text: 'Google로 로그인',
         ),
-        
-        SizedBox(height: 12.h),
-        
-        // Apple 로그인 버튼
-        _buildSocialLoginButton(
-          onPressed: _handleAppleLogin,
-          backgroundColor: Colors.black,
-          borderColor: Colors.black,
-          textColor: Colors.white,
-          icon: Icons.apple,
-          text: 'Apple로 로그인',
-        ),
       ],
     );
   }
@@ -428,26 +481,4 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // Apple 로그인 처리
-  Future<void> _handleAppleLogin() async {
-    if (_isLoading) return;
-    
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      await _authController.signInWithApple();
-      // 자동 로그인 설정 저장 (애플 로그인 포함)
-      await _saveAutoLoginSetting();
-    } catch (e) {
-      Get.snackbar('오류', 'Apple 로그인 중 오류가 발생했습니다.');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
 }

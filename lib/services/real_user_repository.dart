@@ -101,15 +101,32 @@ class RealUserRepository extends GetxService {
   // 이메일로 사용자 조회
   Future<UserModel?> getUserByEmail(String email) async {
     try {
-      final querySnapshot = await _firebase.queryDocuments(
+      // 1차: 정규화된 소문자 이메일 필드로 조회
+      final normalized = email.trim().toLowerCase();
+      try {
+        final lowerQuery = await _firebase.queryDocuments(
+          _collectionName,
+          field: 'emailLower',
+          isEqualTo: normalized,
+          limitCount: 1,
+        );
+        if (lowerQuery.docs.isNotEmpty) {
+          return _convertFirestoreToUserModel(lowerQuery.docs.first);
+        }
+      } catch (e) {
+        // emailLower 인덱스/필드 부재 시에는 아래 fallback 수행
+        print('emailLower 조회 실패, email 정확 일치로 대체: $e');
+      }
+
+      // 2차: 기존 정확 일치 필드로 조회 (호환성)
+      final exactQuery = await _firebase.queryDocuments(
         _collectionName,
         field: 'email',
-        isEqualTo: email,
+        isEqualTo: email.trim(),
         limitCount: 1,
       );
-
-      if (querySnapshot.docs.isNotEmpty) {
-        return _convertFirestoreToUserModel(querySnapshot.docs.first);
+      if (exactQuery.docs.isNotEmpty) {
+        return _convertFirestoreToUserModel(exactQuery.docs.first);
       }
       return null;
     } catch (e) {
@@ -152,6 +169,16 @@ class RealUserRepository extends GetxService {
     } catch (e) {
       print('이메일 차단 확인 실패: $e');
       return null;
+    }
+  }
+
+  // 이메일 차단 해제 (재가입 시 사용)
+  Future<void> unblockEmail(String email) async {
+    try {
+      await _firebase.deleteDocument('$_blockedEmailsCollection/${email.toLowerCase()}');
+      print('이메일 차단 해제: ${email.toLowerCase()}');
+    } catch (e) {
+      print('이메일 차단 해제 실패: $e');
     }
   }
 
@@ -263,22 +290,43 @@ class RealUserRepository extends GetxService {
   Future<bool> isEmailAvailable(String email) async {
     try {
       final normalized = email.trim().toLowerCase();
-      // 1) 사용자 컬렉션에 동일 이메일 존재 여부 (대소문자 보정 포함)
-      final userExact = await getUserByEmail(email.trim());
-      if (userExact != null) return false;
-      final userLower = await getUserByEmail(normalized);
-      if (userLower != null) return false;
+      print('이메일 중복 확인 시작: $email (정규화: $normalized)');
+      
+      // 1) 사용자 컬렉션에 동일 이메일 존재 여부 (emailLower 기준 우선)
+      UserModel? existing;
+      try {
+        final lowerQuery = await _firebase.queryDocuments(
+          _collectionName,
+          field: 'emailLower',
+          isEqualTo: normalized,
+          limitCount: 1,
+        );
+        if (lowerQuery.docs.isNotEmpty) {
+          existing = _convertFirestoreToUserModel(lowerQuery.docs.first);
+        }
+      } catch (e) {
+        print('emailLower 조회 실패, exact로 대체: $e');
+      }
+      if (existing == null) {
+        existing = await getUserByEmail(email.trim());
+      }
+      if (existing != null) {
+        print('이메일 사용 불가: 사용자 존재(emailLower 또는 exact)');
+        return false;
+      }
 
       // 2) 탈퇴로 차단된 이메일인지 확인 (차단 중이면 사용 불가 처리)
       final blockedUntil = await getEmailBlockedUntil(normalized);
       if (blockedUntil != null && blockedUntil.isAfter(DateTime.now())) {
+        print('이메일 사용 불가: 차단된 이메일 (${blockedUntil}까지)');
         return false;
       }
 
+      print('이메일 사용 가능: $email');
       return true; // 어떤 제약도 없으면 사용 가능
     } catch (e) {
       print('이메일 중복 확인 실패: $e');
-      // 오류 발생 시 중복으로 간주하여 안전하게 처리
+      // 오류 발생 시 사용 불가로 처리 (안전한 방향으로 처리)
       return false;
     }
   }
@@ -468,6 +516,11 @@ class RealUserRepository extends GetxService {
     // DateTime을 Timestamp로 변환
     data['createdAt'] = Timestamp.fromDate(user.createdAt);
     data['updatedAt'] = Timestamp.fromDate(user.updatedAt);
+    
+    // 이메일 정규화 필드 저장 (대소문자 무시 중복 방지용)
+    if (data['email'] != null && data['email'] is String) {
+      data['emailLower'] = (data['email'] as String).trim().toLowerCase();
+    }
     
     // stats 내의 DateTime들도 변환
     if (data['stats'] != null) {

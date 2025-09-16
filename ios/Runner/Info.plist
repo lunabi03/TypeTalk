@@ -57,6 +57,14 @@
 				<string>signinwithapple</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>google</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.805092955656-9kh1erd0ol043m8lv9ift2mcq4q798gd</string>
+			</array>
+		</dict>
 	</array>
 	
 	<!-- Apple 로그인을 위한 URL 스킴 허용 -->

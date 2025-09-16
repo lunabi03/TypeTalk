@@ -210,13 +210,14 @@ class _SignupScreenState extends State<SignupScreen> {
         centerTitle: true,
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 24.w),
           child: Form(
             key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                 SizedBox(height: 32.h),
                 
                 // 환영 메시지
@@ -626,7 +627,8 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
                 
                 SizedBox(height: 40.h),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -646,18 +648,6 @@ class _SignupScreenState extends State<SignupScreen> {
           textColor: AppColors.textPrimary,
           icon: Icons.g_mobiledata, // Google 아이콘 대신 임시 아이콘
           text: 'Google로 계속하기',
-        ),
-        
-        SizedBox(height: 12.h),
-        
-        // Apple 로그인 버튼
-        _buildSocialLoginButton(
-          onPressed: _handleAppleLogin,
-          backgroundColor: Colors.black,
-          borderColor: Colors.black,
-          textColor: Colors.white,
-          icon: Icons.apple,
-          text: 'Apple로 계속하기',
         ),
       ],
     );
@@ -717,8 +707,9 @@ class _SignupScreenState extends State<SignupScreen> {
     });
 
     try {
+      // 회원가입 플로우 플래그 ON
+      _authController.isSignupFlow.value = true;
       await _authController.signInWithGoogle();
-      // signInWithGoogle이 성공하면 자동으로 리다이렉트됨
     } catch (e) {
       Get.snackbar('오류', 'Google 로그인 중 오류가 발생했습니다.');
     } finally {
@@ -730,25 +721,4 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
-  // Apple 로그인 처리
-  Future<void> _handleAppleLogin() async {
-    if (_isLoading) return;
-    
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      await _authController.signInWithApple();
-      // signInWithApple이 성공하면 자동으로 리다이렉트됨
-    } catch (e) {
-      Get.snackbar('오류', 'Apple 로그인 중 오류가 발생했습니다.');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
 }

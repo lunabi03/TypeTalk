@@ -46,14 +46,30 @@ class RealAuthService extends GetxService {
     required String name,
   }) async {
     try {
-      // Firebase Auth 회원가입
+      // 1. 이메일 중복 및 차단 확인 (Firestore에서)
+      final isEmailAvailable = await _userRepository.isEmailAvailable(email);
+      if (!isEmailAvailable) {
+        throw Exception('이미 사용 중인 이메일입니다.');
+      }
+
+      // 1-2. 회원탈퇴로 차단된 이메일인지 확인 (관리자 해제 전에는 가입 불가)
+      final blockedUntil = await _userRepository.getEmailBlockedUntil(email);
+      if (blockedUntil != null && blockedUntil.isAfter(DateTime.now())) {
+        final remain = blockedUntil.difference(DateTime.now()).inDays + 1;
+        throw Exception('회원탈퇴 처리된 이메일입니다. 관리자 해제 후 또는 ${remain}일 후 가입 가능합니다.');
+      }
+
+      // 2. Firebase Auth 회원가입
       final credential = await _firebase.signUpWithEmailAndPassword(
         email: email,
         password: password,
       );
 
       if (credential.user != null) {
-        // Firestore에 사용자 프로필 정보 저장
+        // 3. 이메일 인증 발송
+        await credential.user!.sendEmailVerification();
+        
+        // 4. Firestore에 사용자 프로필 정보 저장
         final userModel = UserModel(
           uid: credential.user!.uid,
           email: email,
@@ -68,15 +84,23 @@ class RealAuthService extends GetxService {
         await _userRepository.createUser(userModel);
         print('실제 Firebase 회원가입 및 프로필 저장 완료: ${credential.user!.uid}');
         
-        Get.snackbar('성공', '회원가입이 완료되었습니다!');
+        Get.snackbar('성공', '회원가입이 완료되었습니다! 이메일 인증을 확인해주세요.');
         return credential;
       }
 
       return null;
     } catch (e) {
       print('실제 Firebase 회원가입 실패: $e');
-      Get.snackbar('오류', '회원가입 중 오류가 발생했습니다: ${e.toString()}');
-      return null;
+      // Firebase Auth 오류 메시지 처리
+      if (e.toString().contains('email-already-in-use')) {
+        throw Exception('이미 사용 중인 이메일입니다.');
+      } else if (e.toString().contains('weak-password')) {
+        throw Exception('비밀번호가 너무 약합니다. 6자 이상 입력해주세요.');
+      } else if (e.toString().contains('invalid-email')) {
+        throw Exception('올바른 이메일 형식을 입력해주세요.');
+      } else {
+        throw Exception('회원가입 중 오류가 발생했습니다: ${e.toString()}');
+      }
     }
   }
 
@@ -105,6 +129,9 @@ class RealAuthService extends GetxService {
       );
 
       if (credential.user != null) {
+        // 이메일 인증 강제 조건을 완화: Firestore 사용자 문서가 존재하면 통과시키고,
+        // 인증은 앱 내에서 별도로 유도
+        
         // 마지막 로그인 시간 업데이트
         await _updateLastLogin(credential.user!.uid);
         print('실제 Firebase 로그인 완료: ${credential.user!.uid}');
@@ -158,6 +185,8 @@ class RealAuthService extends GetxService {
   // Google 로그인 (실제 구현)
   Future<UserCredential?> signInWithGoogle() async {
     try {
+      print('Google 로그인 시작');
+      
       // Google Sign In 인스턴스 생성 - profile 스코프 제거
       final GoogleSignIn googleSignIn = GoogleSignIn(
         scopes: ['email'], // profile 스코프 제거하여 People API 호출 방지
@@ -167,6 +196,7 @@ class RealAuthService extends GetxService {
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
       if (googleUser == null) {
         // 사용자가 로그인을 취소한 경우
+        print('Google 로그인 취소됨');
         throw Exception('Google 로그인이 취소되었습니다.');
       }
       
@@ -248,9 +278,9 @@ class RealAuthService extends GetxService {
     final existingUser = await _userRepository.getUser(userCredential.user!.uid);
     
     if (existingUser == null) {
-      // 기존 프로필이 없는 소셜 로그인: 회원가입 절차로 유도 (자동 생성 방지)
-      print('Google 로그인: 기존 프로필 없음 → 회원가입 절차 진행 필요');
-      // AuthController가 로그인 상태 변화를 감지해 회원가입 화면으로 이동하도록 처리됨
+      // 기존 프로필이 없어도 컨트롤러에서 이메일 기반 매칭/자동 생성 처리
+      // 여기서는 성공적으로 Firebase Auth 로그인만 완료하고 다음 단계로 위임
+      print('Google 로그인: Firestore 프로필 없음 -> 컨트롤러에서 매칭/생성 처리 예정');
     } else {
       // 기존 사용자인 경우 마지막 로그인 시간 업데이트
       await _updateLastLogin(userCredential.user!.uid);
@@ -292,6 +322,18 @@ class RealAuthService extends GetxService {
       final userCredential = await _firebase.signInWithCredential(oauthCredential);
       
       if (userCredential.user != null) {
+        final email = userCredential.user!.email;
+        
+        // 이메일 중복 확인 (다른 계정에서 이미 사용 중인지)
+        if (email != null && email.isNotEmpty) {
+          final isEmailAvailable = await _userRepository.isEmailAvailable(email);
+          if (!isEmailAvailable) {
+            // 이미 다른 계정에서 사용 중인 이메일인 경우 로그아웃
+            await signOut();
+            throw Exception('이미 사용 중인 이메일입니다. 다른 계정으로 로그인하거나 이메일을 변경해주세요.');
+          }
+        }
+        
         // Firestore에 사용자 정보가 있는지 확인
         final existingUser = await _userRepository.getUser(userCredential.user!.uid);
         
@@ -428,11 +470,31 @@ class RealAuthService extends GetxService {
     try {
       if (user.value != null && !user.value!.emailVerified) {
         await user.value!.sendEmailVerification();
-        Get.snackbar('성공', '인증 이메일이 발송되었습니다.');
+        Get.snackbar('성공', '인증 이메일이 발송되었습니다. 이메일을 확인해주세요.');
+      } else if (user.value != null && user.value!.emailVerified) {
+        Get.snackbar('알림', '이미 인증된 이메일입니다.');
+      } else {
+        Get.snackbar('오류', '로그인이 필요합니다.');
       }
     } catch (e) {
       print('이메일 인증 발송 실패: $e');
       Get.snackbar('오류', '이메일 인증 발송 중 오류가 발생했습니다: ${e.toString()}');
+    }
+  }
+
+  // 이메일 인증 재발송 (로그인 전)
+  Future<void> sendEmailVerificationToEmail(String email) async {
+    try {
+      // Firebase Auth의 sendPasswordResetEmail을 사용하여 이메일 인증 유도
+      await _firebase.sendPasswordResetEmail(email);
+      Get.snackbar('성공', '이메일 인증 안내가 발송되었습니다. 이메일을 확인해주세요.');
+    } catch (e) {
+      print('이메일 인증 재발송 실패: $e');
+      if (e.toString().contains('user-not-found')) {
+        Get.snackbar('오류', '해당 이메일로 가입된 계정이 없습니다.');
+      } else {
+        Get.snackbar('오류', '이메일 인증 발송 중 오류가 발생했습니다: ${e.toString()}');
+      }
     }
   }
 

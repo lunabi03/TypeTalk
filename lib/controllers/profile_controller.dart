@@ -108,7 +108,7 @@ class ProfileController extends GetxController {
     try {
       isLoading.value = true;
       
-      final uid = _authController.userId;
+      final uid = _authController.currentUserId.value;
       if (uid != null) {
         final user = await readUserProfile(uid);
         if (user != null) {
@@ -209,7 +209,7 @@ class ProfileController extends GetxController {
     try {
       isSaving.value = true;
       
-      final uid = _authController.userId;
+      final uid = _authController.currentUserId.value;
       if (uid == null) {
         Get.snackbar('오류', '사용자 정보를 찾을 수 없습니다.');
         return false;
@@ -326,7 +326,7 @@ class ProfileController extends GetxController {
 
       isLoading.value = true;
 
-      final uid = _authController.userId;
+      final uid = _authController.currentUserId.value;
       if (uid == null) {
         throw Exception('로그인된 사용자가 없습니다.');
       }
@@ -421,7 +421,7 @@ class ProfileController extends GetxController {
     try {
       isSaving.value = true;
 
-      final uid = _authController.userId;
+      final uid = _authController.currentUserId.value;
       if (uid == null) {
         throw Exception('로그인된 사용자가 없습니다.');
       }
@@ -459,7 +459,7 @@ class ProfileController extends GetxController {
     try {
       isSaving.value = true;
 
-      final uid = _authController.userId;
+      final uid = _authController.currentUserId.value;
       if (uid == null) {
         throw Exception('로그인된 사용자가 없습니다.');
       }
@@ -638,7 +638,7 @@ class ProfileController extends GetxController {
         
         // 프로필 새로고침 시도
         try {
-          final uid = _authController.userId;
+          final uid = _authController.currentUserId.value;
           if (uid != null) {
             await _loadCurrentUserProfile();
             final refreshedUser = currentUser.value;

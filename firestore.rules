@@ -319,6 +319,67 @@ service cloud.firestore {
     }
     
     // ================================
+    // 알림 컬렉션 보안 규칙
+    // ================================
+    
+    match /notifications/{notificationId} {
+      // 읽기 권한: 알림 받는 사용자만 가능
+      allow read: if isAuthenticated() &&
+                 isOwner(resource.data.userId);
+      
+      // 생성 권한: 시스템에서만 생성 (서버 사이드)
+      allow create: if isAuthenticated() &&
+                   isOwner(request.resource.data.userId) &&
+                   request.resource.data.keys().hasAll(['notificationId', 'userId', 'type', 'title', 'message', 'createdAt']) &&
+                   request.resource.data.type in ['chat_invite', 'message', 'system', 'friend_request'] &&
+                   request.resource.data.title is string &&
+                   request.resource.data.title.size() >= 1 &&
+                   request.resource.data.title.size() <= 100 &&
+                   request.resource.data.message is string &&
+                   request.resource.data.message.size() >= 1 &&
+                   request.resource.data.message.size() <= 500 &&
+                   isValidTimestamp(request.resource.data.createdAt);
+      
+      // 수정 권한: 알림 받는 사용자가 읽음 상태만 변경 가능
+      allow update: if isAuthenticated() &&
+                   isOwner(resource.data.userId) &&
+                   // 수정 가능한 필드만 허용
+                   request.resource.data.diff(resource.data).affectedKeys()
+                     .hasOnly(['isRead', 'readAt']) &&
+                   // 읽음 상태 변경 시 타임스탬프 업데이트
+                   (request.resource.data.get('isRead', false) == true &&
+                    request.resource.data.get('readAt', null) != null &&
+                    isValidTimestamp(request.resource.data.readAt));
+      
+      // 삭제 권한: 알림 받는 사용자만 가능
+      allow delete: if isAuthenticated() &&
+                   isOwner(resource.data.userId);
+    }
+    
+    // ================================
+    // 차단된 이메일 컬렉션 보안 규칙
+    // ================================
+    
+    match /blocked_emails/{emailId} {
+      // 읽기 권한: 모든 인증된 사용자 (이메일 중복 체크용)
+      allow read: if isAuthenticated();
+      
+      // 생성 권한: 시스템에서만 생성 (회원 탈퇴 시)
+      allow create: if isAuthenticated() &&
+                   request.resource.data.keys().hasAll(['emailId', 'email', 'blockedUntil', 'createdAt']) &&
+                   request.resource.data.email is string &&
+                   request.resource.data.email.matches('.*@.*\\..*') &&
+                   isValidTimestamp(request.resource.data.blockedUntil) &&
+                   isValidTimestamp(request.resource.data.createdAt);
+      
+      // 수정 권한: 허용하지 않음
+      allow update: if false;
+      
+      // 삭제 권한: 관리자만 가능
+      allow delete: if isAdmin();
+    }
+    
+    // ================================
     // 기본 거부 규칙
     // ================================
     

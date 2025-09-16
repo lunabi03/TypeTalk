@@ -48,8 +48,8 @@ class NotificationService extends GetxController {
       final authController = _authController;
       if (authController == null) return;
       
-      final currentUserId = authController.userId;
-      if (currentUserId == null) return;
+      final currentUserId = authController.currentUserId.value;
+      if (currentUserId.isEmpty) return;
 
       // 채팅 초대 알림 로드
       await _loadInviteNotifications(currentUserId);

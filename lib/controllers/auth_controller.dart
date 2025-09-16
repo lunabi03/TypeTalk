@@ -29,6 +29,8 @@ class AuthController extends GetxController {
   
   // 차단된 사용자 플래그
   RxBool isBlockedUser = false.obs;
+  // 회원가입 화면에서 소셜 연동 여부 플래그
+  RxBool isSignupFlow = false.obs;
 
   @override
   void onInit() {
@@ -71,53 +73,18 @@ class AuthController extends GetxController {
 
   // 사용자 로그인 시 호출
   void _onUserLogin(User firebaseUser) async {
-    // 회원탈퇴 차단 이메일인지 검사 (30일) - 로그인 직후 즉시 검사
+    // 관리자 해제 전까지는 차단 이메일 로그인 불가
     final userEmail = firebaseUser.email ?? '';
-    print('=== 차단 검사 시작 ===');
-    print('사용자 이메일: $userEmail');
-    
     final blockedUntil = await _userRepository.getEmailBlockedUntil(userEmail);
-    print('차단 정보: $blockedUntil');
-    print('현재 시간: ${DateTime.now()}');
-    
     if (blockedUntil != null && blockedUntil.isAfter(DateTime.now())) {
-      // 차단 상태이면 즉시 로그아웃시키고 안내
       final remain = blockedUntil.difference(DateTime.now()).inDays + 1;
-      print('차단된 사용자 - ${remain}일 남음');
-      
-      // 차단된 사용자임을 표시하는 플래그 설정
-      isBlockedUser.value = true;
-      
-      // 직접 로그아웃 처리 (signOut() 호출하지 않음)
-      currentUserId.value = '';
-      currentUserEmail.value = '';
-      currentUserName.value = '';
-      userProfile.value = <String, dynamic>{};
-      userModel.value = null;
-      
-      // Firebase Auth에서 직접 로그아웃 (메시지 없이)
-      try {
-        await _authService.signOut();
-      } catch (e) {
-        print('차단된 사용자 로그아웃 처리: $e');
-      }
-      
-      // 모든 스택을 비우고 로그인 화면으로 이동
-      if (Get.currentRoute != AppRoutes.login) {
-        Get.offAllNamed(AppRoutes.login);
-      }
-      
-      // 차단 전용 메시지만 표시
-      Get.snackbar('로그인 제한', '회원탈퇴로 인해 ${remain}일 후에 다시 로그인할 수 있습니다.');
-      
-      // 차단 플래그 리셋
-      Future.delayed(const Duration(milliseconds: 100), () {
-        isBlockedUser.value = false;
-      });
-      
+      // 강제 로그아웃 후 안내
+      try { await _authService.signOut(); } catch (_) {}
+      Get.offAllNamed(AppRoutes.login);
+      Get.snackbar('로그인 제한', '회원탈퇴 처리된 계정입니다. ${remain}일 후 또는 관리자 해제 후 이용 가능합니다.');
       return;
     }
-    print('차단되지 않은 사용자 - 로그인 진행');
+    print('차단 아님 - 로그인 진행');
     print('==================');
     
     currentUserId.value = firebaseUser.uid;
@@ -126,22 +93,119 @@ class AuthController extends GetxController {
     
     // Firestore에서 사용자 프로필 로드 후 분기
     loadUserProfile().then((_) async {
-      // userModel이 없거나 프로필 문서가 없으면 회원가입 화면으로 유도
+      // userModel이 없거나 프로필 문서가 없으면 회원가입 유도 (메인 화면 이동 금지)
       if (userModel.value == null) {
         final exists = await _userRepository.userExists(firebaseUser.uid);
         if (!exists) {
-          Get.snackbar('회원가입 필요', '계정 정보가 없어 회원가입을 진행합니다.');
-          // 즉시 회원가입 화면으로 이동
-          await Future.delayed(Duration(milliseconds: 500)); // 스낵바 표시 후
-          Get.offAllNamed(AppRoutes.signup); // 모든 화면 스택 제거하고 이동
+          // 1) 동일 이메일로 기존 계정(다른 uid)이 있는지 확인하여 프로필 매칭/이전 처리
+          try {
+            final email = (firebaseUser.email ?? '').trim();
+            if (email.isNotEmpty) {
+              final existingByEmail = await _userRepository.getUserByEmail(email);
+              if (existingByEmail != null) {
+                // 기존 이메일 계정의 프로필을 현재 Google uid로 복제 생성
+                final migrated = existingByEmail.copyWith(
+                  uid: firebaseUser.uid,
+                  updatedAt: DateTime.now(),
+                  loginProvider: 'google',
+                  // displayName이 더 풍부하면 보강
+                  name: (firebaseUser.displayName != null && firebaseUser.displayName!.trim().isNotEmpty)
+                      ? firebaseUser.displayName
+                      : existingByEmail.name,
+                );
+                await _userRepository.createUser(migrated);
+                // 마지막 로그인 갱신 시도 (비치명적)
+                try { await _userRepository.updateLastLogin(firebaseUser.uid); } catch (_) {}
+
+                // 로컬 상태 업데이트 후 메인으로 이동
+                userModel.value = migrated;
+                userProfile.value = {
+                  'name': migrated.name,
+                  'email': migrated.email,
+                  'mbti': migrated.mbtiType,
+                  'bio': migrated.bio ?? '자기소개를 입력해주세요.',
+                  'age': migrated.age,
+                  'profileImageUrl': migrated.profileImageUrl,
+                  'mbtiTestCount': migrated.mbtiTestCount,
+                  'lastMBTITestDate': migrated.lastMBTITestDate,
+                  'createdAt': migrated.createdAt,
+                };
+                Get.snackbar('성공', '기존 이메일 계정을 Google로 연결했습니다.');
+                Get.offNamed(AppRoutes.start);
+                return;
+              }
+            }
+          } catch (e) {
+            print('이메일 기반 기존 계정 매칭 시도 중 오류: $e');
+            // 계속 진행 (아래 분기)
+          }
+
+          // 신규 사용자: 회원가입 화면에서 구글 연동으로 진입한 경우 자동 프로필 생성
+          if (isSignupFlow.value) {
+            try {
+              // 신규 사용자 프로필 생성
+              final newUser = UserModel(
+                uid: firebaseUser.uid,
+                email: (firebaseUser.email ?? '').trim(),
+                name: (firebaseUser.displayName ?? '사용자'),
+                createdAt: DateTime.now(),
+                updatedAt: DateTime.now(),
+                loginProvider: 'google',
+                profileImageUrl: firebaseUser.photoURL,
+              );
+              await _userRepository.createUser(newUser);
+
+              // 로컬 상태 반영
+              userModel.value = newUser;
+              userProfile.value = {
+                'name': newUser.name,
+                'email': newUser.email,
+                'mbti': newUser.mbtiType,
+                'bio': newUser.bio ?? '자기소개를 입력해주세요.',
+                'age': newUser.age,
+                'profileImageUrl': newUser.profileImageUrl,
+                'mbtiTestCount': newUser.mbtiTestCount,
+                'lastMBTITestDate': newUser.lastMBTITestDate,
+                'createdAt': newUser.createdAt,
+              };
+
+              // 회원가입 완료 처리
+              isSignupFlow.value = false; // 플로우 플래그 리셋
+              Get.snackbar('성공', 'Google 계정으로 회원가입되었습니다.');
+              Get.offNamed(AppRoutes.start);
+              return;
+            } catch (e) {
+              // 자동 생성 실패 시 기존 안내로 폴백
+              print('Google 신규 사용자 자동 프로필 생성 실패: $e');
+            }
+          }
+
+          // (폴백) 회원가입 유도 팝업
+          try { await _authService.signOut(); } catch (_) {}
+          Get.offAllNamed(AppRoutes.login);
+          Get.dialog(
+            AlertDialog(
+              title: const Text('회원가입 필요'),
+              content: const Text('해당 이메일로 생성된 프로필이 없습니다. 회원가입을 먼저 진행해주세요.'),
+              actions: [
+                TextButton(
+                  onPressed: () { Get.back(); },
+                  child: const Text('닫기'),
+                ),
+                TextButton(
+                  onPressed: () { Get.back(); Get.toNamed(AppRoutes.signup); },
+                  child: const Text('회원가입으로 이동'),
+                ),
+              ],
+            ),
+            barrierDismissible: true,
+          );
           return;
         }
       }
       
-      // 정상 로그인 성공 메시지 표시 (차단되지 않은 사용자만)
-      if (!isBlockedUser.value) {
-        Get.snackbar('성공', '로그인 되었습니다.');
-      }
+      // 정상 로그인 성공 메시지 표시
+      Get.snackbar('성공', '로그인 되었습니다.');
       
       // 기존 사용자이면 메인으로 이동
       Get.offNamed(AppRoutes.start);
@@ -419,14 +483,7 @@ class AuthController extends GetxController {
   Future<void> signInWithEmailAndPassword(String email, String password) async {
     try {
       isSigningIn.value = true;
-      // 1) 이메일 차단 사전 검사 (회원탈퇴 후 30일 제한)
-      final blockedUntil = await _userRepository.getEmailBlockedUntil(email.trim());
-      if (blockedUntil != null && blockedUntil.isAfter(DateTime.now())) {
-        final remain = blockedUntil.difference(DateTime.now()).inDays + 1;
-        Get.snackbar('로그인 제한', '회원탈퇴로 인해 ${remain}일 후에 다시 로그인할 수 있습니다.');
-        return; // 로그인 시도하지 않음
-      }
-      
+      // 차단 검사 제거: Firebase Auth 로그인만 시도
       // Firebase Auth 로그인
       await _authService.signInWithEmailAndPassword(email: email, password: password);
       
@@ -441,6 +498,8 @@ class AuthController extends GetxController {
       // 로그인 실패 시에는 메인 화면으로 이동하지 않음
     } finally {
       isSigningIn.value = false;
+      // 로그인 시도 후에는 회원가입 플래그를 항상 OFF로 리셋
+      isSignupFlow.value = false;
     }
   }
 
@@ -721,6 +780,29 @@ class AuthController extends GetxController {
     } catch (e) {
       print('Firebase Auth 계정 삭제 실패: $e');
       throw Exception('Firebase Auth 계정 삭제에 실패했습니다: ${e.toString()}');
+    }
+  }
+
+  /// 이메일 인증 재발송 (로그인 전)
+  Future<void> resendEmailVerification(String email) async {
+    try {
+      await _authService.sendEmailVerificationToEmail(email);
+    } catch (e) {
+      print('이메일 인증 재발송 실패: $e');
+      throw Exception('이메일 인증 재발송에 실패했습니다: ${e.toString()}');
+    }
+  }
+
+  /// 현재 사용자의 이메일 인증 상태 확인
+  bool get isEmailVerified => _authService.isEmailVerified;
+
+  /// 현재 사용자의 이메일 인증 발송
+  Future<void> sendEmailVerification() async {
+    try {
+      await _authService.sendEmailVerification();
+    } catch (e) {
+      print('이메일 인증 발송 실패: $e');
+      throw Exception('이메일 인증 발송에 실패했습니다: ${e.toString()}');
     }
   }
 }

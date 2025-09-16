@@ -66,7 +66,14 @@ class ChatController extends GetxController {
   Future<void> loadChatList() async {
     try {
       isLoading.value = true;
-      final myId = authController.userId ?? 'current-user';
+      
+      // 인증 상태 확인
+      if (authController.currentUserId.value.isEmpty) {
+        print('❌ 로그인되지 않은 사용자 - 채팅 목록 로드 중단');
+        return;
+      }
+      
+      final myId = authController.currentUserId.value;
       print('🔍 채팅 목록 로드 시작 - 사용자 ID: $myId');
       
       final snapshots = await _firestore.queryDocuments(
@@ -223,7 +230,7 @@ class ChatController extends GetxController {
     // 이렇게 하면 재실행만으로 이전에 읽었던 대화에 배지가 붙지 않습니다.
     final lastRead = _lastReadAt[chat.chatId] ?? _appLaunchedAt;
     if (chat.lastMessage != null && chat.lastMessage!.timestamp.isAfter(lastRead)) {
-      final myId = authController.userId ?? 'current-user';
+      final myId = authController.currentUserId.value;
       if (chat.lastMessage!.senderId != myId) {
         return 1;
       }
@@ -247,7 +254,7 @@ class ChatController extends GetxController {
 
   /// 선택한 사용자와 개인 채팅 시작 (초대 시스템 사용)
   Future<void> startPrivateChatWith(UserModel otherUser) async {
-    final currentUserId = authController.userId ?? 'current-user';
+    final currentUserId = authController.currentUserId.value;
     final otherUserId = otherUser.uid;
 
     try {
@@ -401,7 +408,7 @@ class ChatController extends GetxController {
       final newMessage = MessageModel(
         messageId: 'msg-${now.millisecondsSinceEpoch}-${now.microsecond}',
         chatId: chatId.value,
-        senderId: authController.userId ?? 'current-user',
+        senderId: authController.currentUserId.value,
         senderName: authController.userName ?? '나',
         senderMBTI: authController.userProfile['mbti'] ?? 'ENFP',
         content: content,
@@ -410,7 +417,7 @@ class ChatController extends GetxController {
         status: MessageStatus(
           isEdited: false,
           isDeleted: false,
-          readBy: [authController.userId ?? 'current-user'],
+          readBy: [authController.currentUserId.value],
         ),
         reactions: {},
       );
@@ -592,7 +599,7 @@ class ChatController extends GetxController {
           status: MessageStatus(
             isEdited: false,
             isDeleted: false,
-            readBy: [authController.userId ?? 'current-user'],
+            readBy: [authController.currentUserId.value],
           ),
           reactions: {},
         );
@@ -672,7 +679,7 @@ class ChatController extends GetxController {
 
   /// 내가 보낸 메시지인지 확인
   bool isMyMessage(MessageModel message) {
-    return message.senderId == (authController.userId ?? 'current-user');
+    return message.senderId == authController.currentUserId.value;
   }
 
   /// MBTI 색상 반환
@@ -730,7 +737,7 @@ class ChatController extends GetxController {
   void _updateReadStatus(String messageId) {
     try {
       // 현재 사용자 ID
-      final currentUserId = authController.userId ?? 'current-user';
+      final currentUserId = authController.currentUserId.value;
       
       // 메시지의 읽음 상태 업데이트
       final messageIndex = messages.indexWhere((m) => m.messageId == messageId);
@@ -970,7 +977,7 @@ class ChatController extends GetxController {
   /// 채팅방 완전 삭제
   Future<void> deleteChatPermanently(String chatId) async {
     try {
-      final currentUserId = authController.userId ?? 'current-user';
+      final currentUserId = authController.currentUserId.value;
       
       // 권한 확인
       final chat = chatList.firstWhereOrNull((c) => c.chatId == chatId);
@@ -1016,7 +1023,7 @@ class ChatController extends GetxController {
   /// 메시지 삭제
   Future<void> deleteMessage(String messageId) async {
     try {
-      final currentUserId = authController.userId ?? 'current-user';
+      final currentUserId = authController.currentUserId.value;
       
       final messageIndex = messages.indexWhere((m) => m.messageId == messageId);
       if (messageIndex == -1) {
@@ -1194,7 +1201,7 @@ class ChatController extends GetxController {
 
   /// 일반 사용자와의 대화 시작
   Future<void> startUserChat(String userName, String userMBTI, String? userBio) async {
-    final currentUserId = authController.userId ?? 'current-user';
+    final currentUserId = authController.currentUserId.value;
     print('🚀 대화 시작 - 사용자: $userName, MBTI: $userMBTI, 현재 사용자 ID: $currentUserId');
     
     // 자신과의 채팅방 생성 방지
@@ -1337,7 +1344,7 @@ class ChatController extends GetxController {
     try {
       print('🧹 불필요한 채팅방 정리 시작...');
       
-      final myId = authController.userId ?? 'current-user';
+      final myId = authController.currentUserId.value;
       
       // 모든 채팅방 로드
       final snapshots = await _firestore.queryDocuments('chats');

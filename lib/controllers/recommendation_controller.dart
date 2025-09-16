@@ -45,7 +45,7 @@ class RecommendationController extends GetxController {
     try {
       isLoading.value = true;
       
-      final userId = _authController.userId;
+      final userId = _authController.currentUserId.value;
       if (userId == null) {
         print('로그인된 사용자가 없습니다.');
         return;
@@ -80,7 +80,7 @@ class RecommendationController extends GetxController {
   /// 추천 통계 로드
   Future<void> _loadRecommendationStats() async {
     try {
-      final userId = _authController.userId;
+      final userId = _authController.currentUserId.value;
       if (userId == null) return;
 
       final stats = await _recommendationService.getRecommendationStats(userId);
@@ -95,7 +95,7 @@ class RecommendationController extends GetxController {
     try {
       isGenerating.value = true;
       
-      final userId = _authController.userId;
+      final userId = _authController.currentUserId.value;
       if (userId == null) {
         Get.snackbar('오류', '로그인이 필요합니다.');
         return;

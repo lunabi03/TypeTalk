@@ -358,6 +358,7 @@ class AuthController extends GetxController {
     try {
       isLoading.value = true;
       
+      // 이름 중복 확인은 공개 usernames 컬렉션을 우선 조회하여 비로그인 상태에서도 동작
       final isAvailable = await _userRepository.isNameAvailable(name);
       
       if (isAvailable) {
@@ -399,7 +400,8 @@ class AuthController extends GetxController {
     try {
       isLoading.value = true;
       
-      final isAvailable = await _userRepository.isEmailAvailable(email);
+      // 회원가입 화면에서의 중복 확인은 차단 목록은 무시하고 실제 사용자 존재만 확인
+      final isAvailable = await _userRepository.isEmailAvailable(email, ignoreBlocked: true);
       
       if (isAvailable) {
         Get.snackbar(

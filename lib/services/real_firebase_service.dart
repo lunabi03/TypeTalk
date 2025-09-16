@@ -414,6 +414,20 @@ class RealFirebaseService extends GetxService {
     }
   }
 
+  // 이메일로 가입 방법 조회 (비인증 상태에서도 사용 가능)
+  Future<List<String>> fetchSignInMethodsForEmail(String email) async {
+    try {
+      final methods = await _auth.fetchSignInMethodsForEmail(email);
+      return methods;
+    } on FirebaseAuthException catch (e) {
+      print('fetchSignInMethodsForEmail 실패: ${e.code} - ${e.message}');
+      return <String>[];
+    } catch (e) {
+      print('fetchSignInMethodsForEmail 일반 오류: $e');
+      return <String>[];
+    }
+  }
+
   // 배치 작업 시작
   WriteBatch batch() {
     return _firestore.batch();

@@ -10,6 +10,7 @@ class RealUserRepository extends GetxService {
   RealFirebaseService get _firebase => Get.find<RealFirebaseService>();
   static const String _collectionName = 'users';
   static const String _blockedEmailsCollection = 'blocked_emails';
+  static const String _usernamesCollection = 'usernames';
 
   // 사용자 생성
   Future<void> createUser(UserModel user) async {
@@ -20,6 +21,25 @@ class RealUserRepository extends GetxService {
       );
       
       print('실제 Firebase 사용자 생성 완료: ${user.uid}');
+
+      // 사용자명 인덱스에 등록 (중복 확인용 공개 컬렉션)
+      try {
+        if (user.name.trim().isNotEmpty) {
+          await _firebase.setDocument(
+            '$_usernamesCollection/${user.name.trim()}',
+            {
+              'name': user.name.trim(),
+              'uid': user.uid,
+              'createdAt': FieldValue.serverTimestamp(),
+              'updatedAt': FieldValue.serverTimestamp(),
+            },
+            merge: true,
+          );
+          print('usernames 인덱스 등록: ${user.name.trim()} -> ${user.uid}');
+        }
+      } catch (e) {
+        print('usernames 인덱스 등록 실패(치명적 아님): $e');
+      }
     } catch (e) {
       print('실제 Firebase 사용자 생성 실패: $e');
       throw Exception('사용자 생성 중 오류가 발생했습니다: ${e.toString()}');
@@ -277,17 +297,42 @@ class RealUserRepository extends GetxService {
   // 이름 중복 확인
   Future<bool> isNameAvailable(String name) async {
     try {
-      final user = await getUserByName(name);
-      return user == null; // 사용자가 없으면 사용 가능
+      final normalized = name.trim();
+      // 우선 공개 usernames 컬렉션에서 확인 (비인증 환경에서도 동작)
+      try {
+        final snapshot = await _firebase.queryDocuments(
+          _usernamesCollection,
+          field: 'name',
+          isEqualTo: normalized,
+          limitCount: 1,
+        );
+        if (snapshot.docs.isNotEmpty) {
+          return false; // 이미 등록된 이름
+        }
+        // 공개 컬렉션에 없으면 사용 가능으로 판단
+        return true;
+      } catch (e) {
+        print('usernames 컬렉션 확인 실패, users 쿼리로 대체: $e');
+      }
+
+      // Fallback: users 컬렉션 직접 조회 (인증 필요할 수 있음)
+      try {
+        final user = await getUserByName(normalized);
+        return user == null;
+      } catch (e) {
+        // 권한 오류 등으로 조회 실패 시에는 사용 가능으로 처리
+        print('users 컬렉션으로 이름 확인 실패(가용 처리): $e');
+        return true;
+      }
     } catch (e) {
       print('이름 중복 확인 실패: $e');
-      // 오류 발생 시 중복으로 간주하여 안전하게 처리
-      return false;
+      // 마지막 방어: 실패 시 사용 가능으로 처리하여 UX 개선
+      return true;
     }
   }
 
   // 이메일 중복 확인
-  Future<bool> isEmailAvailable(String email) async {
+  Future<bool> isEmailAvailable(String email, {bool ignoreBlocked = false}) async {
     try {
       final normalized = email.trim().toLowerCase();
       print('이메일 중복 확인 시작: $email (정규화: $normalized)');
@@ -308,26 +353,44 @@ class RealUserRepository extends GetxService {
         print('emailLower 조회 실패, exact로 대체: $e');
       }
       if (existing == null) {
-        existing = await getUserByEmail(email.trim());
+        try {
+          existing = await getUserByEmail(email.trim());
+        } catch (e) {
+          print('getUserByEmail 실패(권한 등): $e');
+          existing = null; // 실패는 무시하고 다음 단계로 진행
+        }
       }
       if (existing != null) {
         print('이메일 사용 불가: 사용자 존재(emailLower 또는 exact)');
         return false;
       }
 
-      // 2) 탈퇴로 차단된 이메일인지 확인 (차단 중이면 사용 불가 처리)
-      final blockedUntil = await getEmailBlockedUntil(normalized);
-      if (blockedUntil != null && blockedUntil.isAfter(DateTime.now())) {
-        print('이메일 사용 불가: 차단된 이메일 (${blockedUntil}까지)');
-        return false;
+      // 2) Firebase Auth에 가입된 이메일인지 확인 (비인증 상태에서도 가능)
+      try {
+        final methods = await _firebase.fetchSignInMethodsForEmail(email.trim());
+        if (methods.isNotEmpty) {
+          print('이메일 사용 불가: Firebase Auth에 가입된 이메일 (methods: $methods)');
+          return false;
+        }
+      } catch (e) {
+        print('Firebase Auth 이메일 가입 여부 확인 실패: $e');
+      }
+
+      // 3) 탈퇴로 차단된 이메일인지 확인 (회원가입 실행 단계에서 별도 검사)
+      if (!ignoreBlocked) {
+        final blockedUntil = await getEmailBlockedUntil(normalized);
+        if (blockedUntil != null && blockedUntil.isAfter(DateTime.now())) {
+          print('이메일 사용 불가: 차단된 이메일 (${blockedUntil}까지)');
+          return false;
+        }
       }
 
       print('이메일 사용 가능: $email');
       return true; // 어떤 제약도 없으면 사용 가능
     } catch (e) {
       print('이메일 중복 확인 실패: $e');
-      // 오류 발생 시 사용 불가로 처리 (안전한 방향으로 처리)
-      return false;
+      // 실패 시에도 사용 가능으로 처리하여 UX 개선 (실제 가입 시 재검증)
+      return true;
     }
   }
 

@@ -98,6 +98,17 @@ service cloud.firestore {
       allow delete: if isAuthenticated() &&
                    isOwner(userId);
     }
+
+    // ================================
+    // 공개 사용자명 컬렉션 (중복 확인용)
+    // ================================
+    
+    match /usernames/{nameId} {
+      // 읽기 권한: 모든 사용자에게 공개 (중복 확인 전용)
+      allow read: if true;
+      // 생성/수정/삭제: 본인만 가능
+      allow create, update, delete: if isAuthenticated() && isOwner(request.resource.data.uid);
+    }
     
     // ================================
     // 추천 컬렉션 보안 규칙

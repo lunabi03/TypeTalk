@@ -3,10 +3,12 @@ import 'package:typetalk/models/chat_notification_model.dart';
 import 'package:typetalk/models/chat_model.dart';
 import 'package:typetalk/models/message_model.dart';
 import 'package:typetalk/services/real_firebase_service.dart';
+import 'package:typetalk/controllers/auth_controller.dart';
 
 // 채팅 알림 서비스 클래스
 class ChatNotificationService extends GetxService {
   final RealFirebaseService _firestoreService = Get.find<RealFirebaseService>();
+  AuthController? get _authController => Get.isRegistered<AuthController>() ? Get.find<AuthController>() : null;
   
   // 알림 데이터
   final RxList<ChatNotificationModel> notifications = <ChatNotificationModel>[].obs;
@@ -45,6 +47,12 @@ class ChatNotificationService extends GetxService {
   // 알림 로드
   Future<void> _loadNotifications() async {
     try {
+      // 비로그인 시에는 알림 로드를 건너뜀
+      final auth = _authController;
+      if (auth == null || !auth.isLoggedIn) {
+        print('알림 로드 건너뜀: 비로그인 상태');
+        return;
+      }
       final notificationsSnapshot = await _firestoreService.getCollectionDocuments('notifications');
       final loadedNotifications = <ChatNotificationModel>[];
       

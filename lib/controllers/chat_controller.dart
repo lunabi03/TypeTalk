@@ -39,6 +39,9 @@ class ChatController extends GetxController {
   // 메시지 목록
   RxList<MessageModel> messages = <MessageModel>[].obs;
   
+  // 메시지 캐시 (채팅방별 메시지 저장)
+  final Map<String, List<MessageModel>> _messageCache = {};
+  
   // UI 상태
   RxBool isLoading = false.obs;
   RxBool isSending = false.obs;
@@ -158,8 +161,17 @@ class ChatController extends GetxController {
     currentChat.value = chat;
     chatId.value = chat.chatId;
     
-    // 메시지 목록 초기화 후 로드
+    // 메시지 목록 초기화
     messages.clear();
+    
+    // 캐시된 메시지가 있으면 먼저 로드
+    if (_messageCache.containsKey(chat.chatId)) {
+      final cachedMessages = _messageCache[chat.chatId]!;
+      messages.addAll(cachedMessages);
+      print('📦 캐시에서 메시지 로드: ${cachedMessages.length}개');
+    }
+    
+    // Firestore에서 최신 메시지 로드
     await loadMessagesForChat(chat.chatId);
     
     _lastReadAt[chat.chatId] = DateTime.now();
@@ -207,6 +219,12 @@ class ChatController extends GetxController {
       // assignAll 대신 clear + addAll 사용하여 UI 업데이트 보장
       messages.clear();
       messages.addAll(loaded);
+      
+      // 캐시도 업데이트
+      if (loaded.isNotEmpty) {
+        _messageCache[id] = List.from(loaded);
+        print('💾 Firestore 로드 후 캐시 업데이트: $id (${loaded.length}개)');
+      }
       
       // 정렬 후 한 번 더 확인
       print('🔍 최종 메시지 목록 정렬 확인:');
@@ -431,6 +449,12 @@ class ChatController extends GetxController {
         if (timeComparison != 0) return timeComparison;
         return a.messageId.compareTo(b.messageId);
       });
+      
+      // 캐시에도 업데이트
+      if (currentChat.value != null) {
+        _messageCache[currentChat.value!.chatId] = List.from(messages);
+        print('💾 메시지 캐시 업데이트: ${currentChat.value!.chatId} (${messages.length}개)');
+      }
       
       // 입력창 초기화
       messageController.clear();
@@ -725,8 +749,14 @@ class ChatController extends GetxController {
     }
   }
 
-  /// 채팅방 나가기
+  /// 채팅방 나가기 (메시지는 캐시에 보관)
   void leaveChat() {
+    // 현재 메시지를 캐시에 저장
+    if (currentChat.value != null && messages.isNotEmpty) {
+      _messageCache[currentChat.value!.chatId] = List.from(messages);
+      print('💾 메시지 캐시 저장: ${currentChat.value!.chatId} (${messages.length}개)');
+    }
+    
     currentChat.value = null;
     chatId.value = '';
     messages.clear();

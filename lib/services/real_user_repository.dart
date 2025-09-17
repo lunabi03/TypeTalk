@@ -11,6 +11,7 @@ class RealUserRepository extends GetxService {
   static const String _collectionName = 'users';
   static const String _blockedEmailsCollection = 'blocked_emails';
   static const String _usernamesCollection = 'usernames';
+  static const String _emailsCollection = 'emails';
 
   // 사용자 생성
   Future<void> createUser(UserModel user) async {
@@ -39,6 +40,26 @@ class RealUserRepository extends GetxService {
         }
       } catch (e) {
         print('usernames 인덱스 등록 실패(치명적 아님): $e');
+      }
+
+      // 이메일 인덱스에 등록 (중복 확인용 공개 컬렉션)
+      try {
+        if (user.email.trim().isNotEmpty) {
+          final lower = user.email.trim().toLowerCase();
+          await _firebase.setDocument(
+            '$_emailsCollection/$lower',
+            {
+              'email': lower,
+              'uid': user.uid,
+              'createdAt': FieldValue.serverTimestamp(),
+              'updatedAt': FieldValue.serverTimestamp(),
+            },
+            merge: true,
+          );
+          print('emails 인덱스 등록: $lower -> ${user.uid}');
+        }
+      } catch (e) {
+        print('emails 인덱스 등록 실패(치명적 아님): $e');
       }
     } catch (e) {
       print('실제 Firebase 사용자 생성 실패: $e');
@@ -298,7 +319,8 @@ class RealUserRepository extends GetxService {
   Future<bool> isNameAvailable(String name) async {
     try {
       final normalized = name.trim();
-      // 우선 공개 usernames 컬렉션에서 확인 (비인증 환경에서도 동작)
+      print('[NAME_CHECK] start name="$normalized"');
+      // 공개 usernames 컬렉션에서만 확인 (회원가입 전 비로그인 상태에서도 신뢰 가능)
       try {
         final snapshot = await _firebase.queryDocuments(
           _usernamesCollection,
@@ -307,26 +329,19 @@ class RealUserRepository extends GetxService {
           limitCount: 1,
         );
         if (snapshot.docs.isNotEmpty) {
-          return false; // 이미 등록된 이름
+          print('[NAME_CHECK] in usernames -> taken');
+          return false;
         }
-        // 공개 컬렉션에 없으면 사용 가능으로 판단
+        print('[NAME_CHECK] not in usernames -> available');
         return true;
       } catch (e) {
-        print('usernames 컬렉션 확인 실패, users 쿼리로 대체: $e');
-      }
-
-      // Fallback: users 컬렉션 직접 조회 (인증 필요할 수 있음)
-      try {
-        final user = await getUserByName(normalized);
-        return user == null;
-      } catch (e) {
-        // 권한 오류 등으로 조회 실패 시에는 사용 가능으로 처리
-        print('users 컬렉션으로 이름 확인 실패(가용 처리): $e');
+        // 공개 인덱스 조회 실패 시에는 사용자 경험을 위해 가용으로 처리
+        print('[NAME_CHECK] usernames query failed (treat as available): $e');
         return true;
       }
     } catch (e) {
       print('이름 중복 확인 실패: $e');
-      // 마지막 방어: 실패 시 사용 가능으로 처리하여 UX 개선
+      // 마지막 방어: 실패 시 가용 처리(실제 가입 시 서버측에서 중복 방지됨)
       return true;
     }
   }
@@ -336,8 +351,48 @@ class RealUserRepository extends GetxService {
     try {
       final normalized = email.trim().toLowerCase();
       print('이메일 중복 확인 시작: $email (정규화: $normalized)');
+      // 방어적 처리: 빈 문자열은 사용 불가로 간주
+      if (normalized.isEmpty) {
+        print('[EMAIL_CHECK] empty email -> not available');
+        return false;
+      }
       
-      // 1) 사용자 컬렉션에 동일 이메일 존재 여부 (emailLower 기준 우선)
+      // 0) Firebase Auth에 가입된 이메일인지 최우선 확인 (프로바이더 무관)
+      bool hasAuthMethods = false; // Firebase Auth에 가입된 이메일 여부
+      try {
+        final methods = await _firebase.fetchSignInMethodsForEmail(email.trim());
+        print('[EMAIL_CHECK] fetchSignInMethodsForEmail -> $methods');
+        hasAuthMethods = methods.isNotEmpty;
+        if (hasAuthMethods) {
+          print('이메일 사용 불가: Firebase Auth에 가입된 이메일 (methods: $methods)');
+          return false;
+        }
+      } catch (e) {
+        // 회원가입 플로우에서도 Auth 조회 실패 시 보수적으로 사용 불가 처리
+        print('Firebase Auth 이메일 가입 여부 확인 실패: $e -> treat as not available');
+        return false;
+      }
+
+      // 1) 공개 이메일 인덱스 컬렉션 확인 (회원가입 플로우에서도 필수 확인)
+      try {
+        final indexDoc = await _firebase.getDocument('$_emailsCollection/$normalized');
+        if (indexDoc.exists) {
+          print('이메일 사용 불가: 공개 이메일 인덱스에 존재');
+          return false;
+        }
+        print('[EMAIL_CHECK] not in public email index');
+      } catch (e) {
+        // 회원가입 플로우에서도 인덱스 확인 실패는 보수적으로 사용 불가 처리
+        print('공개 이메일 인덱스 확인 실패: $e -> treat as not available');
+        return false;
+      }
+
+      // 2) 회원가입 플로우에서는 users 조회에서 권한 오류 시에만 건너뜀
+      if (ignoreBlocked) {
+        print('[EMAIL_CHECK] signup flow: check users collection with permission error handling');
+      }
+
+      // 3) 사용자 컬렉션에 동일 이메일 존재 여부 (emailLower 기준 우선)
       UserModel? existing;
       try {
         final lowerQuery = await _firebase.queryDocuments(
@@ -349,15 +404,29 @@ class RealUserRepository extends GetxService {
         if (lowerQuery.docs.isNotEmpty) {
           existing = _convertFirestoreToUserModel(lowerQuery.docs.first);
         }
+        print('[EMAIL_CHECK] users.emailLower exists=${existing != null}');
       } catch (e) {
-        print('emailLower 조회 실패, exact로 대체: $e');
+        // 회원가입 플로우(ignoreBlocked=true)에서는 권한 오류 시 users 조회를 건너뛰고
+        // Auth/Public Index 결과만으로 판정한다.
+        final msg = e.toString();
+        if (ignoreBlocked && msg.contains('permission-denied')) {
+          print('emailLower 조회 실패(권한): $e -> signup flow: skip users check');
+        } else {
+          print('emailLower 조회 실패: $e -> treat as not available');
+          return false;
+        }
       }
       if (existing == null) {
         try {
           existing = await getUserByEmail(email.trim());
         } catch (e) {
-          print('getUserByEmail 실패(권한 등): $e');
-          existing = null; // 실패는 무시하고 다음 단계로 진행
+          final msg = e.toString();
+          if (ignoreBlocked && msg.contains('permission-denied')) {
+            print('getUserByEmail 실패(권한): $e -> signup flow: skip exact check');
+          } else {
+            print('getUserByEmail 실패(권한 등): $e -> treat as not available');
+            return false;
+          }
         }
       }
       if (existing != null) {
@@ -365,32 +434,27 @@ class RealUserRepository extends GetxService {
         return false;
       }
 
-      // 2) Firebase Auth에 가입된 이메일인지 확인 (비인증 상태에서도 가능)
-      try {
-        final methods = await _firebase.fetchSignInMethodsForEmail(email.trim());
-        if (methods.isNotEmpty) {
-          print('이메일 사용 불가: Firebase Auth에 가입된 이메일 (methods: $methods)');
-          return false;
-        }
-      } catch (e) {
-        print('Firebase Auth 이메일 가입 여부 확인 실패: $e');
-      }
-
-      // 3) 탈퇴로 차단된 이메일인지 확인 (회원가입 실행 단계에서 별도 검사)
+      // 4) 탈퇴로 차단된 이메일인지 확인 (회원가입 실행 단계에서 별도 검사)
       if (!ignoreBlocked) {
-        final blockedUntil = await getEmailBlockedUntil(normalized);
-        if (blockedUntil != null && blockedUntil.isAfter(DateTime.now())) {
-          print('이메일 사용 불가: 차단된 이메일 (${blockedUntil}까지)');
+        try {
+          final blockedUntil = await getEmailBlockedUntil(normalized);
+          if (blockedUntil != null && blockedUntil.isAfter(DateTime.now())) {
+            print('이메일 사용 불가: 차단된 이메일 (${blockedUntil}까지)');
+            return false;
+          }
+        } catch (e) {
+          // 실패 시 보수적으로 사용 불가 처리
+          print('차단 이메일 확인 실패: $e -> treat as not available');
           return false;
         }
       }
 
-      print('이메일 사용 가능: $email');
+      print('[EMAIL_CHECK] available: $email');
       return true; // 어떤 제약도 없으면 사용 가능
     } catch (e) {
       print('이메일 중복 확인 실패: $e');
-      // 실패 시에도 사용 가능으로 처리하여 UX 개선 (실제 가입 시 재검증)
-      return true;
+      // 실패 시 보수적으로 사용 불가 처리하여 중복 허용을 방지
+      return false;
     }
   }
 

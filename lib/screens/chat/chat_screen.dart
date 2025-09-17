@@ -40,6 +40,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF0F8FF), // 연한 파란색 배경
+      resizeToAvoidBottomInset: true, // 키보드가 올라올 때 화면 크기 조정
       appBar: _buildAppBar(),
       body: Obx(() {
         // 채팅방이 선택되지 않은 경우: 채팅 목록 또는 빈 상태 표시

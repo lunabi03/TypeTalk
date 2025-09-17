@@ -418,6 +418,7 @@ class RealFirebaseService extends GetxService {
   Future<List<String>> fetchSignInMethodsForEmail(String email) async {
     try {
       final methods = await _auth.fetchSignInMethodsForEmail(email);
+      print('fetchSignInMethodsForEmail("$email") -> $methods');
       return methods;
     } on FirebaseAuthException catch (e) {
       print('fetchSignInMethodsForEmail 실패: ${e.code} - ${e.message}');

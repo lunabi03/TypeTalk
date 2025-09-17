@@ -109,6 +109,14 @@ service cloud.firestore {
       // 생성/수정/삭제: 본인만 가능
       allow create, update, delete: if isAuthenticated() && isOwner(request.resource.data.uid);
     }
+
+    // 공개 이메일 인덱스 (중복 확인용, 이메일은 하위 문서 키를 소문자로 저장)
+    match /emails/{emailId} {
+      // 읽기 권한: 모든 사용자에게 공개 (중복 확인 전용)
+      allow read: if true;
+      // 생성/수정/삭제: 본인만 가능
+      allow create, update, delete: if isAuthenticated() && isOwner(request.resource.data.uid);
+    }
     
     // ================================
     // 추천 컬렉션 보안 규칙

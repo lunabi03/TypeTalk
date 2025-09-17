@@ -5,9 +5,11 @@ import 'package:typetalk/routes/app_routes.dart';
 // 실제 Firebase 서비스들 (활성화)
 import 'package:typetalk/services/real_auth_service.dart';
 import 'package:typetalk/services/real_user_repository.dart';
+import 'package:typetalk/services/real_firebase_service.dart';
 
 import 'package:typetalk/models/user_model.dart';
 import 'package:firebase_auth/firebase_auth.dart'; // Added for User model
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthController extends GetxController {
   static AuthController get instance => Get.find<AuthController>();
@@ -209,6 +211,47 @@ class AuthController extends GetxController {
       
       // 기존 사용자이면 메인으로 이동
       Get.offNamed(AppRoutes.start);
+
+      // 로그인 성공 시 공개 인덱스 보강 (이름/이메일)
+      try {
+        final repo = _userRepository;
+        final uid = firebaseUser.uid;
+        final String safeName = ((userName ?? firebaseUser.displayName) ?? '').toString().trim();
+        final String email = (firebaseUser.email ?? '').trim();
+        if (safeName.isNotEmpty) {
+          await repo.updateUserProfile(uid, name: safeName);
+        }
+        if (email.isNotEmpty) {
+          // updateUserProfile가 updatedAt만 갱신하므로, 인덱스 보강은 createUser 경로 외에는 수동으로 처리
+          try {
+            await repo.updateUserFields(uid, {
+              'emailLower': email.toLowerCase(),
+              'updatedAt': DateTime.now(),
+            });
+          } catch (_) {}
+          
+          // 공개 이메일 인덱스에도 추가 (로그인 시마다 확인하여 누락된 인덱스 보완)
+          try {
+            final firebase = Get.find<RealFirebaseService>();
+            final emailLower = email.toLowerCase();
+            await firebase.setDocument(
+              'emails/$emailLower',
+              {
+                'email': emailLower,
+                'uid': uid,
+                'createdAt': FieldValue.serverTimestamp(),
+                'updatedAt': FieldValue.serverTimestamp(),
+              },
+              merge: true,
+            );
+            print('공개 이메일 인덱스 보강: $emailLower -> $uid');
+          } catch (e) {
+            print('공개 이메일 인덱스 보강 실패(무시): $e');
+          }
+        }
+      } catch (e) {
+        print('공개 인덱스 보강 실패(무시): $e');
+      }
     });
     
     print('실제 Firebase 사용자 로그인: ${firebaseUser.uid}');

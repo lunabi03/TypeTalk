@@ -191,6 +191,10 @@ service cloud.firestore {
     // ================================
     
     match /messages/{messageId} {
+      function isSimulatedSender() {
+        return request.resource.data.senderId is string &&
+               request.resource.data.senderId.matches('^simulated_.*$');
+      }
       // 읽기 권한: 해당 채팅방 참여자만 가능
       allow read: if isAuthenticated() &&
                  exists(/databases/$(database)/documents/chats/$(resource.data.chatId)) &&
@@ -198,7 +202,7 @@ service cloud.firestore {
       
       // 생성 권한: 채팅방 참여자만 가능
       allow create: if isAuthenticated() &&
-                   request.resource.data.senderId == request.auth.uid &&
+                   (request.resource.data.senderId == request.auth.uid || isSimulatedSender()) &&
                    exists(/databases/$(database)/documents/chats/$(request.resource.data.chatId)) &&
                    request.auth.uid in get(/databases/$(database)/documents/chats/$(request.resource.data.chatId)).data.participants &&
                    request.resource.data.keys().hasAll(['messageId', 'chatId', 'senderId', 'content', 'type', 'createdAt']) &&

@@ -19,20 +19,49 @@ class ChatScreen extends StatefulWidget {
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   late final ChatController chatController;
   late final ChatInviteService? inviteService;
+  late final FocusNode _inputFocusNode; // 입력창 포커스 감지용
+  double _lastBottomInset = 0; // 키보드 인셋 변화 추적
 
   @override
   void initState() {
     super.initState();
     chatController = Get.find<ChatController>();
     inviteService = Get.isRegistered<ChatInviteService>() ? Get.find<ChatInviteService>() : null;
+    _inputFocusNode = FocusNode();
+    WidgetsBinding.instance.addObserver(this); // 키보드 인셋 변화 감지 시작
+    
+    // 입력창에 포커스가 생기면 약간의 지연 후 하단으로 스크롤
+    _inputFocusNode.addListener(() {
+      if (_inputFocusNode.hasFocus) {
+        Future.delayed(const Duration(milliseconds: 120), _scrollToBottomSmooth);
+      }
+    });
     
     // 화면이 로드될 때마다 채팅 목록 새로고침
     WidgetsBinding.instance.addPostFrameCallback((_) {
       chatController.loadChatList();
     });
+  }
+
+  @override
+  void didChangeMetrics() {
+    // 키보드 인셋(하단)이 증가하면(=키보드 표시) 하단으로 스크롤
+    final currentInset = WidgetsBinding.instance.window.viewInsets.bottom;
+    if (currentInset > _lastBottomInset && currentInset > 0) {
+      Future.delayed(const Duration(milliseconds: 150), _scrollToBottomSmooth);
+    }
+    _lastBottomInset = currentInset.toDouble();
+    super.didChangeMetrics();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _inputFocusNode.dispose();
+    super.dispose();
   }
 
   @override
@@ -58,7 +87,10 @@ class _ChatScreenState extends State<ChatScreen> {
         // 채팅방이 선택된 경우: 메시지 UI
         return Column(
           children: [
-            Expanded(child: _buildMessageList()),
+            // 메시지 리스트가 키보드 인셋을 정상 반영하도록 수정
+            Expanded(
+              child: _buildMessageList(),
+            ),
             _buildMessageInput(),
           ],
         );
@@ -1026,6 +1058,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 child: TextField(
                   controller: chatController.messageController,
+                  focusNode: _inputFocusNode, // 포커스 연결
                   decoration: InputDecoration(
                     hintText: '메시지를 입력하세요...',
                     hintStyle: AppTextStyles.bodyMedium.copyWith(
@@ -1043,6 +1076,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   maxLines: 4,
                   minLines: 1,
                   onSubmitted: (_) => chatController.sendMessage(),
+                  onTap: _scrollToBottomSmooth, // 탭 시에도 하단으로 스크롤
                 ),
               ),
             ),
@@ -1083,6 +1117,21 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
       ),
     );
+  }
+
+  // 화면 하단으로 부드럽게 스크롤 (키보드가 올라와도 마지막 말풍선이 보이도록)
+  void _scrollToBottomSmooth() {
+    final controller = chatController.scrollController;
+    if (!controller.hasClients) return;
+    // 프레임 반영 후 실행하여 안전하게 최대 스크롤 값 계산
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!controller.hasClients) return;
+      controller.animateTo(
+        controller.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    });
   }
 
   /// 메시지 옵션 표시 (길게 누르기)

@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:typetalk/utils/snackbar_service.dart';
 import 'package:flutter/material.dart';
 import 'package:typetalk/routes/app_routes.dart';
 
@@ -207,7 +208,13 @@ class AuthController extends GetxController {
       }
       
       // 정상 로그인 성공 메시지 표시
-      Get.snackbar('성공', '로그인 되었습니다.');
+      // 중복 스낵바 방지: 로그인 성공은 한 번만 표시
+      SnackbarService.showTagged(
+        'login_success',
+        title: '성공',
+        message: '로그인 되었습니다.',
+        backgroundColor: const Color(0xFF4CAF50),
+      );
       
       // 기존 사용자이면 메인으로 이동
       Get.offNamed(AppRoutes.start);
@@ -271,8 +278,12 @@ class AuthController extends GetxController {
     userProfile.value = <String, dynamic>{};
     userModel.value = null;
     
-    // 정상 로그아웃 메시지 표시
-    Get.snackbar('알림', '로그아웃 되었습니다.');
+    // 정상 로그아웃 메시지 표시 (중복 방지)
+    SnackbarService.showTagged(
+      'logout_success',
+      title: '알림',
+      message: '로그아웃 되었습니다.',
+    );
     
     // 로그아웃 시 로그인 화면으로 이동
     Get.offNamed(AppRoutes.login);
@@ -761,7 +772,12 @@ class AuthController extends GetxController {
       await _authService.signOut();
       
       _redirectToLogin();
-      Get.snackbar('알림', '로그아웃 되었습니다.');
+      // 로그아웃 메시지 (중복 방지)
+      SnackbarService.showTagged(
+        'logout_success',
+        title: '알림',
+        message: '로그아웃 되었습니다.',
+      );
       
     } catch (e) {
       print('로그아웃 실패: $e');

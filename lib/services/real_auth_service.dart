@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
+import 'package:typetalk/utils/snackbar_service.dart';
 import 'package:typetalk/services/real_firebase_service.dart';
 import 'package:typetalk/services/real_user_repository.dart';
 import 'package:typetalk/models/user_model.dart';
@@ -8,6 +9,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
+import 'package:flutter/material.dart';
 
 // 실제 Firebase 인증 서비스
 class RealAuthService extends GetxService {
@@ -136,7 +138,13 @@ class RealAuthService extends GetxService {
         await _updateLastLogin(credential.user!.uid);
         print('실제 Firebase 로그인 완료: ${credential.user!.uid}');
         
-        Get.snackbar('성공', '로그인되었습니다!');
+        // 중복 스낵바 방지: 로그인 성공은 한 번만 표시
+        SnackbarService.showTagged(
+          'login_success',
+          title: '성공',
+          message: '로그인되었습니다!',
+          backgroundColor: const Color(0xFF4CAF50),
+        );
         return credential;
       }
 
@@ -155,15 +163,22 @@ class RealAuthService extends GetxService {
       user.value = null;
       print('실제 Firebase 로그아웃 완료');
       
-      // 차단된 사용자가 아닌 경우에만 로그아웃 메시지 표시
+      // 차단된 사용자가 아닌 경우에만 로그아웃 메시지 표시 (중복 방지)
       try {
         final authController = Get.find<AuthController>();
         if (!authController.isBlockedUser.value) {
-          Get.snackbar('알림', '로그아웃되었습니다.');
+          SnackbarService.showTagged(
+            'logout_success',
+            title: '알림',
+            message: '로그아웃되었습니다.',
+          );
         }
       } catch (e) {
-        // AuthController를 찾을 수 없는 경우 기본 메시지 표시
-        Get.snackbar('알림', '로그아웃되었습니다.');
+        SnackbarService.showTagged(
+          'logout_success',
+          title: '알림',
+          message: '로그아웃되었습니다.',
+        );
       }
     } catch (e) {
       print('실제 Firebase 로그아웃 실패: $e');

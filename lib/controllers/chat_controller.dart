@@ -13,6 +13,7 @@ import 'package:typetalk/services/chat_invite_service.dart';
 import 'package:typetalk/services/gemini_service.dart';
 import 'package:typetalk/routes/app_routes.dart';
 import 'package:typetalk/core/theme/app_colors.dart';
+import 'package:typetalk/utils/snackbar_service.dart';
 
 /// 채팅 화면 컨트롤러
 /// 실시간 메시지 전송/수신 및 채팅방 관리를 담당합니다.
@@ -333,11 +334,10 @@ class ChatController extends GetxController {
       
     } catch (e) {
       print('개인 채팅 시작 실패: $e');
-      Get.snackbar(
-        '오류', 
-        '채팅 초대 전송에 실패했습니다: ${e.toString()}',
-        backgroundColor: const Color(0xFFFF0000).withOpacity(0.1),
-        colorText: const Color(0xFFFF0000),
+      SnackbarService.showOnce(
+        title: '오류',
+        message: '채팅 초대 전송에 실패했습니다: ${e.toString()}',
+        backgroundColor: const Color(0xFFFF0000),
       );
     }
   }

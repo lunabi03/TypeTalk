@@ -10,6 +10,7 @@ import 'package:typetalk/services/real_user_repository.dart';
 import 'package:typetalk/services/chat_invite_service.dart';
 import 'package:typetalk/models/chat_invite_model.dart';
 import 'package:typetalk/routes/app_routes.dart';
+import 'package:typetalk/utils/snackbar_service.dart';
 
 
 class ChatScreen extends StatefulWidget {
@@ -483,11 +484,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
          }
       }
     } catch (e) {
-      Get.snackbar(
-        '오류', 
-        '초대 수락에 실패했습니다: ${e.toString()}',
-        backgroundColor: const Color(0xFFFF0000).withOpacity(0.1),
-        colorText: const Color(0xFFFF0000),
+      SnackbarService.showOnce(
+        title: '오류',
+        message: '초대 수락에 실패했습니다: ${e.toString()}',
+        backgroundColor: const Color(0xFFFF0000),
       );
     }
   }
@@ -497,19 +497,18 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     try {
       final success = await inviteService.declineInvite(inviteId);
       if (success) {
-        Get.snackbar(
-          '초대 거절', 
-          '초대를 거절했습니다.',
-          backgroundColor: Colors.grey.withOpacity(0.1),
-          colorText: Colors.grey[700],
+        SnackbarService.showOnce(
+          title: '초대 거절',
+          message: '초대를 거절했습니다.',
+          backgroundColor: Colors.grey,
+          foregroundColor: Colors.white,
         );
       }
     } catch (e) {
-      Get.snackbar(
-        '오류', 
-        '초대 거절에 실패했습니다: ${e.toString()}',
-        backgroundColor: const Color(0xFFFF0000).withOpacity(0.1),
-        colorText: const Color(0xFFFF0000),
+      SnackbarService.showOnce(
+        title: '오류',
+        message: '초대 거절에 실패했습니다: ${e.toString()}',
+        backgroundColor: const Color(0xFFFF0000),
       );
     }
   }
@@ -1222,7 +1221,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               onTap: () {
                 Get.back();
                 // 클립보드에 복사
-                Get.snackbar('복사됨', '메시지가 클립보드에 복사되었습니다.');
+                SnackbarService.showOnce(title: '복사됨', message: '메시지가 클립보드에 복사되었습니다.');
               },
             ),
             
@@ -1515,7 +1514,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               Get.back();
               // 메시지 삭제 로직
               chatController.messages.removeWhere((m) => m.messageId == message.messageId);
-              Get.snackbar('삭제됨', '메시지가 삭제되었습니다.');
+              SnackbarService.showOnce(title: '삭제됨', message: '메시지가 삭제되었습니다.');
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: Text('삭제'),

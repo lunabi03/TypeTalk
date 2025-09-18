@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:typetalk/utils/snackbar_service.dart';
 import 'package:flutter/material.dart';
 import 'package:typetalk/controllers/auth_controller.dart';
 import 'package:typetalk/services/real_user_repository.dart';
@@ -303,12 +304,12 @@ class ProfileController extends GetxController {
         _authController.userModel.refresh();
       } catch (_) {}
 
-      Get.snackbar('성공', '프로필이 업데이트되었습니다.');
+      SnackbarService.showTagged('profile_update_success', title: '성공', message: '프로필이 업데이트되었습니다.');
       return true;
       
     } catch (e) {
       print('프로필 업데이트 오류: $e');
-      Get.snackbar('오류', '프로필 업데이트에 실패했습니다: ${e.toString()}');
+      SnackbarService.showOnce(title: '오류', message: '프로필 업데이트에 실패했습니다: ${e.toString()}');
       return false;
     } finally {
       isSaving.value = false;

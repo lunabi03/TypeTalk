@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:typetalk/utils/snackbar_service.dart';
 import 'package:typetalk/services/user_repository.dart';
 import 'package:typetalk/models/user_model.dart';
 
@@ -195,7 +196,13 @@ class AuthService extends GetxService {
       
       user.value = demoUser;
       await _saveSession(demoUser);
-      Get.snackbar('성공', '로그인되었습니다!');
+      // 중복 스낵바 방지: 로그인 성공은 한 번만 표시
+      SnackbarService.showTagged(
+        'login_success',
+        title: '성공',
+        message: '로그인되었습니다!',
+        backgroundColor: const Color(0xFF4CAF50),
+      );
       return DemoUserCredential(user: demoUser);
     } catch (e) {
       Get.snackbar('오류', '로그인 중 오류가 발생했습니다: ${e.toString()}');
@@ -208,9 +215,9 @@ class AuthService extends GetxService {
     try {
       user.value = null;
       await _clearSession();
-      Get.snackbar('알림', '로그아웃되었습니다.');
+      SnackbarService.showTagged('logout_success', title: '알림', message: '로그아웃되었습니다.');
     } catch (e) {
-      Get.snackbar('오류', '로그아웃 중 오류가 발생했습니다: ${e.toString()}');
+      SnackbarService.showOnce(title: '오류', message: '로그아웃 중 오류가 발생했습니다: ${e.toString()}');
     }
   }
   
